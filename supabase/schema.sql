@@ -46,7 +46,7 @@ begin
   end if;
 
   insert into public.fee_calc_private_settings (setting_key, setting_value, updated_at)
-  values ('access_code_hash', crypt(trim(p_access_code), gen_salt('bf')), now())
+  values ('access_code_hash', encode(digest(trim(p_access_code), 'sha256'), 'hex'), now())
   on conflict (setting_key)
   do update set
     setting_value = excluded.setting_value,
@@ -73,7 +73,7 @@ begin
     raise exception '수강료 계산기 접속 코드가 아직 설정되지 않았습니다.';
   end if;
 
-  return crypt(trim(coalesce(p_access_code, '')), stored_hash) = stored_hash;
+  return encode(digest(trim(coalesce(p_access_code, '')), 'sha256'), 'hex') = stored_hash;
 end;
 $$;
 
