@@ -66,7 +66,7 @@
         .capture-mode .shadow-inner { box-shadow: none !important; }
         .capture-mode .backdrop-blur-sm { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
 
-        #captureArea { position: relative; overflow: hidden; background-color: white; max-width: 1000px; width: 1000px; padding: 2.5rem !important; }
+        #captureArea { position: relative; overflow: hidden; background-color: white; width: 100%; max-width: 100%; min-width: 0; padding: 2.5rem !important; }
         .watermark-img { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 40%; opacity: 0.05; pointer-events: none; z-index: 0; }
         
         .receipt-content { position: relative; z-index: 10; display: flex; width: 100%; gap: 2rem; }
@@ -111,6 +111,7 @@
         .record-item-active { border-color: #38bdf8; box-shadow: 0 18px 40px -26px rgba(14, 165, 233, 0.5); background: linear-gradient(180deg, #eff6ff 0%, #f8fbff 100%); }
         .record-search { background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%); }
         .editor-body { min-height: 560px; }
+        #recordsDock, #controlColumn { min-width: 0; }
     </style>
 </head>
 <body class="bg-gray-100 p-6 min-h-screen font-[400]">
@@ -132,7 +133,7 @@
         </div>
 
         <div id="workspaceGrid" class="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
-            <div id="recordsDock" class="xl:col-span-3 space-y-4"></div>
+            <div id="recordsDock" class="xl:col-span-2 space-y-4"></div>
         
             <div id="controlColumn" class="xl:col-span-4 space-y-4">
             <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-200">
@@ -202,7 +203,7 @@
                 <div id="serverRecordStatus" class="text-[11px] bg-slate-50 text-slate-600 border border-slate-200 rounded-lg px-3 py-2 mb-3">
                     서버 연결 전입니다.
                 </div>
-                <div id="serverRecordList" class="space-y-3 max-h-[760px] overflow-y-auto custom-scroll pr-1">
+                <div id="serverRecordList" class="space-y-3 max-h-[720px] overflow-y-auto custom-scroll pr-1">
                     <div class="text-[11px] text-gray-400 text-center py-6 border border-dashed border-gray-200 rounded-lg">저장된 기록을 불러오는 중입니다.</div>
                 </div>
             </div>
@@ -262,7 +263,7 @@
             </div>
         </div>
 
-        <div class="xl:col-span-5 flex flex-col items-center">
+        <div class="xl:col-span-6 flex flex-col items-center min-w-0">
             <div id="captureArea" class="w-full receipt-shadow border-t-[10px] border-[#004094] rounded-b-2xl mb-6 bg-white transition-colors duration-300">
                 <img src="https://raw.githubusercontent.com/whdtjd5294/whdtjd5294.github.io/main/sedu_logo.png" class="watermark-img" crossorigin="anonymous">
                 <div class="text-center mb-6 relative z-20">
@@ -308,7 +309,7 @@
                 </div> 
             </div>
 
-            <div class="w-full max-w-[1000px] mb-6">
+            <div class="w-full mb-6">
                 <button onclick="downloadImage()" class="w-full py-3 bg-[#004094] text-white font-bold rounded-xl shadow-xl hover:bg-blue-900 transition flex justify-center items-center gap-2 mb-4 transform hover:-translate-y-1 text-base"><span class="text-optical-center">📸 이미지 저장</span></button>
                 <div class="bg-gray-100 border border-gray-300 rounded-xl p-4">
                     <div class="flex justify-between items-center mb-2"><h4 class="text-xs font-bold text-gray-700">💬 안내 문자 (자동생성)</h4><button onclick="copyGeneratedText()" class="text-[10px] bg-gray-600 text-white px-2 py-1 rounded hover:bg-gray-800">복사하기</button></div>
@@ -637,7 +638,38 @@
         function addSelectRow(nameVal = '') { const id = generateSafeId(); selectRowDates[id] = new Set(); const html = `<div class="bg-white p-4 border border-gray-200 rounded-lg shadow-sm relative group select-row" id="srow-${id}" onclick="activeSelectRowId='${id}'; document.querySelectorAll('.select-row').forEach(r=>r.classList.remove('active-row')); this.classList.add('active-row'); renderCalendar();"><button onclick="event.stopPropagation(); removeEl('srow-${id}')" class="absolute top-2 right-2 text-gray-300 hover:text-red-500">✖</button><div class="mb-3"><input type="text" class="sub-name w-full text-base font-bold border-b p-1 focus:outline-none focus:border-[#004094]" placeholder="과목명" value="${escapeHtml(nameVal)}" oninput="updateAll()"></div><div class="flex gap-2 bg-gray-50 p-2 rounded items-center"><input type="text" class="sub-count w-8 text-sm text-center bg-transparent font-bold text-[#004094]" readonly value="0"><span class="text-xs font-bold text-gray-400">회 ×</span><input type="number" class="sub-rate w-24 text-sm p-1 border rounded text-right" placeholder="단가" oninput="updateAll()"></div></div>`; document.getElementById('selectList').insertAdjacentHTML('beforeend', html); if (!activeSelectRowId) activeSelectRowId = id; updateAll(); }
         function removeEl(id) { const el = document.getElementById(id); if(!el) return; if (id.startsWith('srow-')) { const key = id.replace('srow-', ''); delete selectRowDates[key]; if (activeSelectRowId === key) activeSelectRowId = null; } el.remove(); updateAll(); renderCalendar(); }
         function updatePaymentView() { if (currentTab !== 'payment') return; const m = parseInt(document.getElementById('targetMonth').value) || 0; document.getElementById('calTitle').innerText = `${m}월 납부/차액`; document.getElementById('calBadge').innerText = '수정 모드'; document.getElementById('calendarGrid').innerHTML = ''; }
-        async function downloadImage() { try { const target = document.getElementById('captureArea'); if (document.fonts && document.fonts.ready) await document.fonts.ready; await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))); const canvas = await html2canvas(target, { scale: 2, useCORS: true, backgroundColor: '#fff', onclone: (doc) => { doc.body.classList.add('capture-mode'); } }); const a = document.createElement('a'); const name = (document.getElementById('studentName').value || '학생명').replace(/[^\w가-힣-]/g, '_'); a.download = `${name}_${document.getElementById('targetYear').value}-${document.getElementById('targetMonth').value}.png`; a.href = canvas.toDataURL('image/png'); a.click(); } catch (e) { alert('이미지 저장 중 오류가 발생했습니다.'); } }
+        async function downloadImage() {
+            let previousWidth = '';
+            let previousMaxWidth = '';
+            try {
+                const target = document.getElementById('captureArea');
+                previousWidth = target.style.width;
+                previousMaxWidth = target.style.maxWidth;
+                target.style.width = '1000px';
+                target.style.maxWidth = '1000px';
+                if (document.fonts && document.fonts.ready) await document.fonts.ready;
+                await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+                const canvas = await html2canvas(target, {
+                    scale: 2,
+                    useCORS: true,
+                    backgroundColor: '#fff',
+                    onclone: (doc) => { doc.body.classList.add('capture-mode'); }
+                });
+                const a = document.createElement('a');
+                const name = (document.getElementById('studentName').value || '학생명').replace(/[^\w가-힣-]/g, '_');
+                a.download = `${name}_${document.getElementById('targetYear').value}-${document.getElementById('targetMonth').value}.png`;
+                a.href = canvas.toDataURL('image/png');
+                a.click();
+            } catch (e) {
+                alert('이미지 저장 중 오류가 발생했습니다.');
+            } finally {
+                const target = document.getElementById('captureArea');
+                if (target) {
+                    target.style.width = previousWidth;
+                    target.style.maxWidth = previousMaxWidth;
+                }
+            }
+        }
 
         function renderTimetableResult() { const listDiv = document.getElementById('ttList'); listDiv.innerHTML = ''; const dayNames = ['일', '월', '화', '수', '목', '금', '토']; ttData.forEach((item, idx) => { if (!Array.isArray(item.manualDates)) item.manualDates = []; const html = `<div class="bg-white p-2 border border-orange-200 rounded flex items-center justify-between gap-2 ${activeTtRowIndex===idx?'active-row':''}" onclick="setActiveTtRow(${idx})"><div class="flex items-center gap-1.5 flex-1 overflow-hidden"><span class="text-orange-600 font-bold bg-orange-50 px-1.5 py-0.5 rounded text-[10px] whitespace-nowrap">${dayNames[item.day]}</span><input type="text" class="tt-name-input text-xs font-bold text-gray-700 bg-transparent outline-none w-full" value="${escapeHtml(item.subject)}" oninput="ttData[${idx}].subject=this.value; updateTimetableView(); event.stopPropagation();"><span class="text-gray-400 text-[10px] whitespace-nowrap">(${item.duration}h${item.manualDates.length?` +${item.manualDates.length}회`:''})</span></div><div class="flex items-center gap-1"><input type="number" class="tt-price-input w-16 p-1 border rounded text-right text-xs font-bold" value="${item.price||''}" placeholder="단가" oninput="ttData[${idx}].price=parseInt(this.value)||0; updateTimetableView(); event.stopPropagation();"><button onclick="event.stopPropagation(); ttData.splice(${idx}, 1); if(activeTtRowIndex===${idx}) activeTtRowIndex=null; renderTimetableResult();" class="text-red-400 hover:text-red-600 font-bold px-1">X</button><input type="hidden" class="tt-day-val" value="${item.day}"><input type="hidden" class="tt-dur-val" value="${item.duration}"></div></div>`; listDiv.insertAdjacentHTML('beforeend', html); }); updateTimetableView(); }
 
