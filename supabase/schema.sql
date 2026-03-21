@@ -199,9 +199,30 @@ begin
 end;
 $$;
 
+drop function if exists public.feecalc_delete_record(text, uuid);
+create or replace function public.feecalc_delete_record(
+  p_access_code text,
+  p_record_id uuid
+)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if not public.fee_calc_check_access_code(p_access_code) then
+    raise exception '기록 접속 코드가 올바르지 않습니다.';
+  end if;
+
+  delete from public.fee_calc_records
+  where record_id = p_record_id;
+end;
+$$;
+
 grant execute on function public.feecalc_list_records(text, integer) to anon, authenticated;
 grant execute on function public.feecalc_get_record(text, uuid) to anon, authenticated;
 grant execute on function public.feecalc_save_record(text, text, integer, integer, text, text, jsonb) to anon, authenticated;
+grant execute on function public.feecalc_delete_record(text, uuid) to anon, authenticated;
 
 revoke all on function public.fee_calc_check_access_code(text) from public, anon, authenticated;
 revoke all on function public.set_fee_calc_access_code(text) from public, anon, authenticated;

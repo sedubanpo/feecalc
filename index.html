@@ -104,13 +104,37 @@
         .grid-select { width: 100%; border: none; padding: 6px; outline: none; background: transparent; cursor: pointer; font-size: 11px; }
         .grid-btn-del { color: #ef4444; font-weight: bold; cursor: pointer; text-align: center; font-size: 12px; }
         .grid-btn-del:hover { background-color: #fee2e2; }
+        #workspaceTopBar { position: sticky; top: 12px; z-index: 30; }
+        #tabNavRow { display: flex; flex-wrap: wrap; gap: 0.6rem; align-items: center; }
+        .top-tab-button { min-width: 92px; white-space: nowrap; }
+        .record-item { border-radius: 18px; border: 1px solid #dbeafe; background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%); box-shadow: 0 12px 30px -24px rgba(15, 23, 42, 0.55); }
+        .record-item-active { border-color: #38bdf8; box-shadow: 0 18px 40px -26px rgba(14, 165, 233, 0.5); background: linear-gradient(180deg, #eff6ff 0%, #f8fbff 100%); }
+        .record-search { background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%); }
+        .editor-body { min-height: 560px; }
     </style>
 </head>
 <body class="bg-gray-100 p-6 min-h-screen font-[400]">
 
-    <div class="max-w-[1900px] mx-auto grid grid-cols-1 xl:grid-cols-12 gap-6">
+    <div class="max-w-[1920px] mx-auto space-y-6">
+        <div id="workspaceTopBar" class="hidden">
+            <div class="rounded-[30px] border border-white/70 bg-white/90 backdrop-blur-sm shadow-[0_22px_50px_-30px_rgba(15,23,42,0.55)] px-6 py-5">
+                <div class="flex items-center justify-between gap-6">
+                    <div class="shrink-0">
+                        <p class="text-[11px] font-black tracking-[0.35em] text-slate-400 uppercase">Sedu Workspace</p>
+                        <h2 class="text-2xl font-black text-slate-900 mt-1">수강료 계산 메뉴</h2>
+                    </div>
+                    <div class="flex-1 min-w-0 overflow-x-auto">
+                        <div id="topTabBarSlot"></div>
+                    </div>
+                </div>
+                <div id="topTabHelpSlot" class="mt-4"></div>
+            </div>
+        </div>
+
+        <div id="workspaceGrid" class="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
+            <div id="recordsDock" class="xl:col-span-3 space-y-4"></div>
         
-        <div class="xl:col-span-4 space-y-4">
+            <div id="controlColumn" class="xl:col-span-4 space-y-4">
             <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-200">
                 <h2 class="text-lg font-bold mb-4 text-gray-800 flex items-center gap-2">📅 기본 설정</h2>
                 <div class="space-y-3">
@@ -172,16 +196,19 @@
                 <div class="text-[11px] bg-sky-50 text-sky-700 border border-sky-100 rounded-lg px-3 py-2 mb-3">
                     내부 기록 서버에 자동 연결됩니다. 별도 접속코드 입력 없이 바로 저장/불러오기를 사용하시면 됩니다.
                 </div>
+                <div class="mb-3">
+                    <input id="serverRecordSearch" type="search" placeholder="이름으로 검색" class="record-search w-full p-2.5 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:border-sky-400 focus:outline-none" oninput="renderServerRecordList()">
+                </div>
                 <div id="serverRecordStatus" class="text-[11px] bg-slate-50 text-slate-600 border border-slate-200 rounded-lg px-3 py-2 mb-3">
                     서버 연결 전입니다.
                 </div>
-                <div id="serverRecordList" class="space-y-2 max-h-[260px] overflow-y-auto custom-scroll pr-1">
+                <div id="serverRecordList" class="space-y-3 max-h-[760px] overflow-y-auto custom-scroll pr-1">
                     <div class="text-[11px] text-gray-400 text-center py-6 border border-dashed border-gray-200 rounded-lg">저장된 기록을 불러오는 중입니다.</div>
                 </div>
             </div>
 
-            <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                <div class="flex border-b border-gray-200 overflow-x-auto">
+            <div id="editorPanel" class="bg-white rounded-[28px] shadow-sm border border-gray-200 overflow-hidden">
+                <div id="tabNavRow" class="flex border-b border-gray-200 overflow-x-auto px-4 pt-4">
                     <button onclick="switchTab('auto')" id="btn-auto" class="flex-1 py-3 text-[11px] font-bold text-center border-b-2 border-transparent text-gray-400 min-w-[60px]">요일고정</button>
                     <button onclick="switchTab('select')" id="btn-select" class="flex-1 py-3 text-[11px] font-bold text-center border-b-2 border-transparent text-gray-400 min-w-[50px]">선택형</button>
                     <button onclick="switchTab('manual')" id="btn-manual" class="flex-1 py-3 text-[11px] font-bold text-center border-b-2 border-transparent text-gray-400 min-w-[50px]">변동형</button>
@@ -193,7 +220,7 @@
                 <div id="tabHelpBubble" class="mx-4 mt-3 mb-1 text-[11px] text-gray-600 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
                     탭 기능 안내
                 </div>
-                <div class="p-4 bg-gray-50 h-[450px] overflow-y-auto custom-scroll">
+                <div class="editor-body p-4 bg-gray-50 h-[540px] overflow-y-auto custom-scroll">
                     <div id="tab-auto" class="hidden"><div id="autoList" class="space-y-3"></div><button onclick="addAutoRow()" class="mt-4 w-full py-3 border-2 border-dashed border-gray-300 text-gray-400 text-xs font-bold rounded hover:border-[#004094] hover:text-[#004094]">+ 과목 추가</button></div>
                     <div id="tab-select" class="hidden"><div id="selectList" class="space-y-3"></div><button onclick="addSelectRow()" class="mt-4 w-full py-3 border-2 border-dashed border-gray-300 text-gray-400 text-xs font-bold rounded hover:border-[#004094] hover:text-[#004094]">+ 과목 추가</button></div>
                     <div id="tab-manual" class="hidden"><div id="manualList" class="space-y-3"></div><button onclick="addManualRow()" class="mt-4 w-full py-3 border-2 border-dashed border-gray-300 text-gray-400 text-xs font-bold rounded hover:border-[#004094] hover:text-[#004094]">+ 과목 추가</button></div>
@@ -235,7 +262,7 @@
             </div>
         </div>
 
-        <div class="xl:col-span-8 flex flex-col items-center">
+        <div class="xl:col-span-5 flex flex-col items-center">
             <div id="captureArea" class="w-full receipt-shadow border-t-[10px] border-[#004094] rounded-b-2xl mb-6 bg-white transition-colors duration-300">
                 <img src="https://raw.githubusercontent.com/whdtjd5294/whdtjd5294.github.io/main/sedu_logo.png" class="watermark-img" crossorigin="anonymous">
                 <div class="text-center mb-6 relative z-20">
@@ -336,6 +363,7 @@
             document.getElementById('targetYear').value = now.getFullYear();
             document.getElementById('targetMonth').value = now.getMonth() + 1;
             addAutoRow();
+            initWorkspaceLayout();
             switchTab('auto'); 
             await initializeServerRecordFlow();
         };
@@ -348,6 +376,19 @@
         function getSubjectColorClass(name, isMakeup, isPredicted) { if (isPredicted) return 'subj-predicted'; if (isMakeup) return 'subj-makeup'; if (!name) return 'subj-default'; const n = name.trim(); if (n.includes('1:1')) return 'subj-oneonone'; if (n.includes('2:1')) return 'subj-twoonone'; if (n.includes('수학')) return 'subj-math'; if (n.includes('국어')) return 'subj-kor'; if (n.includes('영어')) return 'subj-eng'; if (['과학', '화학', '생명', '물리', '지학', '물지'].some(k => n.includes(k))) return 'subj-sci'; if (['사회', '사탐', '사문', '한국사', '세계사', '지리', '한지', '세지', '윤리', '윤사', '역사'].some(k => n.includes(k))) return 'subj-soc'; return 'subj-default'; }
         function parseSubjectInfo(rawName) { let name = rawName || ''; let timeText = ''; const timeMatch = name.match(/-(\d+(\.\d+)?)h/i); if(timeMatch) { timeText = `${timeMatch[1]}시간`; name = name.replace(timeMatch[0], ''); } let teacher = '', type = '', mainName = name.split('-')[0]; const parts = name.split('-'); for (let i=1; i<parts.length; i++) { let part = parts[i].trim(); const parenMatch = part.match(/(.*)\(([^)]+)\)$/); if (parenMatch) { if (parenMatch[1]) type = parenMatch[1]; teacher = parenMatch[2]; } else if (part.toUpperCase().endsWith('T')) teacher = part; else type = part; } return { mainName, teacher, type, timeText }; }
         function parseAccessTime(tStr) { if(!tStr) return ''; const isPM = tStr.includes('오후'); let [h, m] = tStr.replace('오전', '').replace('오후', '').trim().split(':'); h = parseInt(h); if(isPM && h !== 12) h += 12; if(!isPM && h === 12) h = 0; return `${h}:${m}`; }
+        function initWorkspaceLayout() {
+            const topBar = document.getElementById('workspaceTopBar');
+            const topTabBarSlot = document.getElementById('topTabBarSlot');
+            const topTabHelpSlot = document.getElementById('topTabHelpSlot');
+            const tabNavRow = document.getElementById('tabNavRow');
+            const tabHelpBubble = document.getElementById('tabHelpBubble');
+            const recordsDock = document.getElementById('recordsDock');
+            const serverRecordArea = document.getElementById('serverRecordArea');
+            if (topBar) topBar.classList.remove('hidden');
+            if (tabNavRow && topTabBarSlot && tabNavRow.parentElement !== topTabBarSlot) topTabBarSlot.appendChild(tabNavRow);
+            if (tabHelpBubble && topTabHelpSlot && tabHelpBubble.parentElement !== topTabHelpSlot) topTabHelpSlot.appendChild(tabHelpBubble);
+            if (serverRecordArea && recordsDock && serverRecordArea.parentElement !== recordsDock) recordsDock.appendChild(serverRecordArea);
+        }
         function restoreDefaultPriceSummaryArea() {
             const area = document.getElementById('priceSummaryArea');
             if (!area) return;
@@ -366,14 +407,14 @@
                 document.getElementById(`tab-${t}`).classList.toggle('hidden', t !== tab);
                 const btn = document.getElementById(`btn-${t}`);
                 if(t === tab) {
-                    let colorClass = 'bg-[#004094]/5 text-[#004094] border-[#004094]';
-                    if (t === 'history') colorClass = 'bg-green-50 text-green-700 border-green-600';
-                    if (t === 'payment') colorClass = 'bg-purple-50 text-purple-700 border-purple-600';
-                    if (t === 'ai') colorClass = 'bg-indigo-50 text-indigo-700 border-indigo-600';
-                    if (t === 'timetable') colorClass = 'bg-orange-50 text-orange-700 border-orange-600';
-                    btn.className = `flex-1 py-3 text-[11px] font-bold text-center border-b-2 ${colorClass}`;
+                    let colorClass = 'bg-[#004094] text-white shadow-[0_14px_30px_-18px_rgba(0,64,148,0.95)]';
+                    if (t === 'history') colorClass = 'bg-emerald-600 text-white shadow-[0_14px_30px_-18px_rgba(5,150,105,0.95)]';
+                    if (t === 'payment') colorClass = 'bg-fuchsia-600 text-white shadow-[0_14px_30px_-18px_rgba(192,38,211,0.95)]';
+                    if (t === 'ai') colorClass = 'bg-indigo-600 text-white shadow-[0_14px_30px_-18px_rgba(79,70,229,0.95)]';
+                    if (t === 'timetable') colorClass = 'bg-orange-500 text-white shadow-[0_14px_30px_-18px_rgba(249,115,22,0.95)]';
+                    btn.className = `top-tab-button px-4 py-3 rounded-2xl text-[12px] font-black text-center transition ${colorClass}`;
                 } else {
-                    btn.className = "flex-1 py-3 text-[11px] font-bold text-center border-b-2 border-transparent text-gray-400 hover:text-gray-600";
+                    btn.className = "top-tab-button px-4 py-3 rounded-2xl text-[12px] font-bold text-center transition bg-slate-50 text-slate-500 hover:bg-slate-100 hover:text-slate-900";
                 }
             });
 
@@ -797,29 +838,70 @@
             const list = document.getElementById('serverRecordList');
             if (!list) return;
             list.innerHTML = '';
+            const keyword = String(document.getElementById('serverRecordSearch')?.value || '').trim();
+            const filteredHistory = !keyword
+                ? serverRecordHistory
+                : serverRecordHistory.filter(record => String(record.studentName || '').includes(keyword));
             if (!serverRecordHistory.length) {
                 list.innerHTML = '<div class="text-[11px] text-gray-400 text-center py-6 border border-dashed border-gray-200 rounded-lg">저장된 기록이 없습니다.</div>';
                 return;
             }
-            serverRecordHistory.forEach(record => {
-                const btn = document.createElement('button');
+            if (!filteredHistory.length) {
+                list.innerHTML = '<div class="text-[11px] text-gray-400 text-center py-6 border border-dashed border-gray-200 rounded-lg">검색 결과가 없습니다.</div>';
+                return;
+            }
+            filteredHistory.forEach(record => {
                 const isActive = currentLoadedRecordId && currentLoadedRecordId === record.recordId;
-                btn.type = 'button';
-                btn.className = `w-full text-left p-3 rounded-xl border transition ${isActive ? 'border-sky-400 bg-sky-50' : 'border-gray-200 bg-white hover:border-sky-300 hover:bg-sky-50/40'}`;
-                btn.innerHTML = `
-                    <div class="flex items-center justify-between gap-2 mb-1">
-                        <span class="text-[11px] font-bold text-sky-700">${formatSavedAt(record.savedAt)}</span>
-                        <span class="text-[10px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 font-bold">${TAB_LABELS[record.currentTab] || (record.currentTab || '기록')}</span>
+                const wrapper = document.createElement('div');
+                wrapper.className = `record-item p-3 transition ${isActive ? 'record-item-active' : ''}`;
+                wrapper.innerHTML = `
+                    <div class="flex items-start justify-between gap-3">
+                        <div class="min-w-0">
+                            <div class="text-[11px] font-black text-sky-700">${formatSavedAt(record.savedAt)}</div>
+                            <div class="text-base font-black text-slate-900 truncate mt-1">${escapeHtml(record.studentName || '학생명')}</div>
+                            <div class="mt-1 text-[11px] text-slate-500">${record.targetYear || '-'}년 ${record.targetMonth || '-'}월</div>
+                        </div>
+                        <div class="flex flex-col items-end gap-2 shrink-0">
+                            <span class="text-[10px] px-2.5 py-1 rounded-full bg-slate-100 text-slate-500 font-black">${TAB_LABELS[record.currentTab] || (record.currentTab || '기록')}</span>
+                            <button type="button" class="record-delete-btn px-2.5 py-1 rounded-lg bg-rose-50 text-rose-600 text-[10px] font-black hover:bg-rose-100">삭제</button>
+                        </div>
                     </div>
-                    <div class="text-xs font-bold text-gray-800 truncate">${escapeHtml(record.studentName || '학생명')}</div>
-                    <div class="mt-1 text-[11px] text-gray-500 flex items-center justify-between gap-2">
-                        <span>${record.targetYear || '-'}년 ${record.targetMonth || '-'}월</span>
-                        <span class="font-bold text-gray-700">${escapeHtml(record.totalText || '0원')}</span>
-                    </div>
+                    <button type="button" class="record-open-btn mt-3 w-full text-left rounded-2xl border border-slate-200 bg-white px-3 py-2.5 hover:border-sky-300 hover:bg-sky-50/40">
+                        <div class="flex items-center justify-between gap-3">
+                            <span class="text-[11px] text-slate-500 font-bold">저장본 열기</span>
+                            <span class="text-sm font-black text-slate-800">${escapeHtml(record.totalText || '0원')}</span>
+                        </div>
+                    </button>
                 `;
-                btn.onclick = () => window.open(getRecordOpenUrl(record.recordId), '_blank');
-                list.appendChild(btn);
+                wrapper.querySelector('.record-open-btn')?.addEventListener('click', () => {
+                    window.open(getRecordOpenUrl(record.recordId), '_blank');
+                });
+                wrapper.querySelector('.record-delete-btn')?.addEventListener('click', (event) => {
+                    deleteServerRecord(record.recordId, event);
+                });
+                list.appendChild(wrapper);
             });
+        }
+        async function deleteServerRecord(recordId, event) {
+            if (event) event.stopPropagation();
+            if (!recordId) return;
+            if (!window.confirm('이 저장된 수강료 기록을 삭제할까요?')) return;
+            try {
+                setServerRecordStatus('선택한 기록을 삭제하는 중입니다.', 'info');
+                const client = getSupabaseClient();
+                const accessCode = requireServerAccessCode();
+                const { error } = await client.rpc('feecalc_delete_record', {
+                    p_access_code: accessCode,
+                    p_record_id: recordId
+                });
+                if (error) throw error;
+                serverRecordHistory = serverRecordHistory.filter(record => record.recordId !== recordId);
+                if (currentLoadedRecordId === recordId) currentLoadedRecordId = '';
+                renderServerRecordList();
+                setServerRecordStatus('선택한 기록을 삭제했습니다.', 'success');
+            } catch (error) {
+                setServerRecordStatus(error.message || '기록 삭제 중 오류가 발생했습니다.', 'error');
+            }
         }
         function collectPaymentRows() {
             return Array.from(document.querySelectorAll('#paymentGridBody tr')).map(row => {
