@@ -168,6 +168,10 @@
                         <button onclick="refreshServerRecordList()" class="px-3 py-2 bg-gray-600 text-white text-[11px] font-bold rounded hover:bg-gray-700">새로고침</button>
                     </div>
                 </div>
+                <div class="flex gap-2 mb-3">
+                    <input id="serverAccessCode" type="password" placeholder="기록 접속 코드" class="flex-1 p-2 border border-gray-300 rounded-lg text-xs font-bold focus:border-sky-500 focus:outline-none" oninput="persistServerAccessCode()">
+                    <button onclick="clearServerAccessCode()" class="px-3 py-2 bg-slate-200 text-slate-700 text-[11px] font-bold rounded hover:bg-slate-300">코드 초기화</button>
+                </div>
                 <div id="serverRecordStatus" class="text-[11px] bg-slate-50 text-slate-600 border border-slate-200 rounded-lg px-3 py-2 mb-3">
                     서버 연결 전입니다.
                 </div>
@@ -304,6 +308,7 @@
         const SUPABASE_URL = 'https://REPLACE_ME.supabase.co';
         const SUPABASE_ANON_KEY = 'REPLACE_ME';
         const SUPABASE_TABLE = 'fee_calc_records';
+        const FEECALC_ACCESS_CODE_KEY = 'feecalc_access_code';
         const FEECALC_STORAGE_VERSION = 1;
         const TAB_LABELS = {
             auto: '요일고정',
@@ -684,6 +689,35 @@
         function isServerConfigured() {
             return !!SUPABASE_URL && !!SUPABASE_ANON_KEY && !SUPABASE_URL.includes('REPLACE_ME') && !SUPABASE_ANON_KEY.includes('REPLACE_ME');
         }
+        function getServerAccessCode() {
+            const input = document.getElementById('serverAccessCode');
+            return String(input?.value || '').trim();
+        }
+        function persistServerAccessCode() {
+            const code = getServerAccessCode();
+            try {
+                if (code) localStorage.setItem(FEECALC_ACCESS_CODE_KEY, code);
+                else localStorage.removeItem(FEECALC_ACCESS_CODE_KEY);
+            } catch (error) {}
+        }
+        function clearServerAccessCode() {
+            const input = document.getElementById('serverAccessCode');
+            if (input) input.value = '';
+            try { localStorage.removeItem(FEECALC_ACCESS_CODE_KEY); } catch (error) {}
+            setServerRecordStatus('저장된 접속 코드를 지웠습니다.', 'info');
+        }
+        function hydrateServerAccessCode() {
+            try {
+                const saved = localStorage.getItem(FEECALC_ACCESS_CODE_KEY) || '';
+                const input = document.getElementById('serverAccessCode');
+                if (input && saved) input.value = saved;
+            } catch (error) {}
+        }
+        function requireServerAccessCode() {
+            const code = getServerAccessCode();
+            if (!code) throw new Error('기록 접속 코드를 먼저 입력해주세요.');
+            return code;
+        }
         function getSupabaseClient() {
             if (!isServerConfigured()) throw new Error('Supabase 연결 정보가 아직 설정되지 않았습니다.');
             if (!window.supabase || !window.supabase.createClient) throw new Error('Supabase 클라이언트를 불러오지 못했습니다.');
@@ -883,21 +917,18 @@
             try {
                 setServerRecordStatus('Supabase에 저장 중입니다.', 'info');
                 const client = getSupabaseClient();
-                const record = {
-                    student_name: payload.studentName || '',
-                    target_year: payload.targetYear || null,
-                    target_month: payload.targetMonth || null,
-                    current_tab: payload.currentTab || 'auto',
-                    total_text: document.getElementById('dispTotal')?.innerText || '0원',
-                    payload
-                };
-                const { data, error } = await client
-                    .from(SUPABASE_TABLE)
-                    .insert(record)
-                    .select('record_id, saved_at')
-                    .single();
+                const accessCode = requireServerAccessCode();
+                const { data, error } = await client.rpc('feecalc_save_record', {
+                    p_access_code: accessCode,
+                    p_student_name: payload.studentName || '',
+                    p_target_year: payload.targetYear || null,
+                    p_target_month: payload.targetMonth || null,
+                    p_current_tab: payload.currentTab || 'auto',
+                    p_total_text: document.getElementById('dispTotal')?.innerText || '0원',
+                    p_payload: payload
+                });
                 if (error) throw error;
-                const mapped = mapRecordRow(data || {});
+                const mapped = mapRecordRow(Array.isArray(data) ? (data[0] || {}) : (data || {}));
                 currentLoadedRecordId = mapped.recordId || '';
                 setServerRecordStatus(`저장 완료: ${formatSavedAt(mapped.savedAt)} 기록이 Supabase에 저장되었습니다.`, 'success');
                 await refreshServerRecordList(true);
@@ -915,11 +946,11 @@
             try {
                 if (!silent) setServerRecordStatus('저장 기록을 불러오는 중입니다.', 'info');
                 const client = getSupabaseClient();
-                const { data, error } = await client
-                    .from(SUPABASE_TABLE)
-                    .select('record_id, saved_at, student_name, target_year, target_month, current_tab, total_text')
-                    .order('saved_at', { ascending: false })
-                    .limit(80);
+                const accessCode = requireServerAccessCode();
+                const { data, error } = await client.rpc('feecalc_list_records', {
+                    p_access_code: accessCode,
+                    p_limit: 80
+                });
                 if (error) throw error;
                 serverRecordHistory = (data || []).map(mapRecordRow);
                 renderServerRecordList();
@@ -939,13 +970,13 @@
             try {
                 setServerRecordStatus('저장된 기록을 불러오는 중입니다.', 'info');
                 const client = getSupabaseClient();
-                const { data, error } = await client
-                    .from(SUPABASE_TABLE)
-                    .select('record_id, saved_at, student_name, target_year, target_month, current_tab, total_text, payload')
-                    .eq('record_id', recordId)
-                    .maybeSingle();
+                const accessCode = requireServerAccessCode();
+                const { data, error } = await client.rpc('feecalc_get_record', {
+                    p_access_code: accessCode,
+                    p_record_id: recordId
+                });
                 if (error) throw error;
-                const record = mapRecordRow(data || {});
+                const record = mapRecordRow(Array.isArray(data) ? (data[0] || {}) : (data || {}));
                 if (!record.payload) throw new Error('저장된 데이터 본문이 비어 있습니다.');
                 applyCalculatorState(record.payload);
                 currentLoadedRecordId = recordId;
@@ -958,15 +989,17 @@
         }
         async function initializeServerRecordFlow() {
             renderServerRecordList();
+            hydrateServerAccessCode();
             if (!isServerConfigured()) {
                 setServerRecordStatus('index.html 상단의 SUPABASE_URL과 SUPABASE_ANON_KEY를 넣으면 저장 기록 기능이 활성화됩니다.', 'warning');
                 return;
             }
-            await refreshServerRecordList(true);
+            if (getServerAccessCode()) await refreshServerRecordList(true);
+            else setServerRecordStatus('저장 기록을 보려면 먼저 기록 접속 코드를 입력해주세요.', 'info');
             const recordId = new URLSearchParams(window.location.search).get('recordId');
             if (recordId) await loadServerRecord(recordId, { silent: true });
             else if (serverRecordHistory.length) setServerRecordStatus(`저장 기록 ${serverRecordHistory.length}건이 준비되었습니다.`, 'success');
-            else setServerRecordStatus('아직 저장된 기록이 없습니다. 첫 저장을 진행해 주세요.', 'info');
+            else if (getServerAccessCode()) setServerRecordStatus('아직 저장된 기록이 없습니다. 첫 저장을 진행해 주세요.', 'info');
         }
 
         function collectCoreRows(selector, mapper) { return Array.from(document.querySelectorAll(selector)).map(mapper); }
