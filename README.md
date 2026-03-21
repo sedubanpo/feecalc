@@ -19,10 +19,10 @@ select public.set_fee_calc_access_code('원하는-기록-접속코드');
 
 4. `Project Settings > API`에서 아래 값을 확인합니다.
    - Project URL
-   - anon public key
+   - Publishable key
 5. `index.html` 상단의 아래 값을 채웁니다.
    - `SUPABASE_URL`
-   - `SUPABASE_ANON_KEY`
+   - `SUPABASE_PUBLISHABLE_KEY`
 6. 이 저장소를 GitHub에 push 하면 `https://sedubanpo.github.io/feecalc/`에서 사용 가능합니다.
 
 ## 저장 구조
@@ -38,7 +38,7 @@ select public.set_fee_calc_access_code('원하는-기록-접속코드');
 
 ## 주의
 
-- 서버 저장 기능은 Supabase URL과 anon key가 연결되기 전까지 동작하지 않습니다.
+- 서버 저장 기능은 Supabase URL과 publishable key가 연결되기 전까지 동작하지 않습니다.
 - 브라우저에서는 `기록 접속 코드`를 입력해야 저장/목록/불러오기가 동작합니다.
 - 저장된 기록을 눌렀을 때는 같은 페이지가 새 창으로 열리며 `recordId` 쿼리로 해당 저장본을 불러옵니다.
 - 현재 구조는 같은 Supabase 프로젝트를 써도 직접 테이블 접근을 막고, 접속 코드가 맞는 RPC 호출만 허용하는 방식입니다.

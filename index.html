@@ -306,7 +306,7 @@
         let currentLoadedRecordId = '';
         let supabaseClient = null;
         const SUPABASE_URL = 'https://REPLACE_ME.supabase.co';
-        const SUPABASE_ANON_KEY = 'REPLACE_ME';
+        const SUPABASE_PUBLISHABLE_KEY = 'REPLACE_ME';
         const SUPABASE_TABLE = 'fee_calc_records';
         const FEECALC_ACCESS_CODE_KEY = 'feecalc_access_code';
         const FEECALC_STORAGE_VERSION = 1;
@@ -687,7 +687,7 @@
         }
 
         function isServerConfigured() {
-            return !!SUPABASE_URL && !!SUPABASE_ANON_KEY && !SUPABASE_URL.includes('REPLACE_ME') && !SUPABASE_ANON_KEY.includes('REPLACE_ME');
+            return !!SUPABASE_URL && !!SUPABASE_PUBLISHABLE_KEY && !SUPABASE_URL.includes('REPLACE_ME') && !SUPABASE_PUBLISHABLE_KEY.includes('REPLACE_ME');
         }
         function getServerAccessCode() {
             const input = document.getElementById('serverAccessCode');
@@ -722,7 +722,7 @@
             if (!isServerConfigured()) throw new Error('Supabase 연결 정보가 아직 설정되지 않았습니다.');
             if (!window.supabase || !window.supabase.createClient) throw new Error('Supabase 클라이언트를 불러오지 못했습니다.');
             if (!supabaseClient) {
-                supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+                supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
                     auth: {
                         persistSession: false,
                         autoRefreshToken: false,
@@ -910,7 +910,7 @@
         }
         async function saveServerRecord() {
             if (!isServerConfigured()) {
-                setServerRecordStatus('index.html 상단의 SUPABASE_URL과 SUPABASE_ANON_KEY를 넣어야 서버 저장이 동작합니다.', 'warning');
+                setServerRecordStatus('index.html 상단의 SUPABASE_URL과 SUPABASE_PUBLISHABLE_KEY를 넣어야 서버 저장이 동작합니다.', 'warning');
                 return;
             }
             const payload = collectCalculatorState();
@@ -940,7 +940,7 @@
             if (!isServerConfigured()) {
                 serverRecordHistory = [];
                 renderServerRecordList();
-                if (!silent) setServerRecordStatus('Supabase 연결 정보가 아직 비어 있습니다. 프로젝트 URL과 anon key를 먼저 연결해주세요.', 'warning');
+                if (!silent) setServerRecordStatus('Supabase 연결 정보가 아직 비어 있습니다. 프로젝트 URL과 publishable key를 먼저 연결해주세요.', 'warning');
                 return;
             }
             try {
@@ -991,7 +991,7 @@
             renderServerRecordList();
             hydrateServerAccessCode();
             if (!isServerConfigured()) {
-                setServerRecordStatus('index.html 상단의 SUPABASE_URL과 SUPABASE_ANON_KEY를 넣으면 저장 기록 기능이 활성화됩니다.', 'warning');
+                setServerRecordStatus('index.html 상단의 SUPABASE_URL과 SUPABASE_PUBLISHABLE_KEY를 넣으면 저장 기록 기능이 활성화됩니다.', 'warning');
                 return;
             }
             if (getServerAccessCode()) await refreshServerRecordList(true);
