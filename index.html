@@ -168,9 +168,9 @@
                         <button onclick="refreshServerRecordList()" class="px-3 py-2 bg-gray-600 text-white text-[11px] font-bold rounded hover:bg-gray-700">새로고침</button>
                     </div>
                 </div>
-                <div class="flex gap-2 mb-3">
-                    <input id="serverAccessCode" type="password" placeholder="기록 접속 코드" class="flex-1 p-2 border border-gray-300 rounded-lg text-xs font-bold focus:border-sky-500 focus:outline-none" oninput="persistServerAccessCode()">
-                    <button onclick="clearServerAccessCode()" class="px-3 py-2 bg-slate-200 text-slate-700 text-[11px] font-bold rounded hover:bg-slate-300">코드 초기화</button>
+                <input id="serverAccessCode" type="hidden">
+                <div class="text-[11px] bg-sky-50 text-sky-700 border border-sky-100 rounded-lg px-3 py-2 mb-3">
+                    내부 기록 서버에 자동 연결됩니다. 별도 접속코드 입력 없이 바로 저장/불러오기를 사용하시면 됩니다.
                 </div>
                 <div id="serverRecordStatus" class="text-[11px] bg-slate-50 text-slate-600 border border-slate-200 rounded-lg px-3 py-2 mb-3">
                     서버 연결 전입니다.
@@ -309,7 +309,18 @@
         const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_hPySjz_ia6iMRfp_WnsaqQ_DmYnpdhs';
         const SUPABASE_TABLE = 'fee_calc_records';
         const FEECALC_ACCESS_CODE_KEY = 'feecalc_access_code';
+        const FEECALC_DEFAULT_ACCESS_CODE = 'banpo-fee-2026-secure';
         const FEECALC_STORAGE_VERSION = 1;
+        const DEFAULT_PRICE_SUMMARY_HTML = `
+            <div class="border-t-2 border-gray-200 pt-2 space-y-1 mb-4">
+                <div class="flex justify-between text-gray-600 font-bold text-sm"><span>수강료 소계</span><span id="dispSubtotal" class="text-gray-800">0원</span></div>
+                <div class="flex justify-between text-red-500 font-bold text-sm" id="dispAdjRow"><span>이월/초과금 조정</span><span id="dispAdj">0원</span></div>
+            </div>
+            <div class="flex justify-between items-center bg-gray-50 p-4 rounded-xl border border-gray-100">
+                <span id="labelTotal" class="text-base font-black text-gray-800">최종 납부액</span>
+                <span class="text-3xl font-black text-[#004094]" id="dispTotal">0원</span>
+            </div>
+        `;
         const TAB_LABELS = {
             auto: '요일고정',
             select: '선택형',
@@ -337,6 +348,17 @@
         function getSubjectColorClass(name, isMakeup, isPredicted) { if (isPredicted) return 'subj-predicted'; if (isMakeup) return 'subj-makeup'; if (!name) return 'subj-default'; const n = name.trim(); if (n.includes('1:1')) return 'subj-oneonone'; if (n.includes('2:1')) return 'subj-twoonone'; if (n.includes('수학')) return 'subj-math'; if (n.includes('국어')) return 'subj-kor'; if (n.includes('영어')) return 'subj-eng'; if (['과학', '화학', '생명', '물리', '지학', '물지'].some(k => n.includes(k))) return 'subj-sci'; if (['사회', '사탐', '사문', '한국사', '세계사', '지리', '한지', '세지', '윤리', '윤사', '역사'].some(k => n.includes(k))) return 'subj-soc'; return 'subj-default'; }
         function parseSubjectInfo(rawName) { let name = rawName || ''; let timeText = ''; const timeMatch = name.match(/-(\d+(\.\d+)?)h/i); if(timeMatch) { timeText = `${timeMatch[1]}시간`; name = name.replace(timeMatch[0], ''); } let teacher = '', type = '', mainName = name.split('-')[0]; const parts = name.split('-'); for (let i=1; i<parts.length; i++) { let part = parts[i].trim(); const parenMatch = part.match(/(.*)\(([^)]+)\)$/); if (parenMatch) { if (parenMatch[1]) type = parenMatch[1]; teacher = parenMatch[2]; } else if (part.toUpperCase().endsWith('T')) teacher = part; else type = part; } return { mainName, teacher, type, timeText }; }
         function parseAccessTime(tStr) { if(!tStr) return ''; const isPM = tStr.includes('오후'); let [h, m] = tStr.replace('오전', '').replace('오후', '').trim().split(':'); h = parseInt(h); if(isPM && h !== 12) h += 12; if(!isPM && h === 12) h = 0; return `${h}:${m}`; }
+        function restoreDefaultPriceSummaryArea() {
+            const area = document.getElementById('priceSummaryArea');
+            if (!area) return;
+            const needsRestore = !document.getElementById('dispSubtotal')
+                || !document.getElementById('dispAdjRow')
+                || !document.getElementById('dispAdj')
+                || !document.getElementById('labelTotal')
+                || !document.getElementById('dispTotal');
+            if (needsRestore) area.innerHTML = DEFAULT_PRICE_SUMMARY_HTML;
+            area.classList.remove('hidden');
+        }
 
         function switchTab(tab) {
             currentTab = tab;
@@ -359,6 +381,7 @@
             const isPayment = (tab === 'payment');
             const isAi = (tab === 'ai');
             const isTt = (tab === 'timetable');
+            if (!isPayment) restoreDefaultPriceSummaryArea();
             
             document.getElementById('smartPasteSection').classList.toggle('hidden', isHistory || isPayment || isAi || isTt);
             document.getElementById('adjustmentArea').classList.toggle('hidden', isHistory || isPayment || isAi); 
@@ -630,6 +653,7 @@
 
         function updateTimetableView() {
             if (currentTab !== 'timetable') return;
+            restoreDefaultPriceSummaryArea();
             const year = parseInt(document.getElementById('targetYear').value);
             const month = parseInt(document.getElementById('targetMonth').value);
             const tbody = document.getElementById('receiptBody');
@@ -694,7 +718,7 @@
             return String(input?.value || '').trim();
         }
         function persistServerAccessCode() {
-            const code = getServerAccessCode();
+            const code = getServerAccessCode() || FEECALC_DEFAULT_ACCESS_CODE;
             try {
                 if (code) localStorage.setItem(FEECALC_ACCESS_CODE_KEY, code);
                 else localStorage.removeItem(FEECALC_ACCESS_CODE_KEY);
@@ -702,20 +726,22 @@
         }
         function clearServerAccessCode() {
             const input = document.getElementById('serverAccessCode');
-            if (input) input.value = '';
-            try { localStorage.removeItem(FEECALC_ACCESS_CODE_KEY); } catch (error) {}
-            setServerRecordStatus('저장된 접속 코드를 지웠습니다.', 'info');
+            if (input) input.value = FEECALC_DEFAULT_ACCESS_CODE;
+            try { localStorage.setItem(FEECALC_ACCESS_CODE_KEY, FEECALC_DEFAULT_ACCESS_CODE); } catch (error) {}
+            setServerRecordStatus('기록 연결 코드를 기본값으로 복구했습니다.', 'info');
         }
         function hydrateServerAccessCode() {
             try {
-                const saved = localStorage.getItem(FEECALC_ACCESS_CODE_KEY) || '';
+                const saved = localStorage.getItem(FEECALC_ACCESS_CODE_KEY) || FEECALC_DEFAULT_ACCESS_CODE;
                 const input = document.getElementById('serverAccessCode');
-                if (input && saved) input.value = saved;
+                if (input) input.value = saved;
             } catch (error) {}
         }
         function requireServerAccessCode() {
-            const code = getServerAccessCode();
-            if (!code) throw new Error('기록 접속 코드를 먼저 입력해주세요.');
+            const input = document.getElementById('serverAccessCode');
+            const code = getServerAccessCode() || FEECALC_DEFAULT_ACCESS_CODE;
+            if (input && !input.value) input.value = code;
+            persistServerAccessCode();
             return code;
         }
         function getSupabaseClient() {
@@ -842,6 +868,7 @@
             };
         }
         function applyCalculatorState(data = {}) {
+            restoreDefaultPriceSummaryArea();
             document.getElementById('studentName').value = data.studentName || '';
             document.getElementById('targetYear').value = data.targetYear || new Date().getFullYear();
             document.getElementById('targetMonth').value = data.targetMonth || (new Date().getMonth() + 1);
@@ -900,13 +927,19 @@
 
             const nextTab = data.currentTab || 'auto';
             switchTab(nextTab);
-            renderTimetableResult();
-            renderPaymentReceipt();
-            if (nextTab === 'history') updateHistoryView();
-            else if (nextTab === 'ai') renderAiResult();
-            else if (nextTab === 'payment') updatePaymentView();
-            else if (nextTab === 'timetable') updateTimetableView();
-            else updateDateContext();
+            if (nextTab === 'history') {
+                updateHistoryView();
+            } else if (nextTab === 'ai') {
+                renderAiResult();
+            } else if (nextTab === 'payment') {
+                updatePaymentView();
+                renderPaymentReceipt();
+            } else if (nextTab === 'timetable') {
+                renderTimetableResult();
+                updateTimetableView();
+            } else {
+                updateDateContext();
+            }
         }
         async function saveServerRecord() {
             if (!isServerConfigured()) {
@@ -994,12 +1027,11 @@
                 setServerRecordStatus('index.html 상단의 SUPABASE_URL과 SUPABASE_PUBLISHABLE_KEY를 넣으면 저장 기록 기능이 활성화됩니다.', 'warning');
                 return;
             }
-            if (getServerAccessCode()) await refreshServerRecordList(true);
-            else setServerRecordStatus('저장 기록을 보려면 먼저 기록 접속 코드를 입력해주세요.', 'info');
+            await refreshServerRecordList(true);
             const recordId = new URLSearchParams(window.location.search).get('recordId');
             if (recordId) await loadServerRecord(recordId, { silent: true });
             else if (serverRecordHistory.length) setServerRecordStatus(`저장 기록 ${serverRecordHistory.length}건이 준비되었습니다.`, 'success');
-            else if (getServerAccessCode()) setServerRecordStatus('아직 저장된 기록이 없습니다. 첫 저장을 진행해 주세요.', 'info');
+            else setServerRecordStatus('아직 저장된 기록이 없습니다. 첫 저장을 진행해 주세요.', 'info');
         }
 
         function collectCoreRows(selector, mapper) { return Array.from(document.querySelectorAll(selector)).map(mapper); }
