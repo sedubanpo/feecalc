@@ -6,6 +6,7 @@
     <link rel="icon" href="https://raw.githubusercontent.com/whdtjd5294/whdtjd5294.github.io/main/sedu_logo.png" type="image/png">
     <title>에스에듀 반포관 수강료 계산기 V54</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap');
@@ -299,7 +300,10 @@
         let activeTtRowIndex = null;
         let serverRecordHistory = [];
         let currentLoadedRecordId = '';
-        const FEECALC_API_URL = 'https://script.google.com/macros/s/REPLACE_ME/exec';
+        let supabaseClient = null;
+        const SUPABASE_URL = 'https://REPLACE_ME.supabase.co';
+        const SUPABASE_ANON_KEY = 'REPLACE_ME';
+        const SUPABASE_TABLE = 'fee_calc_records';
         const FEECALC_STORAGE_VERSION = 1;
         const TAB_LABELS = {
             auto: '요일고정',
@@ -677,38 +681,34 @@
             updateInfoText(totalAmount, adj);
         }
 
-        function isServerConfigured() { return !!FEECALC_API_URL && !FEECALC_API_URL.includes('REPLACE_ME'); }
-        function buildApiUrl(action, params = {}) {
-            if (!isServerConfigured()) throw new Error('서버 URL이 아직 설정되지 않았습니다.');
-            const url = new URL(FEECALC_API_URL);
-            url.searchParams.set('action', action);
-            Object.entries(params).forEach(([key, value]) => {
-                if (value === undefined || value === null || value === '') return;
-                url.searchParams.set(key, String(value));
-            });
-            return url.toString();
+        function isServerConfigured() {
+            return !!SUPABASE_URL && !!SUPABASE_ANON_KEY && !SUPABASE_URL.includes('REPLACE_ME') && !SUPABASE_ANON_KEY.includes('REPLACE_ME');
         }
-        async function feeApiGet(action, params = {}) {
-            const response = await fetch(buildApiUrl(action, params), { method: 'GET', redirect: 'follow' });
-            const text = await response.text();
-            let data = null;
-            try { data = JSON.parse(text); } catch (err) { throw new Error('서버 응답을 읽지 못했습니다.'); }
-            if (!data.ok) throw new Error(data.message || '서버 요청에 실패했습니다.');
-            return data;
+        function getSupabaseClient() {
+            if (!isServerConfigured()) throw new Error('Supabase 연결 정보가 아직 설정되지 않았습니다.');
+            if (!window.supabase || !window.supabase.createClient) throw new Error('Supabase 클라이언트를 불러오지 못했습니다.');
+            if (!supabaseClient) {
+                supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+                    auth: {
+                        persistSession: false,
+                        autoRefreshToken: false,
+                        detectSessionInUrl: false
+                    }
+                });
+            }
+            return supabaseClient;
         }
-        async function feeApiPost(action, payload = {}) {
-            if (!isServerConfigured()) throw new Error('서버 URL이 아직 설정되지 않았습니다.');
-            const response = await fetch(FEECALC_API_URL, {
-                method: 'POST',
-                redirect: 'follow',
-                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                body: JSON.stringify({ action, ...payload })
-            });
-            const text = await response.text();
-            let data = null;
-            try { data = JSON.parse(text); } catch (err) { throw new Error('서버 응답을 읽지 못했습니다.'); }
-            if (!data.ok) throw new Error(data.message || '서버 저장에 실패했습니다.');
-            return data;
+        function mapRecordRow(row = {}) {
+            return {
+                recordId: row.record_id || row.recordId || '',
+                savedAt: row.saved_at || row.savedAt || row.created_at || row.createdAt || '',
+                studentName: row.student_name || row.studentName || '',
+                targetYear: row.target_year || row.targetYear || '',
+                targetMonth: row.target_month || row.targetMonth || '',
+                currentTab: row.current_tab || row.currentTab || 'auto',
+                totalText: row.total_text || row.totalText || '0원',
+                payload: row.payload || null
+            };
         }
         function setServerRecordStatus(message, tone = 'info') {
             const el = document.getElementById('serverRecordStatus');
@@ -876,22 +876,30 @@
         }
         async function saveServerRecord() {
             if (!isServerConfigured()) {
-                setServerRecordStatus('index.html 상단의 FEECALC_API_URL에 배포된 Apps Script 주소를 넣어야 서버 저장이 동작합니다.', 'warning');
+                setServerRecordStatus('index.html 상단의 SUPABASE_URL과 SUPABASE_ANON_KEY를 넣어야 서버 저장이 동작합니다.', 'warning');
                 return;
             }
             const payload = collectCalculatorState();
-            const meta = {
-                studentName: payload.studentName || '',
-                targetYear: payload.targetYear || '',
-                targetMonth: payload.targetMonth || '',
-                currentTab: payload.currentTab || 'auto',
-                totalText: document.getElementById('dispTotal')?.innerText || '0원'
-            };
             try {
-                setServerRecordStatus('서버에 저장 중입니다.', 'info');
-                const result = await feeApiPost('saveRecord', { meta, payload });
-                currentLoadedRecordId = result.recordId || '';
-                setServerRecordStatus(`저장 완료: ${formatSavedAt(result.savedAt)} 기록이 서버에 저장되었습니다.`, 'success');
+                setServerRecordStatus('Supabase에 저장 중입니다.', 'info');
+                const client = getSupabaseClient();
+                const record = {
+                    student_name: payload.studentName || '',
+                    target_year: payload.targetYear || null,
+                    target_month: payload.targetMonth || null,
+                    current_tab: payload.currentTab || 'auto',
+                    total_text: document.getElementById('dispTotal')?.innerText || '0원',
+                    payload
+                };
+                const { data, error } = await client
+                    .from(SUPABASE_TABLE)
+                    .insert(record)
+                    .select('record_id, saved_at')
+                    .single();
+                if (error) throw error;
+                const mapped = mapRecordRow(data || {});
+                currentLoadedRecordId = mapped.recordId || '';
+                setServerRecordStatus(`저장 완료: ${formatSavedAt(mapped.savedAt)} 기록이 Supabase에 저장되었습니다.`, 'success');
                 await refreshServerRecordList(true);
             } catch (error) {
                 setServerRecordStatus(error.message || '서버 저장 중 오류가 발생했습니다.', 'error');
@@ -901,13 +909,19 @@
             if (!isServerConfigured()) {
                 serverRecordHistory = [];
                 renderServerRecordList();
-                if (!silent) setServerRecordStatus('서버 URL이 아직 비어 있습니다. 배포한 Apps Script 웹 앱 주소를 먼저 연결해주세요.', 'warning');
+                if (!silent) setServerRecordStatus('Supabase 연결 정보가 아직 비어 있습니다. 프로젝트 URL과 anon key를 먼저 연결해주세요.', 'warning');
                 return;
             }
             try {
                 if (!silent) setServerRecordStatus('저장 기록을 불러오는 중입니다.', 'info');
-                const result = await feeApiGet('listRecords', { limit: 80 });
-                serverRecordHistory = result.records || [];
+                const client = getSupabaseClient();
+                const { data, error } = await client
+                    .from(SUPABASE_TABLE)
+                    .select('record_id, saved_at, student_name, target_year, target_month, current_tab, total_text')
+                    .order('saved_at', { ascending: false })
+                    .limit(80);
+                if (error) throw error;
+                serverRecordHistory = (data || []).map(mapRecordRow);
                 renderServerRecordList();
                 if (!silent) setServerRecordStatus(`저장 기록 ${serverRecordHistory.length}건을 불러왔습니다.`, 'success');
             } catch (error) {
@@ -919,17 +933,24 @@
         async function loadServerRecord(recordId, options = {}) {
             if (!recordId) return;
             if (!isServerConfigured()) {
-                setServerRecordStatus('recordId가 있지만 서버 URL이 설정되지 않아 기록을 불러올 수 없습니다.', 'warning');
+                setServerRecordStatus('recordId가 있지만 Supabase 연결 정보가 설정되지 않아 기록을 불러올 수 없습니다.', 'warning');
                 return;
             }
             try {
                 setServerRecordStatus('저장된 기록을 불러오는 중입니다.', 'info');
-                const result = await feeApiGet('getRecord', { recordId });
-                if (!result.record || !result.record.payload) throw new Error('저장된 데이터 본문이 비어 있습니다.');
-                applyCalculatorState(result.record.payload);
+                const client = getSupabaseClient();
+                const { data, error } = await client
+                    .from(SUPABASE_TABLE)
+                    .select('record_id, saved_at, student_name, target_year, target_month, current_tab, total_text, payload')
+                    .eq('record_id', recordId)
+                    .maybeSingle();
+                if (error) throw error;
+                const record = mapRecordRow(data || {});
+                if (!record.payload) throw new Error('저장된 데이터 본문이 비어 있습니다.');
+                applyCalculatorState(record.payload);
                 currentLoadedRecordId = recordId;
                 renderServerRecordList();
-                setServerRecordStatus(`불러오기 완료: ${formatSavedAt(result.record.savedAt)} 저장본을 열었습니다.`, 'success');
+                setServerRecordStatus(`불러오기 완료: ${formatSavedAt(record.savedAt)} 저장본을 열었습니다.`, 'success');
                 if (!options.silent) alert('저장된 수강료 데이터를 불러왔습니다.');
             } catch (error) {
                 setServerRecordStatus(error.message || '저장된 기록을 불러오지 못했습니다.', 'error');
@@ -938,7 +959,7 @@
         async function initializeServerRecordFlow() {
             renderServerRecordList();
             if (!isServerConfigured()) {
-                setServerRecordStatus('index.html 상단의 FEECALC_API_URL에 Apps Script 웹 앱 URL을 넣으면 서버 저장과 기록 목록이 활성화됩니다.', 'warning');
+                setServerRecordStatus('index.html 상단의 SUPABASE_URL과 SUPABASE_ANON_KEY를 넣으면 저장 기록 기능이 활성화됩니다.', 'warning');
                 return;
             }
             await refreshServerRecordList(true);
