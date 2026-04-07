@@ -31,9 +31,9 @@
         .receipt-cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; background-color: #e5e7eb; border: 1px solid #e5e7eb; }
         .receipt-cal-cell { background-color: white; min-height: 65px; height: auto; padding: 2px; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; }
         .rc-date { font-size: 0.75rem; font-weight: bold; color: #9ca3af; margin-bottom: 2px; line-height: 1; width: 100%; text-align: center; }
-        .rc-subject { font-size: 0.65rem; width: 100%; text-align: center; padding: 2px 4px; border-radius: 5px; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 800; line-height: 1.15; display: block; }
-        .rc-subject-label { display: inline-block; max-width: calc(100% - 1.9rem); overflow: hidden; text-overflow: ellipsis; vertical-align: middle; }
-        .rc-subject-time { display: inline-block; margin-left: 2px; font-size: 0.6rem; font-weight: 900; letter-spacing: -0.01em; vertical-align: middle; opacity: 0.95; }
+        .rc-subject { width: 100%; text-align: center; padding: 3px 4px; border-radius: 6px; margin-bottom: 2px; font-weight: 800; line-height: 1.1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; overflow: hidden; min-height: 26px; }
+        .rc-subject-label { display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.68rem; font-weight: 900; }
+        .rc-subject-time { display: block; margin-left: 0; font-size: 0.58rem; font-weight: 900; letter-spacing: -0.01em; opacity: 0.95; white-space: nowrap; }
         
         .subj-default { background-color: #eff6ff; color: #004094; }
         .subj-math { background-color: #dbeafe; color: #1e40af; }
@@ -169,12 +169,14 @@
         .history-status-cancel { background-color: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
         .history-status-makeup { background-color: #fff7ed; color: #ea580c; border: 1px solid #fed7aa; }
         .voucher-guide-box {
-            margin-top: 0.85rem;
+            margin-top: 0.9rem;
+            margin-right: auto;
             width: 100%;
-            max-width: 315px;
-            border-radius: 20px;
-            background: linear-gradient(135deg, #0f4aa3 0%, #004094 100%);
-            box-shadow: 0 18px 34px -26px rgba(0, 64, 148, 0.45);
+            max-width: 320px;
+            border-radius: 18px;
+            background: #f8fafc;
+            border: 1px solid #e5e7eb;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.7);
             overflow: hidden;
         }
         .voucher-guide-inner { padding: 12px 14px; }
@@ -183,30 +185,17 @@
             align-items: center;
             padding: 4px 9px;
             border-radius: 9999px;
-            background: rgba(255, 255, 255, 0.16);
-            color: #dbeafe;
+            background: #e2e8f0;
+            color: #475569;
             font-size: 9px;
             font-weight: 900;
             letter-spacing: 0.02em;
             margin-bottom: 8px;
         }
-        .voucher-guide-title { color: white; font-size: 13px; font-weight: 900; line-height: 1.35; margin-bottom: 8px; }
-        .voucher-guide-desc { color: rgba(255, 255, 255, 0.86); font-size: 10px; font-weight: 800; line-height: 1.45; margin-bottom: 0; }
-        .voucher-guide-example {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 10px;
-            padding: 8px 10px;
-            border-radius: 14px;
-            background: rgba(255, 255, 255, 0.14);
-            border: 1px solid rgba(191, 219, 254, 0.28);
-            color: white;
-            margin-top: 8px;
-        }
-        .voucher-guide-example-label { font-size: 9px; font-weight: 800; opacity: 0.82; }
-        .voucher-guide-example-text { font-size: 10px; font-weight: 900; line-height: 1.4; }
-        .voucher-guide-example-arrows { font-size: 16px; font-weight: 900; letter-spacing: 0.04em; }
+        .voucher-guide-title { color: #1e293b; font-size: 11px; font-weight: 900; line-height: 1.5; margin-bottom: 0; }
+        .voucher-guide-desc { color: #64748b; font-size: 9px; font-weight: 800; line-height: 1.45; margin-top: 6px; }
+        .voucher-guide-red { color: #ef4444; font-weight: 900; }
+        .voucher-guide-blue { color: #004094; font-weight: 900; }
     </style>
 </head>
 <body class="bg-gray-100 p-6 min-h-screen font-[400]">
@@ -378,21 +367,14 @@
                                 <span class="text-3xl font-black text-[#004094]" id="dispTotal">0원</span>
                             </div>
                         </div>
+                        <div class="mt-4 text-[10px] text-gray-500 font-medium text-center"><p class="mb-0.5"><b>문의사항 :</b> 010-4232-7428</p><p class="text-gray-400">* 본 안내서는 에스에듀 반포관 공식 문서입니다.</p></div>
                         <div id="voucherGuideBox" class="voucher-guide-box">
                             <div class="voucher-guide-inner">
                                 <div class="voucher-guide-kicker">바우처식 안내</div>
-                                <div class="voucher-guide-title">선납 후 실제 수업만 정산</div>
-                                <p class="voucher-guide-desc">적으면 이월, 많으면 다음 달에 추가됩니다.</p>
-                                <div class="voucher-guide-example">
-                                    <div>
-                                        <div class="voucher-guide-example-label">예시 100만원 선납</div>
-                                        <div class="voucher-guide-example-text">97만원 진행: 3만원 차감<br>103만원 진행: 3만원 추가</div>
-                                    </div>
-                                    <div class="voucher-guide-example-arrows">S</div>
-                                </div>
+                                <div class="voucher-guide-title">실제 수업이 적으면 <span class="voucher-guide-red">이월금</span>, 많으면 <span class="voucher-guide-blue">초과금</span>으로 다음 달에 반영됩니다.</div>
+                                <p class="voucher-guide-desc">예: 100만원 선납 후 97만원 진행시 3만원 차감, 103만원 진행시 3만원 추가</p>
                             </div>
                         </div>
-                        <div class="mt-4 text-[10px] text-gray-500 font-medium text-center"><p class="mb-0.5"><b>문의사항 :</b> 010-4232-7428</p><p class="text-gray-400">* 본 안내서는 에스에듀 반포관 공식 문서입니다.</p></div>
                     </div>
 
                     <div class="receipt-right relative z-10">
