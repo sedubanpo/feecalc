@@ -152,6 +152,74 @@
         .history-row-note { color: #94a3b8; font-size: 0.76rem; font-weight: 700; margin-top: 0.2rem; }
         .history-status-cancel { background-color: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
         .history-status-makeup { background-color: #fff7ed; color: #ea580c; border: 1px solid #fed7aa; }
+        .voucher-guide-box {
+            margin-top: 1rem;
+            margin-left: auto;
+            max-width: 430px;
+            border: 1px solid #bfdbfe;
+            border-radius: 22px;
+            background: linear-gradient(135deg, #eff6ff 0%, #ffffff 68%);
+            box-shadow: 0 20px 36px -28px rgba(0, 64, 148, 0.3);
+            overflow: hidden;
+        }
+        .voucher-guide-inner { display: flex; align-items: center; gap: 14px; padding: 16px 18px; }
+        .voucher-guide-illust { width: 118px; flex: 0 0 118px; }
+        .voucher-guide-copy { min-width: 0; }
+        .voucher-guide-kicker {
+            display: inline-flex;
+            align-items: center;
+            padding: 5px 10px;
+            border-radius: 9999px;
+            background: #dbeafe;
+            color: #004094;
+            font-size: 10px;
+            font-weight: 900;
+            letter-spacing: 0.02em;
+            margin-bottom: 8px;
+        }
+        .voucher-guide-title { color: #0f172a; font-size: 17px; font-weight: 900; line-height: 1.2; margin-bottom: 4px; }
+        .voucher-guide-desc { color: #475569; font-size: 11px; font-weight: 700; line-height: 1.5; margin-bottom: 10px; }
+        .voucher-guide-steps { display: grid; gap: 6px; margin-bottom: 10px; }
+        .voucher-guide-step {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            padding: 7px 9px;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.88);
+            border: 1px solid #dbeafe;
+            color: #334155;
+            font-size: 10px;
+            font-weight: 800;
+            line-height: 1.45;
+        }
+        .voucher-guide-step strong { color: #004094; }
+        .voucher-guide-dot {
+            width: 18px;
+            height: 18px;
+            border-radius: 9999px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: #004094;
+            color: white;
+            font-size: 10px;
+            font-weight: 900;
+            flex: 0 0 18px;
+        }
+        .voucher-guide-example {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            padding: 9px 10px;
+            border-radius: 14px;
+            background: #0f4aa3;
+            color: white;
+        }
+        .voucher-guide-example-label { font-size: 10px; font-weight: 800; opacity: 0.82; }
+        .voucher-guide-example-text { font-size: 11px; font-weight: 900; line-height: 1.45; }
+        .voucher-guide-example-arrows { font-size: 16px; font-weight: 900; letter-spacing: 0.04em; }
     </style>
 </head>
 <body class="bg-gray-100 p-6 min-h-screen font-[400]">
@@ -324,6 +392,28 @@
                             </div>
                         </div>
                         <div class="mt-4 text-[10px] text-gray-500 font-medium text-center"><p class="mb-0.5"><b>문의사항 :</b> 010-4232-7428</p><p class="text-gray-400">* 본 안내서는 에스에듀 반포관 공식 문서입니다.</p></div>
+                        <div id="voucherGuideBox" class="voucher-guide-box">
+                            <div class="voucher-guide-inner">
+                                <img src="./assets/voucher-s-guide.svg" alt="바우처 안내 일러스트" class="voucher-guide-illust">
+                                <div class="voucher-guide-copy">
+                                    <div class="voucher-guide-kicker">S 바우처 안내</div>
+                                    <div class="voucher-guide-title">선납 후, 다음 달에 맞춰<br>차감 또는 추가됩니다.</div>
+                                    <p class="voucher-guide-desc">쉽게 말해 수강료를 먼저 충전해두고, 실제 진행된 수업만큼 다음 달에 정산하는 방식입니다.</p>
+                                    <div class="voucher-guide-steps">
+                                        <div class="voucher-guide-step"><span class="voucher-guide-dot">1</span><span><strong>예상 수강료</strong>를 먼저 납부합니다.</span></div>
+                                        <div class="voucher-guide-step"><span class="voucher-guide-dot">2</span><span>실제 수업이 <strong>적으면 차액은 이월</strong>됩니다.</span></div>
+                                        <div class="voucher-guide-step"><span class="voucher-guide-dot">3</span><span>실제 수업이 <strong>많으면 다음 달에 추가</strong>됩니다.</span></div>
+                                    </div>
+                                    <div class="voucher-guide-example">
+                                        <div>
+                                            <div class="voucher-guide-example-label">예시 100만원 선납</div>
+                                            <div class="voucher-guide-example-text">97만원 진행: 3만원 차감<br>103만원 진행: 3만원 추가</div>
+                                        </div>
+                                        <div class="voucher-guide-example-arrows">S</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <div class="receipt-right relative z-10">
@@ -543,6 +633,7 @@
             document.getElementById('paymentGuide').classList.toggle('hidden', tab !== 'payment');
             document.getElementById('aiGuide').classList.toggle('hidden', tab !== 'ai');
             toggleMessageControlVisibility();
+            toggleVoucherGuideVisibility();
 
             document.getElementById('generatedTextArea').value = isPayment ? "이 모드에서는 자동 생성 문자가 지원되지 않습니다." : "";
             
@@ -562,6 +653,11 @@
             controlArea.classList.toggle('hidden', shouldHide);
             if (shouldHide) customAccountInput.classList.add('hidden');
             else handleMessageTemplateChange(true);
+        }
+        function toggleVoucherGuideVisibility() {
+            const voucherGuideBox = document.getElementById('voucherGuideBox');
+            if (!voucherGuideBox) return;
+            voucherGuideBox.classList.toggle('hidden', currentTab === 'history' || currentTab === 'payment');
         }
         function handleMessageTemplateChange(skipRefresh) {
             const paymentTypeEl = document.getElementById('messagePaymentType');
