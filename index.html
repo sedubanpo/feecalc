@@ -344,6 +344,19 @@
                 <button onclick="downloadImage()" class="w-full py-3 bg-[#004094] text-white font-bold rounded-xl shadow-xl hover:bg-blue-900 transition flex justify-center items-center gap-2 mb-4 transform hover:-translate-y-1 text-base"><span class="text-optical-center">📸 이미지 저장</span></button>
                 <div class="bg-gray-100 border border-gray-300 rounded-xl p-4">
                     <div class="flex justify-between items-center mb-2"><h4 class="text-xs font-bold text-gray-700">💬 안내 문자 (자동생성)</h4><button onclick="copyGeneratedText()" class="text-[10px] bg-gray-600 text-white px-2 py-1 rounded hover:bg-gray-800">복사하기</button></div>
+                    <div id="messageControlArea" class="grid grid-cols-2 gap-2 mb-2">
+                        <select id="messageTemplateType" class="w-full text-[11px] p-2 border border-gray-300 rounded bg-white font-bold text-gray-700 focus:outline-none" onchange="handleMessageTemplateChange()">
+                            <option value="general">일반 안내</option>
+                            <option value="first">첫 등록 안내</option>
+                        </select>
+                        <select id="messagePaymentType" class="w-full text-[11px] p-2 border border-gray-300 rounded bg-white font-bold text-gray-700 focus:outline-none" onchange="handleMessageTemplateChange()">
+                            <option value="link">결제링크</option>
+                            <option value="visit">현장결제</option>
+                            <option value="transferSchool">계좌이체(기본 계좌)</option>
+                            <option value="transferCustom">계좌이체(직접 입력)</option>
+                        </select>
+                    </div>
+                    <input id="customTransferAccount" type="text" class="hidden w-full mb-2 text-[11px] p-2 border border-amber-300 rounded bg-amber-50 text-gray-700 focus:outline-none" placeholder="예: 국민 / 123456-78-901234 / 홍길동" oninput="handleMessageTemplateChange()">
                     <textarea id="generatedTextArea" class="w-full h-32 text-xs p-2 border border-gray-300 rounded bg-white font-mono leading-relaxed resize-none focus:outline-none" readonly></textarea>
                 </div>
             </div>
@@ -529,6 +542,7 @@
             document.getElementById('historyGuide').classList.toggle('hidden', tab !== 'history');
             document.getElementById('paymentGuide').classList.toggle('hidden', tab !== 'payment');
             document.getElementById('aiGuide').classList.toggle('hidden', tab !== 'ai');
+            toggleMessageControlVisibility();
 
             document.getElementById('generatedTextArea').value = isPayment ? "이 모드에서는 자동 생성 문자가 지원되지 않습니다." : "";
             
@@ -540,7 +554,62 @@
         }
 
         // [이전 함수들: updateInfoText, copyGeneratedText 등]
-        function updateInfoText(totalAmount, adjustment) { if(currentTab === 'history' || currentTab === 'payment') return; const name = document.getElementById('studentName').value || '학생명'; const month = document.getElementById('targetMonth').value; const adjStr = adjustment !== 0 ? adjustment.toLocaleString() : '0'; const totalStr = (totalAmount + adjustment).toLocaleString(); const text = `※전체 재원생 수강료 안내※\n안녕하세요 에스학원입니다.\n수강료 안내 드립니다.\n\n${name} 학생 ${month}월 수업 수강료는 ${totalStr} 원 입니다.\n이전 달의 이월/초과금은 ${adjStr} 원입니다.\n\n학부모님 연락처로 결제링크 발송드리겠습니다.\n\n납부금액보다 수업 수강료가 적거나 많을 경우\n다음 달 수강료에서 차감또는 추가 하도록 하겠습니다.\n\n**수강료 안내에서 회당란 가격은 시간당 가격이고\n횟수란, 한 달 총 수강 시간입니다.\n\n※ 수업 취소 안내 ※\n수업취소는 전날 저녁 8시 전까지 데스크로 전달 부탁드립니다.\n당일취소는 환불되거나 이월되지 않습니다.\n[ 원활한 커리큘럼 진행을 위해 가능한 담당 선생님과 \n취소된 수업 기준으로 2주안에  보충 진행하하겠습니다.\n양해 부탁드립니다. ]\n[  1:1 수업인 경우 당일취소 수업은 2주안에 개별정규 수업으로 보충 수업 진행 됩니다. ]\n\n‘결제링크’ 통해 카드 분할 결제 가능합니다.\n그 외에 - 서울페이 제로페이 가능 - 계좌이체 가능합니다. \n감사합니다.`; document.getElementById('generatedTextArea').value = text; }
+        function toggleMessageControlVisibility() {
+            const controlArea = document.getElementById('messageControlArea');
+            const customAccountInput = document.getElementById('customTransferAccount');
+            if (!controlArea || !customAccountInput) return;
+            const shouldHide = currentTab === 'history' || currentTab === 'payment';
+            controlArea.classList.toggle('hidden', shouldHide);
+            if (shouldHide) customAccountInput.classList.add('hidden');
+            else handleMessageTemplateChange(true);
+        }
+        function handleMessageTemplateChange(skipRefresh) {
+            const paymentTypeEl = document.getElementById('messagePaymentType');
+            const customAccountInput = document.getElementById('customTransferAccount');
+            if (paymentTypeEl && customAccountInput) customAccountInput.classList.toggle('hidden', paymentTypeEl.value !== 'transferCustom');
+            if (!skipRefresh) refreshGeneratedTextByCurrentMode();
+        }
+        function refreshGeneratedTextByCurrentMode() {
+            if (currentTab === 'history') { updateHistoryView(); return; }
+            if (currentTab === 'payment') { updatePaymentView(); return; }
+            if (currentTab === 'ai') { renderAiResult(); return; }
+            if (currentTab === 'timetable') { updateTimetableView(); return; }
+            updateAll();
+        }
+        function buildPaymentGuideText() {
+            const paymentType = document.getElementById('messagePaymentType')?.value || 'link';
+            if (paymentType === 'visit') return '방문 예정 날짜를 말씀해주시면 준비해두겠습니다.';
+            if (paymentType === 'transferSchool') return '아래 계좌로 입금 부탁드립니다.\n기업 / 992-019767-01-011 / 예금주: 김용찬 에스(S)학원';
+            if (paymentType === 'transferCustom') {
+                const customAccount = (document.getElementById('customTransferAccount')?.value || '').trim();
+                return customAccount ? `아래 계좌로 입금 부탁드립니다.\n${customAccount}` : '아래 계좌로 입금 부탁드립니다.\n계좌 정보를 입력해주세요.';
+            }
+            return '학부모님 연락처로 결제링크 발송드리겠습니다.';
+        }
+        function buildFirstRegistrationGuideText() {
+            return '첫 등록 수강료는 4주 기준으로 계산하여 안내드립니다.';
+        }
+        function updateInfoText(totalAmount, adjustment) {
+            if(currentTab === 'history' || currentTab === 'payment') return;
+            const name = document.getElementById('studentName').value || '학생명';
+            const month = document.getElementById('targetMonth').value;
+            const templateType = document.getElementById('messageTemplateType')?.value || 'general';
+            const adjStr = adjustment !== 0 ? adjustment.toLocaleString() : '0';
+            const totalStr = (totalAmount + adjustment).toLocaleString();
+            const lines = [
+                '※전체 재원생 수강료 안내※',
+                '안녕하세요 에스학원입니다.',
+                '수강료 안내 드립니다.',
+                '',
+                `${name} 학생 ${month}월 수업 수강료는 ${totalStr} 원 입니다.`,
+                `이전 달의 이월/초과금은 ${adjStr} 원입니다.`
+            ];
+            if (templateType === 'first') {
+                lines.push('', buildFirstRegistrationGuideText());
+            }
+            lines.push('', buildPaymentGuideText(), '', '감사합니다.');
+            document.getElementById('generatedTextArea').value = lines.join('\n');
+        }
         function updateHistoryInfoText(summary) {
             const today = new Date();
             const todayText = `${today.getFullYear()}년 ${today.getMonth() + 1}월 ${today.getDate()}일`;
