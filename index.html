@@ -231,7 +231,7 @@
                 <div class="space-y-3">
                     <div>
                         <label class="block text-xs font-bold text-gray-500 mb-1">학생 이름</label>
-                        <input type="text" id="studentName" placeholder="이름" class="w-full p-2.5 border border-gray-300 rounded-lg text-sm focus:border-[#004094] focus:outline-none" oninput="updateAll()">
+                        <input type="text" id="studentName" placeholder="이름" class="w-full p-2.5 border border-gray-300 rounded-lg text-sm focus:border-[#004094] focus:outline-none" oninput="handleStudentNameInput()">
                     </div>
                     <div class="flex gap-3">
                         <div class="flex-1"><label class="block text-xs font-bold text-gray-500 mb-1">연도</label><input type="number" id="targetYear" class="w-full p-2.5 border border-gray-300 rounded-lg text-center text-sm font-bold" onchange="resetAndUpdate()"></div>
@@ -296,6 +296,11 @@
                         </div>
                     </div>
                     <p class="text-[11px] text-gray-500 leading-5 mt-2">현재 계산 상태를 서버에 저장하고, 기록을 누르면 새 창에서 그대로 불러옵니다.</p>
+                    <div class="mt-3 pt-3 border-t border-slate-100">
+                        <label class="block text-[11px] font-black text-slate-700 mb-1.5">📝 메모</label>
+                        <textarea id="recordMemoInput" class="w-full h-24 p-2.5 border border-amber-200 rounded-xl text-xs leading-relaxed text-slate-700 bg-amber-50/40 focus:outline-none focus:border-amber-400 resize-none" placeholder="변경 이유나 수강료 안내 시 주의할 사항을 적어두세요." oninput="handleRecordMemoInput()"></textarea>
+                        <p class="mt-1.5 text-[10px] leading-4 text-slate-400">서버 저장 시 함께 보관되며, 같은 학생명의 메모가 우측 위젯에 표시됩니다.</p>
+                    </div>
                 </div>
                 <input id="serverAccessCode" type="hidden">
                 <div class="text-[11px] bg-sky-50 text-sky-700 border border-sky-100 rounded-lg px-3 py-2 mb-3">
@@ -368,6 +373,16 @@
         </div>
 
         <div class="xl:col-span-6 flex flex-col items-center min-w-0">
+            <div id="studentMemoWidget" class="hidden w-full mb-4 bg-white rounded-2xl border border-amber-200 shadow-sm overflow-hidden">
+                <div class="flex items-center justify-between gap-3 px-4 py-3 bg-amber-50 border-b border-amber-100">
+                    <div class="min-w-0">
+                        <div class="text-sm font-black text-slate-900">📝 학생 메모</div>
+                        <div id="studentMemoWidgetName" class="text-[11px] font-bold text-amber-700 truncate mt-0.5"></div>
+                    </div>
+                    <span id="studentMemoWidgetCount" class="shrink-0 rounded-full bg-white border border-amber-200 px-2.5 py-1 text-[10px] font-black text-amber-700">0건</span>
+                </div>
+                <div id="studentMemoWidgetBody" class="p-3 space-y-2"></div>
+            </div>
             <div id="captureArea" class="w-full receipt-shadow border-t-[10px] border-[#004094] rounded-b-2xl mb-6 bg-white transition-colors duration-300">
                 <img src="https://raw.githubusercontent.com/whdtjd5294/whdtjd5294.github.io/main/sedu_logo.png" class="watermark-img" crossorigin="anonymous">
                 <div class="text-center mb-6 relative z-20">
@@ -481,6 +496,9 @@
         let serverRecordHistory = [];
         let currentLoadedRecordId = '';
         let supabaseClient = null;
+        const memoPayloadCache = {};
+        let memoWidgetTimer = null;
+        let memoWidgetToken = 0;
         const SUPABASE_URL = 'https://jtdhvkotlvznedqixsvv.supabase.co';
         const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_hPySjz_ia6iMRfp_WnsaqQ_DmYnpdhs';
         const SUPABASE_TABLE = 'fee_calc_records';
@@ -1600,6 +1618,104 @@
             const pad = (n) => String(n).padStart(2, '0');
             return `${date.getFullYear()}.${pad(date.getMonth() + 1)}.${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
         }
+        function getCurrentStudentName() {
+            return String(document.getElementById('studentName')?.value || '').trim();
+        }
+        function getCurrentRecordMemo() {
+            return String(document.getElementById('recordMemoInput')?.value || '').trim();
+        }
+        function handleStudentNameInput() {
+            updateAll();
+            scheduleStudentMemoWidgetRefresh();
+        }
+        function handleRecordMemoInput() {
+            scheduleStudentMemoWidgetRefresh(120);
+        }
+        function scheduleStudentMemoWidgetRefresh(delay = 250) {
+            clearTimeout(memoWidgetTimer);
+            memoWidgetTimer = setTimeout(refreshStudentMemoWidget, delay);
+        }
+        function renderStudentMemoWidget(studentName = '', items = []) {
+            const widget = document.getElementById('studentMemoWidget');
+            const nameEl = document.getElementById('studentMemoWidgetName');
+            const countEl = document.getElementById('studentMemoWidgetCount');
+            const body = document.getElementById('studentMemoWidgetBody');
+            if (!widget || !nameEl || !countEl || !body) return;
+            const visibleItems = items.filter(item => String(item.memo || '').trim()).slice(0, 8);
+            widget.classList.toggle('hidden', !studentName || !visibleItems.length);
+            if (!studentName || !visibleItems.length) return;
+            nameEl.textContent = `${studentName} 학생 기준`;
+            countEl.textContent = `${visibleItems.length}건`;
+            body.innerHTML = visibleItems.map(item => {
+                const meta = [item.savedAt ? formatSavedAt(item.savedAt) : item.label, item.targetMonthText, item.tabLabel, item.totalText]
+                    .filter(Boolean)
+                    .map(value => escapeHtml(value))
+                    .join(' · ');
+                return `
+                    <div class="rounded-xl border ${item.isDraft ? 'border-amber-200 bg-amber-50/70' : 'border-slate-200 bg-slate-50/70'} px-3 py-2.5">
+                        <div class="flex items-center justify-between gap-2 mb-1.5">
+                            <span class="text-[10px] font-black ${item.isDraft ? 'text-amber-700' : 'text-sky-700'}">${escapeHtml(item.isDraft ? '현재 작성 중' : '저장 메모')}</span>
+                            ${meta ? `<span class="text-[10px] font-bold text-slate-400 text-right truncate">${meta}</span>` : ''}
+                        </div>
+                        <div class="text-xs leading-5 font-bold text-slate-700 whitespace-pre-wrap break-words">${escapeHtml(item.memo)}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+        async function fetchServerRecordPayload(record) {
+            const recordId = record?.recordId || '';
+            if (!recordId) return null;
+            if (record.payload) return record.payload;
+            if (Object.prototype.hasOwnProperty.call(memoPayloadCache, recordId)) return memoPayloadCache[recordId];
+            if (!isServerConfigured()) return null;
+            try {
+                const client = getSupabaseClient();
+                const accessCode = requireServerAccessCode();
+                const { data, error } = await client.rpc('feecalc_get_record', {
+                    p_access_code: accessCode,
+                    p_record_id: recordId
+                });
+                if (error) throw error;
+                const mapped = mapRecordRow(Array.isArray(data) ? (data[0] || {}) : (data || {}));
+                memoPayloadCache[recordId] = mapped.payload || null;
+                return memoPayloadCache[recordId];
+            } catch (error) {
+                memoPayloadCache[recordId] = null;
+                return null;
+            }
+        }
+        async function refreshStudentMemoWidget() {
+            const token = ++memoWidgetToken;
+            const studentName = getCurrentStudentName();
+            if (!studentName) {
+                renderStudentMemoWidget('', []);
+                return;
+            }
+            const items = [];
+            const currentMemo = getCurrentRecordMemo();
+            const loadedMemo = currentLoadedRecordId ? String(memoPayloadCache[currentLoadedRecordId]?.recordMemo || '').trim() : '';
+            if (currentMemo && currentMemo !== loadedMemo) {
+                items.push({ isDraft: true, label: '현재 입력값', memo: currentMemo });
+            }
+            const sameStudentRecords = serverRecordHistory
+                .filter(record => String(record.studentName || '').trim() === studentName)
+                .slice(0, 12);
+            const savedItems = await Promise.all(sameStudentRecords.map(async record => {
+                const payload = await fetchServerRecordPayload(record);
+                const memo = String(payload?.recordMemo || '').trim();
+                if (!memo) return null;
+                return {
+                    isDraft: false,
+                    memo,
+                    savedAt: record.savedAt,
+                    targetMonthText: record.targetYear && record.targetMonth ? `${record.targetYear}년 ${record.targetMonth}월` : '',
+                    tabLabel: TAB_LABELS[record.currentTab] || record.currentTab || '',
+                    totalText: record.totalText || ''
+                };
+            }));
+            if (token !== memoWidgetToken) return;
+            renderStudentMemoWidget(studentName, items.concat(savedItems.filter(Boolean)));
+        }
         function getRecordOpenUrl(recordId) {
             const url = new URL(window.location.href);
             url.searchParams.set('recordId', recordId);
@@ -1667,8 +1783,10 @@
                 });
                 if (error) throw error;
                 serverRecordHistory = serverRecordHistory.filter(record => record.recordId !== recordId);
+                delete memoPayloadCache[recordId];
                 if (currentLoadedRecordId === recordId) currentLoadedRecordId = '';
                 renderServerRecordList();
+                scheduleStudentMemoWidgetRefresh(0);
                 setServerRecordStatus('선택한 기록을 삭제했습니다.', 'success');
             } catch (error) {
                 setServerRecordStatus(error.message || '기록 삭제 중 오류가 발생했습니다.', 'error');
@@ -1704,6 +1822,7 @@
                 targetMonth: parseInt(document.getElementById('targetMonth').value, 10) || (new Date().getMonth() + 1),
                 adjustment: parseInt(document.getElementById('adjustment').value, 10) || 0,
                 aiAdjustment: parseInt(document.getElementById('aiAdjustment')?.value, 10) || 0,
+                recordMemo: getCurrentRecordMemo(),
                 pricePresets: [...pricePresets],
                 adText,
                 excludedDates: Array.from(excludedDates).map(n => parseInt(n, 10)).filter(n => !isNaN(n)),
@@ -1728,6 +1847,8 @@
             document.getElementById('targetYear').value = data.targetYear || new Date().getFullYear();
             document.getElementById('targetMonth').value = data.targetMonth || (new Date().getMonth() + 1);
             document.getElementById('adjustment').value = data.adjustment || 0;
+            const memoInput = document.getElementById('recordMemoInput');
+            if (memoInput) memoInput.value = data.recordMemo || data.memo || '';
             if (document.getElementById('aiAdjustment')) document.getElementById('aiAdjustment').value = data.aiAdjustment || 0;
             if (Array.isArray(data.pricePresets)) {
                 pricePresets = normalizePricePresets(data.pricePresets);
@@ -1809,6 +1930,7 @@
             } else {
                 updateDateContext();
             }
+            scheduleStudentMemoWidgetRefresh(0);
         }
         async function saveServerRecord() {
             if (!isServerConfigured()) {
@@ -1832,8 +1954,10 @@
                 if (error) throw error;
                 const mapped = mapRecordRow(Array.isArray(data) ? (data[0] || {}) : (data || {}));
                 currentLoadedRecordId = mapped.recordId || '';
+                if (currentLoadedRecordId) memoPayloadCache[currentLoadedRecordId] = payload;
                 setServerRecordStatus(`저장 완료: ${formatSavedAt(mapped.savedAt)} 기록이 Supabase에 저장되었습니다.`, 'success');
                 await refreshServerRecordList(true);
+                scheduleStudentMemoWidgetRefresh(0);
             } catch (error) {
                 setServerRecordStatus(error.message || '서버 저장 중 오류가 발생했습니다.', 'error');
             }
@@ -1856,10 +1980,12 @@
                 if (error) throw error;
                 serverRecordHistory = (data || []).map(mapRecordRow);
                 renderServerRecordList();
+                scheduleStudentMemoWidgetRefresh(0);
                 if (!silent) setServerRecordStatus(`저장 기록 ${serverRecordHistory.length}건을 불러왔습니다.`, 'success');
             } catch (error) {
                 serverRecordHistory = [];
                 renderServerRecordList();
+                scheduleStudentMemoWidgetRefresh(0);
                 setServerRecordStatus(error.message || '저장 기록을 불러오지 못했습니다.', 'error');
             }
         }
@@ -1880,9 +2006,11 @@
                 if (error) throw error;
                 const record = mapRecordRow(Array.isArray(data) ? (data[0] || {}) : (data || {}));
                 if (!record.payload) throw new Error('저장된 데이터 본문이 비어 있습니다.');
+                memoPayloadCache[recordId] = record.payload;
                 applyCalculatorState(record.payload);
                 currentLoadedRecordId = recordId;
                 renderServerRecordList();
+                scheduleStudentMemoWidgetRefresh(0);
                 setServerRecordStatus(`불러오기 완료: ${formatSavedAt(record.savedAt)} 저장본을 열었습니다.`, 'success');
                 if (!options.silent) alert('저장된 수강료 데이터를 불러왔습니다.');
             } catch (error) {
@@ -1911,6 +2039,7 @@
                 targetYear: parseInt(document.getElementById('targetYear').value) || new Date().getFullYear(),
                 targetMonth: parseInt(document.getElementById('targetMonth').value) || (new Date().getMonth()+1),
                 adjustment: parseInt(document.getElementById('adjustment').value) || 0,
+                recordMemo: getCurrentRecordMemo(),
                 pricePresets: [...pricePresets],
                 adText,
                 excludedDates: Array.from(excludedDates),
@@ -1936,6 +2065,8 @@
                     document.getElementById('targetYear').value = d.targetYear || new Date().getFullYear();
                     document.getElementById('targetMonth').value = d.targetMonth || (new Date().getMonth()+1);
                     document.getElementById('adjustment').value = d.adjustment || 0;
+                    const memoInput = document.getElementById('recordMemoInput');
+                    if (memoInput) memoInput.value = d.recordMemo || d.memo || '';
                     if (Array.isArray(d.pricePresets)) { pricePresets = normalizePricePresets(d.pricePresets); persistPricePresets(); renderPricePresetPanel(); }
                     if (typeof d.adText === 'string') { adText = d.adText; persistAdText(); renderAdText(); }
                     excludedDates = new Set((d.excludedDates||[]).map(n=>parseInt(n)));
@@ -1946,6 +2077,7 @@
                     (d.manualRows||[]).forEach(r => { addManualRow(r.name||'', r.time||''); const row = document.querySelector('#manualList .manual-row:last-child'); row.querySelector('.sub-count').value = r.count||''; row.querySelector('.sub-rate').value = r.rate||''; });
                     switchTab(currentTab);
                     updateDateContext();
+                    scheduleStudentMemoWidgetRefresh(0);
                     alert('저장 데이터를 불러왔습니다.');
                 } catch(err) { alert('불러오기에 실패했습니다. JSON 파일을 확인해주세요.'); }
             };
