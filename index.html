@@ -17,6 +17,8 @@
         .day-chk:checked + label { background-color: #004094; color: white; border-color: #004094; }
         .info-list li { margin-bottom: 0.2rem; position: relative; padding-left: 0.7rem; line-height: 1.4; font-size: 0.85rem; }
         .info-list li::before { content: '•'; position: absolute; left: 0; color: #004094; font-weight: bold; top: 0; }
+        #infoBox { width: 100%; line-height: 1.5; }
+        #infoBox .info-list li { font-size: 0.78rem; line-height: 1.55; margin-bottom: 0.24rem; }
 
         .calendar-grid div { width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; margin: 1px auto; border-radius: 50%; transition: all 0.2s; cursor: pointer; }
         .sun { color: #ef4444; } .sat { color: #3b82f6; }
@@ -85,12 +87,12 @@
         #captureArea { position: relative; overflow: hidden; background-color: white; width: 100%; max-width: 100%; min-width: 0; padding: 2.5rem !important; }
         .watermark-img { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 40%; opacity: 0.05; pointer-events: none; z-index: 0; }
         
-        .receipt-content { position: relative; z-index: 10; display: flex; width: 100%; gap: 2rem; }
+        .receipt-content { position: relative; z-index: 10; display: flex; width: 100%; gap: 1.5rem; }
         
         /* [V54] 레이아웃 리디자인: 시간표 탭 전용 스타일 */
         .layout-default { flex-direction: row; }
-        .layout-default .receipt-left { flex: 1; order: 1; }
-        .layout-default .receipt-right { width: 38%; order: 2; display: flex; flex-direction: column; }
+        .layout-default .receipt-left { flex: 1 1 56%; order: 1; min-width: 0; }
+        .layout-default .receipt-right { flex: 0 0 42%; order: 2; display: flex; flex-direction: column; min-width: 0; }
         
         .layout-history { gap: 1.5rem; flex-direction: column; }
         .layout-history .receipt-left { order: 2; width: 100%; }
@@ -204,14 +206,19 @@
         .voucher-guide-desc { color: #64748b; font-size: 0.75rem; font-weight: 600; line-height: 1.8; margin-top: 6px; }
         .voucher-guide-red { color: #ef4444; font-weight: 900; }
         .voucher-guide-blue { color: #004094; font-weight: 900; }
+        .voucher-ad-text { margin-top: 12px; padding-top: 10px; border-top: 1px dashed #cbd5e1; color: #334155; font-size: 0.75rem; font-weight: 800; line-height: 1.65; white-space: pre-line; }
+        .settings-modal-backdrop { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.35); z-index: 100; display: flex; align-items: center; justify-content: center; padding: 24px; }
+        .settings-modal-backdrop.hidden { display: none; }
+        .settings-modal { width: min(520px, 100%); border-radius: 20px; background: #fff; box-shadow: 0 24px 70px -30px rgba(15, 23, 42, 0.65); border: 1px solid #e5e7eb; }
     </style>
 </head>
 <body class="bg-gray-100 p-6 min-h-screen font-[400]">
 
     <div class="max-w-[1920px] mx-auto space-y-6">
         <div id="workspaceTopBar" class="hidden">
-            <div class="px-2 pb-2">
-                <div id="topTabBarSlot" class="overflow-x-auto"></div>
+            <div class="px-2 pb-2 flex items-start gap-3">
+                <div id="topTabBarSlot" class="overflow-x-auto flex-1"></div>
+                <button type="button" onclick="openAppSettings()" class="ml-auto mt-2 px-4 py-2 rounded-xl bg-slate-800 text-white text-xs font-black shadow-sm hover:bg-slate-700 shrink-0">설정창</button>
             </div>
         </div>
 
@@ -395,6 +402,7 @@
                                 <div class="voucher-guide-kicker">바우처식 안내</div>
                                 <div class="voucher-guide-title">실제 수업이 적으면 <span class="voucher-guide-red">이월금</span>, 많으면 <span class="voucher-guide-blue">초과금</span>으로 다음 달에 반영됩니다.</div>
                                 <p class="voucher-guide-desc">예: 100만원 선납 후 97만원 진행시 3만원 차감, 103만원 진행시 3만원 추가</p>
+                                <div id="voucherAdText" class="voucher-ad-text hidden"></div>
                             </div>
                         </div>
                     </div>
@@ -435,6 +443,28 @@
             </div>
         </div>
     </div>
+    <div id="appSettingsModal" class="settings-modal-backdrop hidden">
+        <div class="settings-modal">
+            <div class="flex items-start justify-between gap-4 px-5 py-4 border-b border-slate-100">
+                <div>
+                    <h3 class="text-base font-black text-slate-900">설정창</h3>
+                    <p class="text-[11px] text-slate-500 mt-1 font-bold">수강료 안내 이미지에 들어갈 광고 문구를 관리합니다.</p>
+                </div>
+                <button type="button" onclick="closeAppSettings()" class="text-slate-300 hover:text-slate-700 text-xl font-black leading-none">×</button>
+            </div>
+            <div class="p-5">
+                <label class="block text-xs font-black text-slate-600 mb-2">바우처식 안내 하단 광고 텍스트</label>
+                <textarea id="adTextInput" class="w-full h-32 p-3 border border-slate-200 rounded-xl text-sm leading-relaxed focus:outline-none focus:border-[#004094] resize-none" placeholder="예: 5월 공휴일에도 학원 정상 운영합니다. 공휴일을 활용해 듣지 않던 수업까지 모두 진행!"></textarea>
+                <div class="flex justify-between items-center mt-3 gap-2">
+                    <button type="button" onclick="clearAdText()" class="px-3 py-2 rounded-lg bg-slate-100 text-slate-600 text-xs font-black hover:bg-slate-200">비우기</button>
+                    <div class="flex gap-2">
+                        <button type="button" onclick="closeAppSettings()" class="px-3 py-2 rounded-lg bg-white border border-slate-200 text-slate-600 text-xs font-black hover:bg-slate-50">닫기</button>
+                        <button type="button" onclick="saveAppSettings()" class="px-4 py-2 rounded-lg bg-[#004094] text-white text-xs font-black hover:bg-blue-800">저장</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <script>
         let currentTab = 'auto'; 
@@ -458,8 +488,10 @@
         const FEECALC_DEFAULT_ACCESS_CODE = 'banpo-fee-2026-secure';
         const FEECALC_STORAGE_VERSION = 2;
         const PRICE_PRESETS_STORAGE_KEY = 'feecalc_price_presets';
+        const AD_TEXT_STORAGE_KEY = 'feecalc_ad_text';
         const DEFAULT_PRICE_PRESETS = [25000, 29167, 28125, 29000, 62500, 87500];
         let pricePresets = [...DEFAULT_PRICE_PRESETS];
+        let adText = '';
         const DEFAULT_PRICE_SUMMARY_HTML = `
             <div class="border-t-2 border-gray-200 pt-2 space-y-1 mb-4">
                 <div class="flex justify-between text-gray-600 font-bold text-sm"><span>수강료 소계</span><span id="dispSubtotal" class="text-gray-800">0원</span></div>
@@ -485,6 +517,7 @@
             document.getElementById('targetYear').value = now.getFullYear();
             document.getElementById('targetMonth').value = now.getMonth() + 1;
             hydratePricePresets();
+            hydrateAdText();
             addAutoRow();
             initWorkspaceLayout();
             switchTab('auto'); 
@@ -568,6 +601,47 @@
             if (!input) return;
             input.value = amount;
             updateAll();
+        }
+        function hydrateAdText() {
+            try { adText = localStorage.getItem(AD_TEXT_STORAGE_KEY) || ''; }
+            catch (error) { adText = ''; }
+            renderAdText();
+        }
+        function persistAdText() {
+            try { localStorage.setItem(AD_TEXT_STORAGE_KEY, adText); } catch (error) {}
+        }
+        function renderAdText() {
+            const el = document.getElementById('voucherAdText');
+            const input = document.getElementById('adTextInput');
+            if (input) input.value = adText;
+            if (!el) return;
+            const text = String(adText || '').trim();
+            el.textContent = text;
+            el.classList.toggle('hidden', !text);
+        }
+        function openAppSettings() {
+            const modal = document.getElementById('appSettingsModal');
+            const input = document.getElementById('adTextInput');
+            if (input) input.value = adText;
+            if (modal) modal.classList.remove('hidden');
+            setTimeout(() => input?.focus(), 0);
+        }
+        function closeAppSettings() {
+            const modal = document.getElementById('appSettingsModal');
+            if (modal) modal.classList.add('hidden');
+        }
+        function saveAppSettings() {
+            adText = document.getElementById('adTextInput')?.value || '';
+            persistAdText();
+            renderAdText();
+            closeAppSettings();
+        }
+        function clearAdText() {
+            const input = document.getElementById('adTextInput');
+            if (input) input.value = '';
+            adText = '';
+            persistAdText();
+            renderAdText();
         }
         function togglePasteArea() { const el = document.getElementById('pasteAreaContainer'); if(el) el.classList.toggle('hidden'); }
 
@@ -1631,6 +1705,7 @@
                 adjustment: parseInt(document.getElementById('adjustment').value, 10) || 0,
                 aiAdjustment: parseInt(document.getElementById('aiAdjustment')?.value, 10) || 0,
                 pricePresets: [...pricePresets],
+                adText,
                 excludedDates: Array.from(excludedDates).map(n => parseInt(n, 10)).filter(n => !isNaN(n)),
                 autoRows: collectCoreRows('#autoList .auto-row', row => { const id = row.id.replace('arow-', ''); return { name: row.querySelector('.sub-name').value || '', rate: parseInt(row.querySelector('.sub-rate').value, 10) || 0, days: Array.from(row.querySelectorAll('.day-chk:checked')).map(c => parseInt(c.value, 10)), excludedDates: Array.from(autoRowExcludedDates[id] || []).map(n => parseInt(n, 10)).filter(n => !isNaN(n)) }; }),
                 selectRows: collectCoreRows('#selectList .select-row', row => { const id = row.id.replace('srow-', ''); return { name: row.querySelector('.sub-name').value || '', rate: parseInt(row.querySelector('.sub-rate').value, 10) || 0, dates: Array.from(selectRowDates[id] || []).map(n => parseInt(n, 10)) }; }),
@@ -1658,6 +1733,11 @@
                 pricePresets = normalizePricePresets(data.pricePresets);
                 persistPricePresets();
                 renderPricePresetPanel();
+            }
+            if (typeof data.adText === 'string') {
+                adText = data.adText;
+                persistAdText();
+                renderAdText();
             }
             excludedDates = new Set((data.excludedDates || []).map(n => parseInt(n, 10)).filter(n => !isNaN(n)));
             rowCounter = 0;
@@ -1832,6 +1912,7 @@
                 targetMonth: parseInt(document.getElementById('targetMonth').value) || (new Date().getMonth()+1),
                 adjustment: parseInt(document.getElementById('adjustment').value) || 0,
                 pricePresets: [...pricePresets],
+                adText,
                 excludedDates: Array.from(excludedDates),
                 autoRows: collectCoreRows('#autoList .auto-row', row => { const id = row.id.replace('arow-', ''); return { name: row.querySelector('.sub-name').value || '', rate: parseInt(row.querySelector('.sub-rate').value)||0, days: Array.from(row.querySelectorAll('.day-chk:checked')).map(c => parseInt(c.value)), excludedDates: Array.from(autoRowExcludedDates[id] || []) }; }),
                 selectRows: collectCoreRows('#selectList .select-row', row => { const id = row.id.replace('srow-',''); return { name: row.querySelector('.sub-name').value || '', rate: parseInt(row.querySelector('.sub-rate').value)||0, dates: Array.from(selectRowDates[id]||[]) }; }),
@@ -1856,6 +1937,7 @@
                     document.getElementById('targetMonth').value = d.targetMonth || (new Date().getMonth()+1);
                     document.getElementById('adjustment').value = d.adjustment || 0;
                     if (Array.isArray(d.pricePresets)) { pricePresets = normalizePricePresets(d.pricePresets); persistPricePresets(); renderPricePresetPanel(); }
+                    if (typeof d.adText === 'string') { adText = d.adText; persistAdText(); renderAdText(); }
                     excludedDates = new Set((d.excludedDates||[]).map(n=>parseInt(n)));
                     document.getElementById('autoList').innerHTML=''; document.getElementById('selectList').innerHTML=''; document.getElementById('manualList').innerHTML='';
                     Object.keys(selectRowDates).forEach(k => delete selectRowDates[k]); Object.keys(autoRowExcludedDates).forEach(k => delete autoRowExcludedDates[k]); activeSelectRowId = null;
