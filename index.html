@@ -206,10 +206,18 @@
         .voucher-guide-desc { color: #64748b; font-size: 0.75rem; font-weight: 600; line-height: 1.8; margin-top: 6px; }
         .voucher-guide-red { color: #ef4444; font-weight: 900; }
         .voucher-guide-blue { color: #004094; font-weight: 900; }
-        .voucher-ad-text { margin-top: 12px; padding-top: 10px; border-top: 1px dashed #cbd5e1; color: #334155; font-size: 0.75rem; font-weight: 800; line-height: 1.65; white-space: pre-line; }
+        .receipt-notice-list { margin-top: 12px; padding-top: 10px; border-top: 1px dashed #cbd5e1; display: flex; flex-direction: column; gap: 8px; }
+        .receipt-notice-list.hidden { display: none; }
+        .receipt-notice-box { display: grid; grid-template-columns: 26px 1fr; gap: 8px; align-items: start; padding: 9px 10px; border: 1px solid #dbeafe; border-radius: 12px; background: linear-gradient(180deg, #ffffff 0%, #eff6ff 100%); color: #334155; }
+        .receipt-notice-icon { width: 26px; height: 26px; border-radius: 9999px; display: inline-flex; align-items: center; justify-content: center; background: #004094; color: #fff; box-shadow: 0 8px 14px -10px rgba(0, 64, 148, 0.9); }
+        .receipt-notice-icon svg { width: 15px; height: 15px; stroke-width: 2.4; }
+        .receipt-notice-label { color: #004094; font-size: 0.68rem; font-weight: 900; line-height: 1.2; margin-bottom: 2px; }
+        .receipt-notice-text { color: #334155; font-size: 0.75rem; font-weight: 800; line-height: 1.55; white-space: pre-line; word-break: keep-all; overflow-wrap: anywhere; }
         .settings-modal-backdrop { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.35); z-index: 100; display: flex; align-items: center; justify-content: center; padding: 24px; }
         .settings-modal-backdrop.hidden { display: none; }
         .settings-modal { width: min(520px, 100%); border-radius: 20px; background: #fff; box-shadow: 0 24px 70px -30px rgba(15, 23, 42, 0.65); border: 1px solid #e5e7eb; }
+        .notice-setting-row { border: 1px solid #e2e8f0; border-radius: 14px; padding: 10px; background: #f8fafc; }
+        .notice-setting-row textarea { min-height: 74px; }
     </style>
 </head>
 <body class="bg-gray-100 p-6 min-h-screen font-[400]">
@@ -417,7 +425,7 @@
                                 <div class="voucher-guide-kicker">바우처식 안내</div>
                                 <div class="voucher-guide-title">실제 수업이 적으면 <span class="voucher-guide-red">이월금</span>, 많으면 <span class="voucher-guide-blue">초과금</span>으로 다음 달에 반영됩니다.</div>
                                 <p class="voucher-guide-desc">예: 100만원 선납 후 97만원 진행시 3만원 차감, 103만원 진행시 3만원 추가</p>
-                                <div id="voucherAdText" class="voucher-ad-text hidden"></div>
+                                <div id="voucherNoticeList" class="receipt-notice-list hidden"></div>
                             </div>
                         </div>
                     </div>
@@ -463,15 +471,18 @@
             <div class="flex items-start justify-between gap-4 px-5 py-4 border-b border-slate-100">
                 <div>
                     <h3 class="text-base font-black text-slate-900">설정창</h3>
-                    <p class="text-[11px] text-slate-500 mt-1 font-bold">수강료 안내 이미지에 들어갈 광고 문구를 관리합니다.</p>
+                    <p class="text-[11px] text-slate-500 mt-1 font-bold">수강료 안내 이미지에 들어갈 공지사항을 관리합니다.</p>
                 </div>
                 <button type="button" onclick="closeAppSettings()" class="text-slate-300 hover:text-slate-700 text-xl font-black leading-none">×</button>
             </div>
             <div class="p-5">
-                <label class="block text-xs font-black text-slate-600 mb-2">바우처식 안내 하단 광고 텍스트</label>
-                <textarea id="adTextInput" class="w-full h-32 p-3 border border-slate-200 rounded-xl text-sm leading-relaxed focus:outline-none focus:border-[#004094] resize-none" placeholder="예: 5월 공휴일에도 학원 정상 운영합니다. 공휴일을 활용해 듣지 않던 수업까지 모두 진행!"></textarea>
+                <div class="flex items-center justify-between gap-3 mb-2">
+                    <label class="block text-xs font-black text-slate-600">바우처식 안내 하단 공지사항</label>
+                    <button type="button" onclick="addNoticeInput()" class="px-3 py-1.5 rounded-lg bg-blue-50 text-[#004094] text-[11px] font-black hover:bg-blue-100">+ 공지 추가</button>
+                </div>
+                <div id="noticeInputList" class="space-y-2"></div>
                 <div class="flex justify-between items-center mt-3 gap-2">
-                    <button type="button" onclick="clearAdText()" class="px-3 py-2 rounded-lg bg-slate-100 text-slate-600 text-xs font-black hover:bg-slate-200">비우기</button>
+                    <button type="button" onclick="clearAdText()" class="px-3 py-2 rounded-lg bg-slate-100 text-slate-600 text-xs font-black hover:bg-slate-200">전체 비우기</button>
                     <div class="flex gap-2">
                         <button type="button" onclick="closeAppSettings()" class="px-3 py-2 rounded-lg bg-white border border-slate-200 text-slate-600 text-xs font-black hover:bg-slate-50">닫기</button>
                         <button type="button" onclick="saveAppSettings()" class="px-4 py-2 rounded-lg bg-[#004094] text-white text-xs font-black hover:bg-blue-800">저장</button>
@@ -509,7 +520,7 @@
         const AD_TEXT_STORAGE_KEY = 'feecalc_ad_text';
         const DEFAULT_PRICE_PRESETS = [25000, 29167, 28125, 29000, 62500, 87500];
         let pricePresets = [...DEFAULT_PRICE_PRESETS];
-        let adText = '';
+        let adNotices = [];
         const DEFAULT_PRICE_SUMMARY_HTML = `
             <div class="border-t-2 border-gray-200 pt-2 space-y-1 mb-4">
                 <div class="flex justify-between text-gray-600 font-bold text-sm"><span>수강료 소계</span><span id="dispSubtotal" class="text-gray-800">0원</span></div>
@@ -620,44 +631,92 @@
             input.value = amount;
             updateAll();
         }
+        function normalizeNoticeTexts(value) {
+            const source = Array.isArray(value) ? value : (String(value || '').trim() ? [value] : []);
+            return source.map(item => String(item || '').trim()).filter(Boolean);
+        }
         function hydrateAdText() {
-            try { adText = localStorage.getItem(AD_TEXT_STORAGE_KEY) || ''; }
-            catch (error) { adText = ''; }
+            try {
+                const saved = localStorage.getItem(AD_TEXT_STORAGE_KEY);
+                adNotices = saved ? normalizeNoticeTexts(JSON.parse(saved)) : [];
+            } catch (error) {
+                try { adNotices = normalizeNoticeTexts(localStorage.getItem(AD_TEXT_STORAGE_KEY) || ''); }
+                catch (fallbackError) { adNotices = []; }
+            }
             renderAdText();
         }
         function persistAdText() {
-            try { localStorage.setItem(AD_TEXT_STORAGE_KEY, adText); } catch (error) {}
+            try { localStorage.setItem(AD_TEXT_STORAGE_KEY, JSON.stringify(adNotices)); } catch (error) {}
+        }
+        function getNoticeIconSvg() {
+            return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 13.5V10a2 2 0 0 1 2-2h2.5l8-3.5v15l-8-3.5H6a2 2 0 0 1-2-2.5Z"></path><path d="M8.5 16 10 21h3l-1.5-4.2"></path><path d="M19 9.5c.8.6 1.2 1.5 1.2 2.5s-.4 1.9-1.2 2.5"></path></svg>';
+        }
+        function renderNoticeInputs() {
+            const list = document.getElementById('noticeInputList');
+            if (!list) return;
+            const values = adNotices.length ? adNotices : [''];
+            list.innerHTML = values.map((text, index) => `
+                <div class="notice-setting-row">
+                    <div class="flex items-center justify-between gap-2 mb-2">
+                        <span class="text-[11px] font-black text-slate-600">공지 ${index + 1}</span>
+                        <button type="button" onclick="removeNoticeInput(${index})" class="px-2.5 py-1 rounded bg-rose-50 text-rose-600 text-[10px] font-black hover:bg-rose-100">삭제</button>
+                    </div>
+                    <textarea class="notice-input w-full p-3 border border-slate-200 rounded-xl text-sm leading-relaxed focus:outline-none focus:border-[#004094] resize-none bg-white" placeholder="예: 5월 공휴일에도 학원 정상 운영합니다. 공휴일을 활용해 듣지 않던 수업까지 모두 진행!">${escapeHtml(text)}</textarea>
+                </div>
+            `).join('');
         }
         function renderAdText() {
-            const el = document.getElementById('voucherAdText');
-            const input = document.getElementById('adTextInput');
-            if (input) input.value = adText;
+            const el = document.getElementById('voucherNoticeList');
+            renderNoticeInputs();
             if (!el) return;
-            const text = String(adText || '').trim();
-            el.textContent = text;
-            el.classList.toggle('hidden', !text);
+            const notices = normalizeNoticeTexts(adNotices);
+            el.classList.toggle('hidden', !notices.length);
+            el.innerHTML = notices.map((text, index) => `
+                <div class="receipt-notice-box">
+                    <span class="receipt-notice-icon">${getNoticeIconSvg()}</span>
+                    <div>
+                        <div class="receipt-notice-label">공지사항 ${notices.length > 1 ? index + 1 : ''}</div>
+                        <div class="receipt-notice-text">${escapeHtml(text)}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+        function readNoticeInputs() {
+            return normalizeNoticeTexts(Array.from(document.querySelectorAll('.notice-input')).map(input => input.value));
+        }
+        function addNoticeInput() {
+            adNotices = readNoticeInputs();
+            adNotices.push('');
+            renderNoticeInputs();
+            setTimeout(() => {
+                const inputs = document.querySelectorAll('.notice-input');
+                inputs[inputs.length - 1]?.focus();
+            }, 0);
+        }
+        function removeNoticeInput(index) {
+            const values = Array.from(document.querySelectorAll('.notice-input')).map(input => input.value);
+            values.splice(index, 1);
+            adNotices = normalizeNoticeTexts(values);
+            renderNoticeInputs();
         }
         function openAppSettings() {
             const modal = document.getElementById('appSettingsModal');
-            const input = document.getElementById('adTextInput');
-            if (input) input.value = adText;
+            renderNoticeInputs();
             if (modal) modal.classList.remove('hidden');
-            setTimeout(() => input?.focus(), 0);
+            setTimeout(() => document.querySelector('.notice-input')?.focus(), 0);
         }
         function closeAppSettings() {
             const modal = document.getElementById('appSettingsModal');
             if (modal) modal.classList.add('hidden');
         }
         function saveAppSettings() {
-            adText = document.getElementById('adTextInput')?.value || '';
+            adNotices = readNoticeInputs();
             persistAdText();
             renderAdText();
             closeAppSettings();
         }
         function clearAdText() {
-            const input = document.getElementById('adTextInput');
-            if (input) input.value = '';
-            adText = '';
+            adNotices = [];
             persistAdText();
             renderAdText();
         }
@@ -1824,7 +1883,8 @@
                 aiAdjustment: parseInt(document.getElementById('aiAdjustment')?.value, 10) || 0,
                 recordMemo: getCurrentRecordMemo(),
                 pricePresets: [...pricePresets],
-                adText,
+                adNotices: [...adNotices],
+                adText: adNotices.join('\n'),
                 excludedDates: Array.from(excludedDates).map(n => parseInt(n, 10)).filter(n => !isNaN(n)),
                 autoRows: collectCoreRows('#autoList .auto-row', row => { const id = row.id.replace('arow-', ''); return { name: row.querySelector('.sub-name').value || '', rate: parseInt(row.querySelector('.sub-rate').value, 10) || 0, days: Array.from(row.querySelectorAll('.day-chk:checked')).map(c => parseInt(c.value, 10)), excludedDates: Array.from(autoRowExcludedDates[id] || []).map(n => parseInt(n, 10)).filter(n => !isNaN(n)) }; }),
                 selectRows: collectCoreRows('#selectList .select-row', row => { const id = row.id.replace('srow-', ''); return { name: row.querySelector('.sub-name').value || '', rate: parseInt(row.querySelector('.sub-rate').value, 10) || 0, dates: Array.from(selectRowDates[id] || []).map(n => parseInt(n, 10)) }; }),
@@ -1855,8 +1915,8 @@
                 persistPricePresets();
                 renderPricePresetPanel();
             }
-            if (typeof data.adText === 'string') {
-                adText = data.adText;
+            if (Array.isArray(data.adNotices) || typeof data.adText === 'string') {
+                adNotices = normalizeNoticeTexts(Array.isArray(data.adNotices) ? data.adNotices : data.adText);
                 persistAdText();
                 renderAdText();
             }
@@ -2041,7 +2101,8 @@
                 adjustment: parseInt(document.getElementById('adjustment').value) || 0,
                 recordMemo: getCurrentRecordMemo(),
                 pricePresets: [...pricePresets],
-                adText,
+                adNotices: [...adNotices],
+                adText: adNotices.join('\n'),
                 excludedDates: Array.from(excludedDates),
                 autoRows: collectCoreRows('#autoList .auto-row', row => { const id = row.id.replace('arow-', ''); return { name: row.querySelector('.sub-name').value || '', rate: parseInt(row.querySelector('.sub-rate').value)||0, days: Array.from(row.querySelectorAll('.day-chk:checked')).map(c => parseInt(c.value)), excludedDates: Array.from(autoRowExcludedDates[id] || []) }; }),
                 selectRows: collectCoreRows('#selectList .select-row', row => { const id = row.id.replace('srow-',''); return { name: row.querySelector('.sub-name').value || '', rate: parseInt(row.querySelector('.sub-rate').value)||0, dates: Array.from(selectRowDates[id]||[]) }; }),
@@ -2068,7 +2129,7 @@
                     const memoInput = document.getElementById('recordMemoInput');
                     if (memoInput) memoInput.value = d.recordMemo || d.memo || '';
                     if (Array.isArray(d.pricePresets)) { pricePresets = normalizePricePresets(d.pricePresets); persistPricePresets(); renderPricePresetPanel(); }
-                    if (typeof d.adText === 'string') { adText = d.adText; persistAdText(); renderAdText(); }
+                    if (Array.isArray(d.adNotices) || typeof d.adText === 'string') { adNotices = normalizeNoticeTexts(Array.isArray(d.adNotices) ? d.adNotices : d.adText); persistAdText(); renderAdText(); }
                     excludedDates = new Set((d.excludedDates||[]).map(n=>parseInt(n)));
                     document.getElementById('autoList').innerHTML=''; document.getElementById('selectList').innerHTML=''; document.getElementById('manualList').innerHTML='';
                     Object.keys(selectRowDates).forEach(k => delete selectRowDates[k]); Object.keys(autoRowExcludedDates).forEach(k => delete autoRowExcludedDates[k]); activeSelectRowId = null;
