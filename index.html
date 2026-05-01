@@ -218,6 +218,10 @@
         .settings-modal { width: min(520px, 100%); border-radius: 20px; background: #fff; box-shadow: 0 24px 70px -30px rgba(15, 23, 42, 0.65); border: 1px solid #e5e7eb; }
         .notice-setting-row { border: 1px solid #e2e8f0; border-radius: 14px; padding: 10px; background: #f8fafc; }
         .notice-setting-row textarea { min-height: 74px; }
+        .settings-tab-btn { flex: 1; border: 0; border-radius: 10px; padding: 9px 10px; font-size: 0.72rem; font-weight: 900; color: #64748b; background: transparent; transition: 0.15s ease; }
+        .settings-tab-btn.active { color: #004094; background: #fff; box-shadow: 0 1px 6px rgba(15, 23, 42, 0.08); }
+        .guide-setting-row { border: 1px solid #e2e8f0; border-radius: 14px; padding: 10px; background: #f8fafc; }
+        .guide-setting-row textarea { min-height: 62px; }
     </style>
 </head>
 <body class="bg-gray-100 p-6 min-h-screen font-[400]">
@@ -438,7 +442,7 @@
                         </div>
                         <div id="infoBox" class="bg-gray-50 p-3 rounded-xl text-xs text-gray-600 border border-gray-100 shadow-inner">
                             <h4 class="font-bold text-[#004094] mb-1 flex items-center gap-1 text-sm"><span class="text-optical-center">ℹ️ 안내</span></h4>
-                            <ul class="info-list font-medium"><li><b>수업 취소:</b> 전날 저녁 8시 전까지 데스크로 전달 부탁드립니다. (당일 취소는 환불/이월 불가)</li><li><b>보충 안내:</b> 취소된 수업 기준 2주 안에 보충 진행합니다.</li><li><b>결제 방법:</b> '결제링크', 서울페이/제로페이, 계좌이체 가능합니다.</li></ul>
+                            <ul id="receiptGuideList" class="info-list font-medium"></ul>
                         </div>
                     </div>
                 </div> 
@@ -471,18 +475,33 @@
             <div class="flex items-start justify-between gap-4 px-5 py-4 border-b border-slate-100">
                 <div>
                     <h3 class="text-base font-black text-slate-900">설정창</h3>
-                    <p class="text-[11px] text-slate-500 mt-1 font-bold">수강료 안내 이미지에 들어갈 공지사항을 관리합니다.</p>
+                    <p class="text-[11px] text-slate-500 mt-1 font-bold">수강료 안내 이미지에 들어갈 공지사항과 안내 문구를 관리합니다.</p>
                 </div>
                 <button type="button" onclick="closeAppSettings()" class="text-slate-300 hover:text-slate-700 text-xl font-black leading-none">×</button>
             </div>
-            <div class="p-5">
-                <div class="flex items-center justify-between gap-3 mb-2">
-                    <label class="block text-xs font-black text-slate-600">바우처식 안내 하단 공지사항</label>
-                    <button type="button" onclick="addNoticeInput()" class="px-3 py-1.5 rounded-lg bg-blue-50 text-[#004094] text-[11px] font-black hover:bg-blue-100">+ 공지 추가</button>
+            <div class="px-5 pt-4">
+                <div class="flex gap-1 rounded-xl bg-slate-100 p-1">
+                    <button type="button" id="settingsTabNotices" class="settings-tab-btn active" onclick="switchSettingsTab('notices')">공지사항</button>
+                    <button type="button" id="settingsTabGuides" class="settings-tab-btn" onclick="switchSettingsTab('guides')">안내 메세지</button>
                 </div>
-                <div id="noticeInputList" class="space-y-2"></div>
+            </div>
+            <div class="p-5">
+                <div id="settingsPanelNotices">
+                    <div class="flex items-center justify-between gap-3 mb-2">
+                        <label class="block text-xs font-black text-slate-600">바우처식 안내 하단 공지사항</label>
+                        <button type="button" onclick="addNoticeInput()" class="px-3 py-1.5 rounded-lg bg-blue-50 text-[#004094] text-[11px] font-black hover:bg-blue-100">+ 공지 추가</button>
+                    </div>
+                    <div id="noticeInputList" class="space-y-2"></div>
+                </div>
+                <div id="settingsPanelGuides" class="hidden">
+                    <div class="flex items-center justify-between gap-3 mb-2">
+                        <label class="block text-xs font-black text-slate-600">우측 안내 박스 문구</label>
+                        <button type="button" onclick="resetGuideMessages()" class="px-3 py-1.5 rounded-lg bg-slate-100 text-slate-600 text-[11px] font-black hover:bg-slate-200">기본값</button>
+                    </div>
+                    <div id="guideInputList" class="space-y-2"></div>
+                </div>
                 <div class="flex justify-between items-center mt-3 gap-2">
-                    <button type="button" onclick="clearAdText()" class="px-3 py-2 rounded-lg bg-slate-100 text-slate-600 text-xs font-black hover:bg-slate-200">전체 비우기</button>
+                    <button type="button" id="settingsResetButton" onclick="resetCurrentSettingsTab()" class="px-3 py-2 rounded-lg bg-slate-100 text-slate-600 text-xs font-black hover:bg-slate-200">전체 비우기</button>
                     <div class="flex gap-2">
                         <button type="button" onclick="closeAppSettings()" class="px-3 py-2 rounded-lg bg-white border border-slate-200 text-slate-600 text-xs font-black hover:bg-slate-50">닫기</button>
                         <button type="button" onclick="saveAppSettings()" class="px-4 py-2 rounded-lg bg-[#004094] text-white text-xs font-black hover:bg-blue-800">저장</button>
@@ -518,9 +537,17 @@
         const FEECALC_STORAGE_VERSION = 2;
         const PRICE_PRESETS_STORAGE_KEY = 'feecalc_price_presets';
         const AD_TEXT_STORAGE_KEY = 'feecalc_ad_text';
+        const GUIDE_MESSAGES_STORAGE_KEY = 'feecalc_guide_messages';
         const DEFAULT_PRICE_PRESETS = [25000, 29167, 28125, 29000, 62500, 87500];
+        const DEFAULT_GUIDE_MESSAGES = [
+            { title: '수업 취소', text: '전날 저녁 8시 전까지 데스크로 전달 부탁드립니다. (당일 취소는 환불/이월 불가)' },
+            { title: '보충 안내', text: '취소된 수업 기준 2주 안에 보충 진행합니다.' },
+            { title: '결제 방법', text: "'결제링크', 서울페이/제로페이, 계좌이체 가능합니다." }
+        ];
         let pricePresets = [...DEFAULT_PRICE_PRESETS];
         let adNotices = [];
+        let guideMessages = DEFAULT_GUIDE_MESSAGES.map(item => ({ ...item }));
+        let activeSettingsTab = 'notices';
         const DEFAULT_PRICE_SUMMARY_HTML = `
             <div class="border-t-2 border-gray-200 pt-2 space-y-1 mb-4">
                 <div class="flex justify-between text-gray-600 font-bold text-sm"><span>수강료 소계</span><span id="dispSubtotal" class="text-gray-800">0원</span></div>
@@ -547,6 +574,7 @@
             document.getElementById('targetMonth').value = now.getMonth() + 1;
             hydratePricePresets();
             hydrateAdText();
+            hydrateGuideMessages();
             addAutoRow();
             initWorkspaceLayout();
             switchTab('auto'); 
@@ -635,6 +663,89 @@
             const source = Array.isArray(value) ? value : (String(value || '').trim() ? [value] : []);
             return source.map(item => String(item || '').trim()).filter(Boolean);
         }
+        function cloneDefaultGuideMessages() {
+            return DEFAULT_GUIDE_MESSAGES.map(item => ({ ...item }));
+        }
+        function normalizeGuideMessages(value) {
+            if (!Array.isArray(value)) return cloneDefaultGuideMessages();
+            const normalized = value.map((item, index) => {
+                if (typeof item === 'string') {
+                    const fallback = DEFAULT_GUIDE_MESSAGES[index] || { title: `안내 ${index + 1}`, text: '' };
+                    return { title: fallback.title, text: item.trim() };
+                }
+                const fallback = DEFAULT_GUIDE_MESSAGES[index] || { title: `안내 ${index + 1}`, text: '' };
+                return {
+                    title: String(item?.title || fallback.title || `안내 ${index + 1}`).trim(),
+                    text: String(item?.text || '').trim()
+                };
+            }).filter(item => item.title || item.text);
+            return normalized.length ? normalized : cloneDefaultGuideMessages();
+        }
+        function hydrateGuideMessages() {
+            try {
+                const saved = localStorage.getItem(GUIDE_MESSAGES_STORAGE_KEY);
+                guideMessages = saved ? normalizeGuideMessages(JSON.parse(saved)) : cloneDefaultGuideMessages();
+            } catch (error) {
+                guideMessages = cloneDefaultGuideMessages();
+            }
+            renderGuideMessages();
+        }
+        function persistGuideMessages() {
+            try { localStorage.setItem(GUIDE_MESSAGES_STORAGE_KEY, JSON.stringify(guideMessages)); } catch (error) {}
+        }
+        function renderGuideMessages() {
+            const list = document.getElementById('receiptGuideList');
+            renderGuideInputs();
+            if (!list) return;
+            const items = normalizeGuideMessages(guideMessages).filter(item => item.text);
+            list.innerHTML = items.map(item => `<li><b>${escapeHtml(item.title)}:</b> ${escapeHtml(item.text)}</li>`).join('');
+        }
+        function renderGuideInputs() {
+            const list = document.getElementById('guideInputList');
+            if (!list) return;
+            const items = normalizeGuideMessages(guideMessages);
+            list.innerHTML = items.map((item, index) => `
+                <div class="guide-setting-row">
+                    <label class="block text-[11px] font-black text-slate-600 mb-1">항목 ${index + 1}</label>
+                    <input class="guide-title-input w-full mb-2 p-2 border border-slate-200 rounded-lg text-xs font-black text-slate-700 focus:outline-none focus:border-[#004094] bg-white" value="${escapeHtml(item.title)}" placeholder="예: 수업 취소">
+                    <textarea class="guide-text-input w-full p-3 border border-slate-200 rounded-xl text-sm leading-relaxed focus:outline-none focus:border-[#004094] resize-none bg-white" placeholder="안내 문구를 입력하세요.">${escapeHtml(item.text)}</textarea>
+                </div>
+            `).join('');
+        }
+        function readGuideInputs() {
+            const rows = Array.from(document.querySelectorAll('.guide-setting-row'));
+            const values = rows.map((row, index) => {
+                const fallback = DEFAULT_GUIDE_MESSAGES[index] || { title: `안내 ${index + 1}`, text: '' };
+                return {
+                    title: row.querySelector('.guide-title-input')?.value || fallback.title,
+                    text: row.querySelector('.guide-text-input')?.value || ''
+                };
+            });
+            return normalizeGuideMessages(values);
+        }
+        function resetGuideMessages() {
+            guideMessages = cloneDefaultGuideMessages();
+            persistGuideMessages();
+            renderGuideMessages();
+        }
+        function switchSettingsTab(tab) {
+            activeSettingsTab = tab === 'guides' ? 'guides' : 'notices';
+            document.getElementById('settingsPanelNotices')?.classList.toggle('hidden', activeSettingsTab !== 'notices');
+            document.getElementById('settingsPanelGuides')?.classList.toggle('hidden', activeSettingsTab !== 'guides');
+            document.getElementById('settingsTabNotices')?.classList.toggle('active', activeSettingsTab === 'notices');
+            document.getElementById('settingsTabGuides')?.classList.toggle('active', activeSettingsTab === 'guides');
+            const resetButton = document.getElementById('settingsResetButton');
+            if (resetButton) resetButton.textContent = activeSettingsTab === 'guides' ? '기본값' : '전체 비우기';
+            if (activeSettingsTab === 'guides') renderGuideInputs();
+            else renderNoticeInputs();
+        }
+        function resetCurrentSettingsTab() {
+            if (activeSettingsTab === 'guides') {
+                resetGuideMessages();
+                return;
+            }
+            clearAdText();
+        }
         function hydrateAdText() {
             try {
                 const saved = localStorage.getItem(AD_TEXT_STORAGE_KEY);
@@ -702,8 +813,10 @@
         function openAppSettings() {
             const modal = document.getElementById('appSettingsModal');
             renderNoticeInputs();
+            renderGuideInputs();
+            switchSettingsTab(activeSettingsTab);
             if (modal) modal.classList.remove('hidden');
-            setTimeout(() => document.querySelector('.notice-input')?.focus(), 0);
+            setTimeout(() => (activeSettingsTab === 'guides' ? document.querySelector('.guide-text-input') : document.querySelector('.notice-input'))?.focus(), 0);
         }
         function closeAppSettings() {
             const modal = document.getElementById('appSettingsModal');
@@ -711,8 +824,11 @@
         }
         function saveAppSettings() {
             adNotices = readNoticeInputs();
+            guideMessages = readGuideInputs();
             persistAdText();
+            persistGuideMessages();
             renderAdText();
+            renderGuideMessages();
             closeAppSettings();
         }
         function clearAdText() {
@@ -1882,10 +1998,11 @@
                 adjustment: parseInt(document.getElementById('adjustment').value, 10) || 0,
                 aiAdjustment: parseInt(document.getElementById('aiAdjustment')?.value, 10) || 0,
                 recordMemo: getCurrentRecordMemo(),
-                pricePresets: [...pricePresets],
-                adNotices: [...adNotices],
-                adText: adNotices.join('\n'),
-                excludedDates: Array.from(excludedDates).map(n => parseInt(n, 10)).filter(n => !isNaN(n)),
+                    pricePresets: [...pricePresets],
+                    adNotices: [...adNotices],
+                    adText: adNotices.join('\n'),
+                    guideMessages: normalizeGuideMessages(guideMessages),
+                    excludedDates: Array.from(excludedDates).map(n => parseInt(n, 10)).filter(n => !isNaN(n)),
                 autoRows: collectCoreRows('#autoList .auto-row', row => { const id = row.id.replace('arow-', ''); return { name: row.querySelector('.sub-name').value || '', rate: parseInt(row.querySelector('.sub-rate').value, 10) || 0, days: Array.from(row.querySelectorAll('.day-chk:checked')).map(c => parseInt(c.value, 10)), excludedDates: Array.from(autoRowExcludedDates[id] || []).map(n => parseInt(n, 10)).filter(n => !isNaN(n)) }; }),
                 selectRows: collectCoreRows('#selectList .select-row', row => { const id = row.id.replace('srow-', ''); return { name: row.querySelector('.sub-name').value || '', rate: parseInt(row.querySelector('.sub-rate').value, 10) || 0, dates: Array.from(selectRowDates[id] || []).map(n => parseInt(n, 10)) }; }),
                 manualRows: collectCoreRows('#manualList .manual-row', row => ({ name: row.querySelector('.sub-name').value || '', time: parseFloat(row.querySelector('.sub-time').value) || 0, count: parseFloat(row.querySelector('.sub-count').value) || 0, rate: parseInt(row.querySelector('.sub-rate').value, 10) || 0 })),
@@ -1917,10 +2034,15 @@
             }
             if (Array.isArray(data.adNotices) || typeof data.adText === 'string') {
                 adNotices = normalizeNoticeTexts(Array.isArray(data.adNotices) ? data.adNotices : data.adText);
-                persistAdText();
-                renderAdText();
-            }
-            excludedDates = new Set((data.excludedDates || []).map(n => parseInt(n, 10)).filter(n => !isNaN(n)));
+                    persistAdText();
+                    renderAdText();
+                }
+                if (Array.isArray(data.guideMessages)) {
+                    guideMessages = normalizeGuideMessages(data.guideMessages);
+                    persistGuideMessages();
+                    renderGuideMessages();
+                }
+                excludedDates = new Set((data.excludedDates || []).map(n => parseInt(n, 10)).filter(n => !isNaN(n)));
             rowCounter = 0;
             activeSelectRowId = null;
             activeTtRowIndex = null;
@@ -2100,10 +2222,11 @@
                 targetMonth: parseInt(document.getElementById('targetMonth').value) || (new Date().getMonth()+1),
                 adjustment: parseInt(document.getElementById('adjustment').value) || 0,
                 recordMemo: getCurrentRecordMemo(),
-                pricePresets: [...pricePresets],
-                adNotices: [...adNotices],
-                adText: adNotices.join('\n'),
-                excludedDates: Array.from(excludedDates),
+                    pricePresets: [...pricePresets],
+                    adNotices: [...adNotices],
+                    adText: adNotices.join('\n'),
+                    guideMessages: normalizeGuideMessages(guideMessages),
+                    excludedDates: Array.from(excludedDates),
                 autoRows: collectCoreRows('#autoList .auto-row', row => { const id = row.id.replace('arow-', ''); return { name: row.querySelector('.sub-name').value || '', rate: parseInt(row.querySelector('.sub-rate').value)||0, days: Array.from(row.querySelectorAll('.day-chk:checked')).map(c => parseInt(c.value)), excludedDates: Array.from(autoRowExcludedDates[id] || []) }; }),
                 selectRows: collectCoreRows('#selectList .select-row', row => { const id = row.id.replace('srow-',''); return { name: row.querySelector('.sub-name').value || '', rate: parseInt(row.querySelector('.sub-rate').value)||0, dates: Array.from(selectRowDates[id]||[]) }; }),
                 manualRows: collectCoreRows('#manualList .manual-row', row => ({ name: row.querySelector('.sub-name').value||'', time: parseFloat(row.querySelector('.sub-time').value)||0, count: parseFloat(row.querySelector('.sub-count').value)||0, rate: parseInt(row.querySelector('.sub-rate').value)||0 }))
@@ -2128,9 +2251,10 @@
                     document.getElementById('adjustment').value = d.adjustment || 0;
                     const memoInput = document.getElementById('recordMemoInput');
                     if (memoInput) memoInput.value = d.recordMemo || d.memo || '';
-                    if (Array.isArray(d.pricePresets)) { pricePresets = normalizePricePresets(d.pricePresets); persistPricePresets(); renderPricePresetPanel(); }
-                    if (Array.isArray(d.adNotices) || typeof d.adText === 'string') { adNotices = normalizeNoticeTexts(Array.isArray(d.adNotices) ? d.adNotices : d.adText); persistAdText(); renderAdText(); }
-                    excludedDates = new Set((d.excludedDates||[]).map(n=>parseInt(n)));
+                        if (Array.isArray(d.pricePresets)) { pricePresets = normalizePricePresets(d.pricePresets); persistPricePresets(); renderPricePresetPanel(); }
+                        if (Array.isArray(d.adNotices) || typeof d.adText === 'string') { adNotices = normalizeNoticeTexts(Array.isArray(d.adNotices) ? d.adNotices : d.adText); persistAdText(); renderAdText(); }
+                        if (Array.isArray(d.guideMessages)) { guideMessages = normalizeGuideMessages(d.guideMessages); persistGuideMessages(); renderGuideMessages(); }
+                        excludedDates = new Set((d.excludedDates||[]).map(n=>parseInt(n)));
                     document.getElementById('autoList').innerHTML=''; document.getElementById('selectList').innerHTML=''; document.getElementById('manualList').innerHTML='';
                     Object.keys(selectRowDates).forEach(k => delete selectRowDates[k]); Object.keys(autoRowExcludedDates).forEach(k => delete autoRowExcludedDates[k]); activeSelectRowId = null;
                     (d.autoRows||[]).forEach(r => { addAutoRow(r.name||''); const row = document.querySelector('#autoList .auto-row:last-child'); row.querySelector('.sub-rate').value = r.rate||''; (r.days||[]).forEach(day => { const c = row.querySelector(`.day-chk[value="${day}"]`); if(c) c.checked = true; }); const id = row.id.replace('arow-',''); autoRowExcludedDates[id] = new Set((r.excludedDates||[]).map(n=>parseInt(n)).filter(n=>!isNaN(n))); renderAutoRowDatePills(id); });
