@@ -121,7 +121,7 @@
         .grid-btn-del { color: #ef4444; font-weight: bold; cursor: pointer; text-align: center; font-size: 12px; }
         .grid-btn-del:hover { background-color: #fee2e2; }
         #workspaceTopBar { position: relative; z-index: 10; }
-        #topTabBarSlot { position: relative; padding-top: 44px; overflow: visible; }
+        #topTabBarSlot { position: relative; padding-top: 58px; overflow: visible; }
         #tabNavRow { display: flex; flex-wrap: wrap; gap: 0.6rem; align-items: center; }
         .top-tab-button { min-width: 92px; white-space: nowrap; }
         #tabHelpBubble {
@@ -130,7 +130,8 @@
             left: 0;
             transform: translateX(-50%);
             margin: 0;
-            max-width: 280px;
+            min-width: 220px;
+            max-width: min(420px, calc(100vw - 48px));
             padding: 8px 12px;
             border-radius: 14px;
             border: 1px solid #fde68a;
@@ -139,7 +140,7 @@
             font-size: 11px;
             font-weight: 700;
             line-height: 1.45;
-            white-space: nowrap;
+            white-space: normal;
             pointer-events: none;
             box-shadow: none;
             z-index: 20;
@@ -168,6 +169,13 @@
         .history-row-note { color: #94a3b8; font-size: 0.76rem; font-weight: 700; margin-top: 0.2rem; }
         .history-status-cancel { background-color: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
         .history-status-makeup { background-color: #fff7ed; color: #ea580c; border: 1px solid #fed7aa; }
+        .rate-preset-chip { display: inline-flex; align-items: center; justify-content: center; height: 24px; padding: 0 8px; border-radius: 9999px; border: 1px solid #dbeafe; background: #eff6ff; color: #004094; font-size: 10px; font-weight: 900; line-height: 1; white-space: nowrap; cursor: pointer; }
+        .rate-preset-chip:hover { background: #dbeafe; border-color: #93c5fd; }
+        .auto-date-pill { display: inline-flex; align-items: center; justify-content: center; min-width: 28px; height: 26px; padding: 0 8px; border-radius: 9999px; border: 1px solid #bfdbfe; background: #eff6ff; color: #004094; font-size: 11px; font-weight: 900; line-height: 1; cursor: pointer; }
+        .auto-date-pill:hover { background: #dbeafe; border-color: #004094; }
+        .auto-date-pill-off { background: #fff1f2; border-color: #fecdd3; color: #e11d48; text-decoration: line-through; }
+        .auto-date-pill-global { background: #f1f5f9; border-color: #cbd5e1; color: #94a3b8; text-decoration: line-through; cursor: default; }
+        .auto-date-pill-empty { color: #94a3b8; font-size: 10px; font-weight: 800; }
         .voucher-guide-box {
             margin-top: 0.9rem;
             margin-right: auto;
@@ -256,6 +264,20 @@
                     <button onclick="triggerLoadCoreData()" class="flex-1 py-2 bg-slate-600 text-white text-xs font-bold rounded hover:bg-slate-700">불러오기</button>
                 </div>
                 <input id="coreDataInput" type="file" accept=".json,application/json" class="hidden" onchange="loadCoreData(event)">
+            </div>
+            <div id="pricePresetArea" class="hidden bg-white p-3 rounded-xl border border-blue-100 shadow-sm">
+                <div class="flex items-center justify-between gap-3">
+                    <h3 class="text-xs font-bold text-[#004094]">💳 금액 선택지</h3>
+                    <button type="button" onclick="togglePricePresetSettings()" class="px-2.5 py-1 rounded bg-slate-100 text-slate-600 text-[10px] font-black hover:bg-slate-200">설정</button>
+                </div>
+                <div id="pricePresetSummary" class="mt-2 flex flex-wrap gap-1.5"></div>
+                <div id="pricePresetSettings" class="hidden mt-3 pt-3 border-t border-slate-100">
+                    <div id="pricePresetList" class="flex flex-wrap gap-1.5 mb-2"></div>
+                    <div class="flex gap-2">
+                        <input id="pricePresetInput" type="number" class="flex-1 p-2 border border-slate-200 rounded text-xs text-right font-bold" placeholder="금액 추가">
+                        <button type="button" onclick="addPricePreset()" class="px-3 py-2 rounded bg-[#004094] text-white text-xs font-black hover:bg-blue-800">추가</button>
+                    </div>
+                </div>
             </div>
             <div id="serverRecordArea" class="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
                 <div class="mb-3">
@@ -417,6 +439,7 @@
     <script>
         let currentTab = 'auto'; 
         let excludedDates = new Set(); 
+        const autoRowExcludedDates = {};
         let activeSelectRowId = null;  
         const selectRowDates = {};     
         let historyData = [];
@@ -433,7 +456,10 @@
         const SUPABASE_TABLE = 'fee_calc_records';
         const FEECALC_ACCESS_CODE_KEY = 'feecalc_access_code';
         const FEECALC_DEFAULT_ACCESS_CODE = 'banpo-fee-2026-secure';
-        const FEECALC_STORAGE_VERSION = 1;
+        const FEECALC_STORAGE_VERSION = 2;
+        const PRICE_PRESETS_STORAGE_KEY = 'feecalc_price_presets';
+        const DEFAULT_PRICE_PRESETS = [25000, 29167, 28125, 29000, 62500, 87500];
+        let pricePresets = [...DEFAULT_PRICE_PRESETS];
         const DEFAULT_PRICE_SUMMARY_HTML = `
             <div class="border-t-2 border-gray-200 pt-2 space-y-1 mb-4">
                 <div class="flex justify-between text-gray-600 font-bold text-sm"><span>수강료 소계</span><span id="dispSubtotal" class="text-gray-800">0원</span></div>
@@ -458,6 +484,7 @@
             const now = new Date();
             document.getElementById('targetYear').value = now.getFullYear();
             document.getElementById('targetMonth').value = now.getMonth() + 1;
+            hydratePricePresets();
             addAutoRow();
             initWorkspaceLayout();
             switchTab('auto'); 
@@ -476,6 +503,71 @@
             }
             if (info.teacher) badges += `<span class="badge-base teacher-badge text-optical-center">${escapeHtml(info.teacher)}</span>`;
             return badges;
+        }
+        function normalizePricePresets(list) {
+            const source = Array.isArray(list) ? list : DEFAULT_PRICE_PRESETS;
+            const unique = [];
+            source.forEach(value => {
+                const amount = parseInt(String(value).replace(/[^\d-]/g, ''), 10);
+                if (Number.isFinite(amount) && amount > 0 && !unique.includes(amount)) unique.push(amount);
+            });
+            return unique.length ? unique : [...DEFAULT_PRICE_PRESETS];
+        }
+        function hydratePricePresets() {
+            try {
+                const saved = localStorage.getItem(PRICE_PRESETS_STORAGE_KEY);
+                pricePresets = normalizePricePresets(saved ? JSON.parse(saved) : DEFAULT_PRICE_PRESETS);
+            } catch (error) {
+                pricePresets = [...DEFAULT_PRICE_PRESETS];
+            }
+            renderPricePresetPanel();
+        }
+        function persistPricePresets() {
+            try { localStorage.setItem(PRICE_PRESETS_STORAGE_KEY, JSON.stringify(pricePresets)); } catch (error) {}
+        }
+        function formatPresetAmount(amount) { return Number(amount || 0).toLocaleString(); }
+        function buildRatePresetButtons() {
+            return pricePresets.map(amount => `<button type="button" class="rate-preset-chip" onclick="applyRatePreset(this, ${amount}, event)">${formatPresetAmount(amount)}</button>`).join('');
+        }
+        function refreshRatePresetRows() {
+            document.querySelectorAll('.rate-preset-row').forEach(row => { row.innerHTML = buildRatePresetButtons(); });
+        }
+        function renderPricePresetPanel() {
+            const summary = document.getElementById('pricePresetSummary');
+            const list = document.getElementById('pricePresetList');
+            const summaryChips = pricePresets.map(amount => `<span class="inline-flex items-center rounded-full bg-blue-50 border border-blue-100 px-2.5 py-1 text-[10px] font-black text-[#004094]">${formatPresetAmount(amount)}</span>`).join('');
+            const chips = pricePresets.map((amount, idx) => `<span class="inline-flex items-center gap-1 rounded-full bg-blue-50 border border-blue-100 px-2.5 py-1 text-[10px] font-black text-[#004094]">${formatPresetAmount(amount)}<button type="button" class="text-slate-400 hover:text-red-500" onclick="removePricePreset(${idx})">×</button></span>`).join('');
+            if (summary) summary.innerHTML = summaryChips;
+            if (list) list.innerHTML = chips;
+            refreshRatePresetRows();
+        }
+        function togglePricePresetSettings() {
+            const settings = document.getElementById('pricePresetSettings');
+            if (settings) settings.classList.toggle('hidden');
+        }
+        function addPricePreset() {
+            const input = document.getElementById('pricePresetInput');
+            const amount = parseInt(input?.value || '', 10);
+            if (!Number.isFinite(amount) || amount <= 0) { alert('추가할 금액을 입력해주세요.'); return; }
+            pricePresets = normalizePricePresets([...pricePresets, amount]);
+            if (input) input.value = '';
+            persistPricePresets();
+            renderPricePresetPanel();
+        }
+        function removePricePreset(index) {
+            if (pricePresets.length <= 1) { alert('금액 선택지는 최소 1개 이상 필요합니다.'); return; }
+            pricePresets.splice(index, 1);
+            pricePresets = normalizePricePresets(pricePresets);
+            persistPricePresets();
+            renderPricePresetPanel();
+        }
+        function applyRatePreset(button, amount, event) {
+            if (event) event.stopPropagation();
+            const row = button.closest('.auto-row, .select-row, .manual-row');
+            const input = row?.querySelector('.sub-rate');
+            if (!input) return;
+            input.value = amount;
+            updateAll();
         }
         function togglePasteArea() { const el = document.getElementById('pasteAreaContainer'); if(el) el.classList.toggle('hidden'); }
 
@@ -724,9 +816,56 @@
         function pastePaymentFromClipboard() { if (!navigator.clipboard || !navigator.clipboard.readText) { alert('브라우저에서 클립보드 읽기를 지원하지 않습니다. 직접 붙여넣기 해주세요.'); return; } navigator.clipboard.readText().then(text => { document.getElementById('paymentPasteInput').value = text; }).catch(() => alert('클립보드 읽기에 실패했습니다. 직접 붙여넣기 해주세요.')); }
         function extractTeacherName(text) { const parenthesisMatch = text.match(/\(([^)]+)\)/); if (parenthesisMatch) return parenthesisMatch[1]; const parts = text.split('-'); for(let p of parts) if(p.trim().toUpperCase().endsWith('T')) return p.trim(); return ''; }
         function processSmartPaste() { const rawText = document.getElementById('smartPasteInput').value; if (!rawText.trim()) return; const lines = rawText.split('\n'); lines.forEach(line => { line = line.trim(); if (!line) return; let detectedTime = 0; let cleanName = line; const timeMatch = line.match(/-(\d+(\.\d+)?)h$/i) || line.match(/(\d+(\.\d+)?)h$/i); if (timeMatch) detectedTime = parseFloat(timeMatch[1]); if (currentTab === 'manual') addManualRow(cleanName, detectedTime); else if (currentTab === 'select') addSelectRow(cleanName); else addAutoRow(cleanName); }); document.getElementById('smartPasteInput').value = ''; alert(`${lines.length}개의 과목이 추가되었습니다.`); updateAll(); }
-        function resetAndUpdate() { excludedDates.clear(); for (const key in selectRowDates) { selectRowDates[key].clear(); } if(currentTab === 'history') updateHistoryView(); else if(currentTab === 'payment') updatePaymentView(); else if(currentTab === 'ai') renderAiResult(); else if(currentTab === 'timetable') updateTimetableView(); else updateDateContext(); }
+        function resetAndUpdate() { excludedDates.clear(); for (const key in selectRowDates) { selectRowDates[key].clear(); } for (const key in autoRowExcludedDates) { autoRowExcludedDates[key].clear(); } if(currentTab === 'history') updateHistoryView(); else if(currentTab === 'payment') updatePaymentView(); else if(currentTab === 'ai') renderAiResult(); else if(currentTab === 'timetable') updateTimetableView(); else updateDateContext(); }
         function updateDateContext() { if(currentTab === 'history' || currentTab === 'payment' || currentTab === 'ai' || currentTab === 'timetable') return; renderCalendar(); recalcAllAutoCounts(); updateAll(); }
-        function recalcRow(rowIdSuffix, type) { const year = parseInt(document.getElementById('targetYear').value); const month = parseInt(document.getElementById('targetMonth').value); const row = document.getElementById(type === 'auto' ? `arow-${rowIdSuffix}` : `srow-${rowIdSuffix}`); if (!row) return; let count = 0; if (type === 'auto') { const selectedDays = []; row.querySelectorAll('.day-chk:checked').forEach(c => selectedDays.push(parseInt(c.value))); const date = new Date(year, month - 1, 1); while (date.getMonth() === month - 1) { if (selectedDays.includes(date.getDay()) && !excludedDates.has(date.getDate())) count++; date.setDate(date.getDate() + 1); } } else { count = selectRowDates[rowIdSuffix] ? selectRowDates[rowIdSuffix].size : 0; } const cntInput = row.querySelector('.sub-count'); if(cntInput) cntInput.value = count; }
+        function getAutoRowExcludedDates(rowId) {
+            if (!autoRowExcludedDates[rowId]) autoRowExcludedDates[rowId] = new Set();
+            return autoRowExcludedDates[rowId];
+        }
+        function getAutoRowScheduledDates(rowId) {
+            const row = document.getElementById(`arow-${rowId}`);
+            if (!row) return [];
+            const year = parseInt(document.getElementById('targetYear').value);
+            const month = parseInt(document.getElementById('targetMonth').value);
+            const selectedDays = Array.from(row.querySelectorAll('.day-chk:checked')).map(c => parseInt(c.value, 10));
+            if (!selectedDays.length) return [];
+            const dates = [];
+            const date = new Date(year, month - 1, 1);
+            while (date.getMonth() === month - 1) {
+                if (selectedDays.includes(date.getDay())) dates.push(date.getDate());
+                date.setDate(date.getDate() + 1);
+            }
+            return dates;
+        }
+        function renderAutoRowDatePills(rowId) {
+            const holder = document.querySelector(`#arow-${rowId} .auto-date-pills`);
+            if (!holder) return;
+            const dates = getAutoRowScheduledDates(rowId);
+            const rowExcluded = getAutoRowExcludedDates(rowId);
+            if (!dates.length) {
+                holder.innerHTML = '<span class="auto-date-pill-empty">요일을 선택하면 날짜가 표시됩니다.</span>';
+                return;
+            }
+            holder.innerHTML = dates.map(day => {
+                const isGlobalExcluded = excludedDates.has(day);
+                const isRowExcluded = rowExcluded.has(day);
+                const cls = isGlobalExcluded ? 'auto-date-pill auto-date-pill-global' : (isRowExcluded ? 'auto-date-pill auto-date-pill-off' : 'auto-date-pill');
+                const title = isGlobalExcluded ? '전체 휴강 제외일' : (isRowExcluded ? '이 과목만 제외됨' : '클릭하면 이 과목에서만 제외');
+                const click = isGlobalExcluded ? 'event.stopPropagation()' : `toggleAutoRowDate('${rowId}', ${day}, event)`;
+                return `<button type="button" class="${cls}" title="${title}" onclick="${click}">${day}</button>`;
+            }).join('');
+        }
+        function renderAllAutoDatePills() {
+            document.querySelectorAll('#autoList .auto-row').forEach(row => renderAutoRowDatePills(row.id.replace('arow-', '')));
+        }
+        function toggleAutoRowDate(rowId, day, event) {
+            if (event) event.stopPropagation();
+            const rowExcluded = getAutoRowExcludedDates(rowId);
+            if (rowExcluded.has(day)) rowExcluded.delete(day); else rowExcluded.add(day);
+            recalcRow(rowId, 'auto');
+            updateAll();
+        }
+        function recalcRow(rowIdSuffix, type) { const year = parseInt(document.getElementById('targetYear').value); const month = parseInt(document.getElementById('targetMonth').value); const row = document.getElementById(type === 'auto' ? `arow-${rowIdSuffix}` : `srow-${rowIdSuffix}`); if (!row) return; let count = 0; if (type === 'auto') { const selectedDays = []; const rowExcluded = getAutoRowExcludedDates(rowIdSuffix); row.querySelectorAll('.day-chk:checked').forEach(c => selectedDays.push(parseInt(c.value))); const date = new Date(year, month - 1, 1); while (date.getMonth() === month - 1) { if (selectedDays.includes(date.getDay()) && !excludedDates.has(date.getDate()) && !rowExcluded.has(date.getDate())) count++; date.setDate(date.getDate() + 1); } renderAutoRowDatePills(rowIdSuffix); } else { count = selectRowDates[rowIdSuffix] ? selectRowDates[rowIdSuffix].size : 0; } const cntInput = row.querySelector('.sub-count'); if(cntInput) cntInput.value = count; }
         function recalcAllAutoCounts() { document.querySelectorAll('.auto-row').forEach(row => recalcRow(row.id.replace('arow-', ''), 'auto')); document.querySelectorAll('.select-row').forEach(row => recalcRow(row.id.replace('srow-', ''), 'select')); }
         function renderCommonReceiptCalendar(events) {
             const year = parseInt(document.getElementById('targetYear').value);
@@ -801,11 +940,13 @@
                         const timeDisplay = info.timeText ? `<span class="time-badge badge-base text-optical-center mr-1">${escapeHtml(info.timeText)}</span>` : '';
                         tbody.innerHTML += `<tr class="border-b border-dashed border-gray-200 last:border-0"><td class="py-2 pl-1 pr-2 align-top no-wrap-cell"><div class="flex items-center flex-wrap gap-y-1 mb-0.5"><span class="font-extrabold text-gray-800 text-base mr-1">${escapeHtml(info.mainName)}</span>${timeDisplay}${badges}</div><div class="text-xs text-gray-500 pl-0.5">${detailStr}</div></td><td class="py-2 pr-1 text-right font-mono text-base font-black text-gray-800 align-top pt-1.5">${rowTotal.toLocaleString()}원</td></tr>`;
                         if(currentTab === 'auto') {
+                            const rowId = row.id.replace('arow-', '');
                             const checkedBoxes = row.querySelectorAll('.day-chk:checked');
                             const activeDays = Array.from(checkedBoxes).map(cb => parseInt(cb.value));
+                            const rowExcluded = getAutoRowExcludedDates(rowId);
                             const date = new Date(year, month - 1, 1);
                             while (date.getMonth() === month - 1) {
-                                if (activeDays.includes(date.getDay()) && !excludedDates.has(date.getDate())) {
+                                if (activeDays.includes(date.getDay()) && !excludedDates.has(date.getDate()) && !rowExcluded.has(date.getDate())) {
                                     allEvents.push({day: date.getDate(), name: info.mainName, rawName: rawName, durationHours});
                                 }
                                 date.setDate(date.getDate() + 1);
@@ -827,8 +968,20 @@
             renderCommonReceiptCalendar(allEvents);
             updateInfoText(subtotal, adj);
         }
-        function addManualRow(nameVal = '', timeVal = '') { const id = generateSafeId(); const html = `<div class="bg-white p-4 border border-gray-200 rounded-lg shadow-sm relative group manual-row" id="mrow-${id}"><button onclick="removeEl('mrow-${id}')" class="absolute top-2 right-2 text-gray-300 hover:text-red-500">✖</button><div class="mb-3"><input type="text" class="sub-name w-full text-base font-bold border-b p-1 focus:outline-none focus:border-[#004094]" placeholder="과목명" value="${escapeHtml(nameVal)}" oninput="updateAll()"></div><div class="flex items-center gap-2 text-xs"><div class="flex-1"><label class="block text-gray-400 mb-0.5">시간</label><input type="number" class="sub-time w-full p-2 border rounded text-right" placeholder="0" value="${timeVal}" oninput="updateAll()"></div><span class="pt-4 text-gray-300">×</span><div class="flex-1"><label class="block text-gray-400 mb-0.5">횟수</label><input type="number" class="sub-count w-full p-2 border rounded text-right" placeholder="0" oninput="updateAll()"></div><span class="pt-4 text-gray-300">×</span><div class="flex-[1.5]"><label class="block text-gray-400 mb-0.5">금액</label><input type="number" class="sub-rate w-full p-2 border rounded text-right" placeholder="0" oninput="updateAll()"></div></div></div>`; document.getElementById('manualList').insertAdjacentHTML('beforeend', html); updateAll(); }
-        function addAutoRow(nameVal = '') { const id = generateSafeId(); const html = `<div class="bg-white p-4 border border-gray-200 rounded-lg shadow-sm relative group auto-row" id="arow-${id}"><button onclick="removeEl('arow-${id}')" class="absolute top-2 right-2 text-gray-300 hover:text-red-500">✖</button><div class="mb-3"><input type="text" class="sub-name w-full text-base font-bold border-b p-1 focus:outline-none focus:border-[#004094]" placeholder="예: 국어-개별정규-남종언T-3h" value="${escapeHtml(nameVal)}" oninput="updateAll()"></div><div class="flex justify-between mb-3 px-1">${['일','월','화','수','목','금','토'].map((d, i) => `<div><input type="checkbox" id="d-${id}-${i}" value="${i}" class="day-chk hidden" onchange="updateDateContext()"><label for="d-${id}-${i}" class="block w-8 h-8 rounded-full border border-gray-300 text-center leading-7 text-xs cursor-pointer select-none text-gray-400 hover:bg-white hover:border-[#004094] font-bold">${d}</label></div>`).join('')}</div><div class="flex gap-2 bg-gray-50 p-2 rounded items-center"><input type="text" id="cnt-${id}" class="sub-count w-8 text-sm text-center bg-transparent font-bold text-[#004094]" readonly value="0"><span class="text-xs font-bold text-gray-400">회 ×</span><input type="number" class="sub-rate w-24 text-sm p-1 border rounded text-right" placeholder="단가" oninput="updateAll()"></div></div>`; document.getElementById('autoList').insertAdjacentHTML('beforeend', html); updateAll(); }
+        function addManualRow(nameVal = '', timeVal = '') {
+            const id = generateSafeId();
+            const html = `<div class="bg-white p-4 border border-gray-200 rounded-lg shadow-sm relative group manual-row" id="mrow-${id}"><button onclick="removeEl('mrow-${id}')" class="absolute top-2 right-2 text-gray-300 hover:text-red-500">✖</button><div class="mb-3"><input type="text" class="sub-name w-full text-base font-bold border-b p-1 focus:outline-none focus:border-[#004094]" placeholder="과목명" value="${escapeHtml(nameVal)}" oninput="updateAll()"></div><div class="flex items-start gap-2 text-xs"><div class="flex-1"><label class="block text-gray-400 mb-0.5">시간</label><input type="number" class="sub-time w-full p-2 border rounded text-right" placeholder="0" value="${timeVal}" oninput="updateAll()"></div><span class="pt-7 text-gray-300">×</span><div class="flex-1"><label class="block text-gray-400 mb-0.5">횟수</label><input type="number" class="sub-count w-full p-2 border rounded text-right" placeholder="0" oninput="updateAll()"></div><span class="pt-7 text-gray-300">×</span><div class="flex-[1.7]"><label class="block text-gray-400 mb-0.5">금액</label><input type="number" class="sub-rate w-full p-2 border rounded text-right" placeholder="0" oninput="updateAll()"><div class="rate-preset-row mt-2 flex flex-wrap gap-1.5">${buildRatePresetButtons()}</div></div></div></div>`;
+            document.getElementById('manualList').insertAdjacentHTML('beforeend', html);
+            updateAll();
+        }
+        function addAutoRow(nameVal = '') {
+            const id = generateSafeId();
+            autoRowExcludedDates[id] = new Set();
+            const html = `<div class="bg-white p-4 border border-gray-200 rounded-lg shadow-sm relative group auto-row" id="arow-${id}"><button onclick="removeEl('arow-${id}')" class="absolute top-2 right-2 text-gray-300 hover:text-red-500">✖</button><div class="mb-3"><input type="text" class="sub-name w-full text-base font-bold border-b p-1 focus:outline-none focus:border-[#004094]" placeholder="예: 국어-개별정규-남종언T-3h" value="${escapeHtml(nameVal)}" oninput="updateAll()"></div><div class="flex justify-between mb-3 px-1">${['일','월','화','수','목','금','토'].map((d, i) => `<div><input type="checkbox" id="d-${id}-${i}" value="${i}" class="day-chk hidden" onchange="updateDateContext()"><label for="d-${id}-${i}" class="block w-8 h-8 rounded-full border border-gray-300 text-center leading-7 text-xs cursor-pointer select-none text-gray-400 hover:bg-white hover:border-[#004094] font-bold">${d}</label></div>`).join('')}</div><div class="bg-gray-50 p-2 rounded"><div class="flex gap-2 items-start"><input type="text" id="cnt-${id}" class="sub-count w-8 text-sm text-center bg-transparent font-bold text-[#004094] mt-1.5" readonly value="0"><span class="text-xs font-bold text-gray-400 mt-2">회 ×</span><div class="w-28 shrink-0"><input type="number" class="sub-rate w-full text-sm p-1 border rounded text-right" placeholder="단가" oninput="updateAll()"><div class="rate-preset-row mt-2 flex flex-wrap gap-1.5">${buildRatePresetButtons()}</div></div><div class="flex-1 min-w-0"><div class="text-[10px] font-black text-slate-400 mb-1">수업일 선택해제</div><div class="auto-date-pills flex flex-wrap gap-1.5"></div></div></div></div></div>`;
+            document.getElementById('autoList').insertAdjacentHTML('beforeend', html);
+            updateAll();
+            renderAutoRowDatePills(id);
+        }
         // (나머지 로직 processPaymentPaste, renderPaymentReceipt 등 V47/V53과 동일)
         function processPaymentPaste() {
             const raw = document.getElementById('paymentPasteInput').value;
@@ -1154,8 +1307,8 @@
 
         function setActiveTtRow(idx) { activeTtRowIndex = idx; document.querySelectorAll('#ttList > div').forEach((row, i) => row.classList.toggle('active-row', i === idx)); renderCalendar(); }
         function getTtManualDates(idx) { if (!ttData[idx]) return []; if (!Array.isArray(ttData[idx].manualDates)) ttData[idx].manualDates = []; return ttData[idx].manualDates; }
-        function addSelectRow(nameVal = '') { const id = generateSafeId(); selectRowDates[id] = new Set(); const html = `<div class="bg-white p-4 border border-gray-200 rounded-lg shadow-sm relative group select-row" id="srow-${id}" onclick="activeSelectRowId='${id}'; document.querySelectorAll('.select-row').forEach(r=>r.classList.remove('active-row')); this.classList.add('active-row'); renderCalendar();"><button onclick="event.stopPropagation(); removeEl('srow-${id}')" class="absolute top-2 right-2 text-gray-300 hover:text-red-500">✖</button><div class="mb-3"><input type="text" class="sub-name w-full text-base font-bold border-b p-1 focus:outline-none focus:border-[#004094]" placeholder="과목명" value="${escapeHtml(nameVal)}" oninput="updateAll()"></div><div class="flex gap-2 bg-gray-50 p-2 rounded items-center"><input type="text" class="sub-count w-8 text-sm text-center bg-transparent font-bold text-[#004094]" readonly value="0"><span class="text-xs font-bold text-gray-400">회 ×</span><input type="number" class="sub-rate w-24 text-sm p-1 border rounded text-right" placeholder="단가" oninput="updateAll()"></div></div>`; document.getElementById('selectList').insertAdjacentHTML('beforeend', html); if (!activeSelectRowId) activeSelectRowId = id; updateAll(); }
-        function removeEl(id) { const el = document.getElementById(id); if(!el) return; if (id.startsWith('srow-')) { const key = id.replace('srow-', ''); delete selectRowDates[key]; if (activeSelectRowId === key) activeSelectRowId = null; } el.remove(); updateAll(); renderCalendar(); }
+        function addSelectRow(nameVal = '') { const id = generateSafeId(); selectRowDates[id] = new Set(); const html = `<div class="bg-white p-4 border border-gray-200 rounded-lg shadow-sm relative group select-row" id="srow-${id}" onclick="activeSelectRowId='${id}'; document.querySelectorAll('.select-row').forEach(r=>r.classList.remove('active-row')); this.classList.add('active-row'); renderCalendar();"><button onclick="event.stopPropagation(); removeEl('srow-${id}')" class="absolute top-2 right-2 text-gray-300 hover:text-red-500">✖</button><div class="mb-3"><input type="text" class="sub-name w-full text-base font-bold border-b p-1 focus:outline-none focus:border-[#004094]" placeholder="과목명" value="${escapeHtml(nameVal)}" oninput="updateAll()"></div><div class="flex gap-2 bg-gray-50 p-2 rounded items-start"><input type="text" class="sub-count w-8 text-sm text-center bg-transparent font-bold text-[#004094] mt-1.5" readonly value="0"><span class="text-xs font-bold text-gray-400 mt-2">회 ×</span><div class="w-32"><input type="number" class="sub-rate w-full text-sm p-1 border rounded text-right" placeholder="단가" oninput="updateAll()"><div class="rate-preset-row mt-2 flex flex-wrap gap-1.5">${buildRatePresetButtons()}</div></div></div></div>`; document.getElementById('selectList').insertAdjacentHTML('beforeend', html); if (!activeSelectRowId) activeSelectRowId = id; updateAll(); }
+        function removeEl(id) { const el = document.getElementById(id); if(!el) return; if (id.startsWith('srow-')) { const key = id.replace('srow-', ''); delete selectRowDates[key]; if (activeSelectRowId === key) activeSelectRowId = null; } if (id.startsWith('arow-')) { const key = id.replace('arow-', ''); delete autoRowExcludedDates[key]; } el.remove(); updateAll(); renderCalendar(); }
         function updatePaymentView() { if (currentTab !== 'payment') return; const m = parseInt(document.getElementById('targetMonth').value) || 0; document.getElementById('calTitle').innerText = `${m}월 납부/차액`; document.getElementById('calBadge').innerText = '수정 모드'; document.getElementById('calendarGrid').innerHTML = ''; }
         async function downloadImage() {
             let previousWidth = '';
@@ -1477,8 +1630,9 @@
                 targetMonth: parseInt(document.getElementById('targetMonth').value, 10) || (new Date().getMonth() + 1),
                 adjustment: parseInt(document.getElementById('adjustment').value, 10) || 0,
                 aiAdjustment: parseInt(document.getElementById('aiAdjustment')?.value, 10) || 0,
+                pricePresets: [...pricePresets],
                 excludedDates: Array.from(excludedDates).map(n => parseInt(n, 10)).filter(n => !isNaN(n)),
-                autoRows: collectCoreRows('#autoList .auto-row', row => ({ name: row.querySelector('.sub-name').value || '', rate: parseInt(row.querySelector('.sub-rate').value, 10) || 0, days: Array.from(row.querySelectorAll('.day-chk:checked')).map(c => parseInt(c.value, 10)) })),
+                autoRows: collectCoreRows('#autoList .auto-row', row => { const id = row.id.replace('arow-', ''); return { name: row.querySelector('.sub-name').value || '', rate: parseInt(row.querySelector('.sub-rate').value, 10) || 0, days: Array.from(row.querySelectorAll('.day-chk:checked')).map(c => parseInt(c.value, 10)), excludedDates: Array.from(autoRowExcludedDates[id] || []).map(n => parseInt(n, 10)).filter(n => !isNaN(n)) }; }),
                 selectRows: collectCoreRows('#selectList .select-row', row => { const id = row.id.replace('srow-', ''); return { name: row.querySelector('.sub-name').value || '', rate: parseInt(row.querySelector('.sub-rate').value, 10) || 0, dates: Array.from(selectRowDates[id] || []).map(n => parseInt(n, 10)) }; }),
                 manualRows: collectCoreRows('#manualList .manual-row', row => ({ name: row.querySelector('.sub-name').value || '', time: parseFloat(row.querySelector('.sub-time').value) || 0, count: parseFloat(row.querySelector('.sub-count').value) || 0, rate: parseInt(row.querySelector('.sub-rate').value, 10) || 0 })),
                 ttRows: (ttData || []).map(item => ({ day: parseInt(item.day, 10) || 0, subject: item.subject || '', start: parseInt(item.start, 10) || 0, duration: parseInt(item.duration, 10) || 1, price: parseInt(item.price, 10) || 0, manualDates: Array.from(item.manualDates || []).map(n => parseInt(n, 10)).filter(n => !isNaN(n)) })),
@@ -1500,6 +1654,11 @@
             document.getElementById('targetMonth').value = data.targetMonth || (new Date().getMonth() + 1);
             document.getElementById('adjustment').value = data.adjustment || 0;
             if (document.getElementById('aiAdjustment')) document.getElementById('aiAdjustment').value = data.aiAdjustment || 0;
+            if (Array.isArray(data.pricePresets)) {
+                pricePresets = normalizePricePresets(data.pricePresets);
+                persistPricePresets();
+                renderPricePresetPanel();
+            }
             excludedDates = new Set((data.excludedDates || []).map(n => parseInt(n, 10)).filter(n => !isNaN(n)));
             rowCounter = 0;
             activeSelectRowId = null;
@@ -1510,6 +1669,7 @@
             document.getElementById('ttList').innerHTML = '';
             document.getElementById('paymentGridBody').innerHTML = '';
             Object.keys(selectRowDates).forEach(key => delete selectRowDates[key]);
+            Object.keys(autoRowExcludedDates).forEach(key => delete autoRowExcludedDates[key]);
 
             (data.autoRows || []).forEach(rowData => {
                 addAutoRow(rowData.name || '');
@@ -1519,6 +1679,9 @@
                     const checkbox = row.querySelector(`.day-chk[value="${day}"]`);
                     if (checkbox) checkbox.checked = true;
                 });
+                const rowId = row.id.replace('arow-', '');
+                autoRowExcludedDates[rowId] = new Set((rowData.excludedDates || []).map(n => parseInt(n, 10)).filter(n => !isNaN(n)));
+                renderAutoRowDatePills(rowId);
             });
             (data.selectRows || []).forEach(rowData => {
                 addSelectRow(rowData.name || '');
@@ -1668,8 +1831,9 @@
                 targetYear: parseInt(document.getElementById('targetYear').value) || new Date().getFullYear(),
                 targetMonth: parseInt(document.getElementById('targetMonth').value) || (new Date().getMonth()+1),
                 adjustment: parseInt(document.getElementById('adjustment').value) || 0,
+                pricePresets: [...pricePresets],
                 excludedDates: Array.from(excludedDates),
-                autoRows: collectCoreRows('#autoList .auto-row', row => ({ name: row.querySelector('.sub-name').value || '', rate: parseInt(row.querySelector('.sub-rate').value)||0, days: Array.from(row.querySelectorAll('.day-chk:checked')).map(c => parseInt(c.value)) })),
+                autoRows: collectCoreRows('#autoList .auto-row', row => { const id = row.id.replace('arow-', ''); return { name: row.querySelector('.sub-name').value || '', rate: parseInt(row.querySelector('.sub-rate').value)||0, days: Array.from(row.querySelectorAll('.day-chk:checked')).map(c => parseInt(c.value)), excludedDates: Array.from(autoRowExcludedDates[id] || []) }; }),
                 selectRows: collectCoreRows('#selectList .select-row', row => { const id = row.id.replace('srow-',''); return { name: row.querySelector('.sub-name').value || '', rate: parseInt(row.querySelector('.sub-rate').value)||0, dates: Array.from(selectRowDates[id]||[]) }; }),
                 manualRows: collectCoreRows('#manualList .manual-row', row => ({ name: row.querySelector('.sub-name').value||'', time: parseFloat(row.querySelector('.sub-time').value)||0, count: parseFloat(row.querySelector('.sub-count').value)||0, rate: parseInt(row.querySelector('.sub-rate').value)||0 }))
             };
@@ -1691,10 +1855,11 @@
                     document.getElementById('targetYear').value = d.targetYear || new Date().getFullYear();
                     document.getElementById('targetMonth').value = d.targetMonth || (new Date().getMonth()+1);
                     document.getElementById('adjustment').value = d.adjustment || 0;
+                    if (Array.isArray(d.pricePresets)) { pricePresets = normalizePricePresets(d.pricePresets); persistPricePresets(); renderPricePresetPanel(); }
                     excludedDates = new Set((d.excludedDates||[]).map(n=>parseInt(n)));
                     document.getElementById('autoList').innerHTML=''; document.getElementById('selectList').innerHTML=''; document.getElementById('manualList').innerHTML='';
-                    Object.keys(selectRowDates).forEach(k => delete selectRowDates[k]); activeSelectRowId = null;
-                    (d.autoRows||[]).forEach(r => { addAutoRow(r.name||''); const row = document.querySelector('#autoList .auto-row:last-child'); row.querySelector('.sub-rate').value = r.rate||''; (r.days||[]).forEach(day => { const c = row.querySelector(`.day-chk[value="${day}"]`); if(c) c.checked = true; }); });
+                    Object.keys(selectRowDates).forEach(k => delete selectRowDates[k]); Object.keys(autoRowExcludedDates).forEach(k => delete autoRowExcludedDates[k]); activeSelectRowId = null;
+                    (d.autoRows||[]).forEach(r => { addAutoRow(r.name||''); const row = document.querySelector('#autoList .auto-row:last-child'); row.querySelector('.sub-rate').value = r.rate||''; (r.days||[]).forEach(day => { const c = row.querySelector(`.day-chk[value="${day}"]`); if(c) c.checked = true; }); const id = row.id.replace('arow-',''); autoRowExcludedDates[id] = new Set((r.excludedDates||[]).map(n=>parseInt(n)).filter(n=>!isNaN(n))); renderAutoRowDatePills(id); });
                     (d.selectRows||[]).forEach(r => { addSelectRow(r.name||''); const row = document.querySelector('#selectList .select-row:last-child'); const id = row.id.replace('srow-',''); row.querySelector('.sub-rate').value = r.rate||''; selectRowDates[id] = new Set((r.dates||[]).map(n=>parseInt(n))); });
                     (d.manualRows||[]).forEach(r => { addManualRow(r.name||'', r.time||''); const row = document.querySelector('#manualList .manual-row:last-child'); row.querySelector('.sub-count').value = r.count||''; row.querySelector('.sub-rate').value = r.rate||''; });
                     switchTab(currentTab);
@@ -1719,7 +1884,13 @@
             el.innerText = map[tab] || '탭 기능 안내';
             positionTabHelpBubble(tab);
         }
-        function updateCoreDataArea(tab){ const area = document.getElementById('coreDataArea'); if(area) area.classList.toggle('hidden', !['auto','select','manual'].includes(tab)); }
+        function updateCoreDataArea(tab){
+            const area = document.getElementById('coreDataArea');
+            const priceArea = document.getElementById('pricePresetArea');
+            const visible = ['auto','select','manual'].includes(tab);
+            if(area) area.classList.toggle('hidden', !visible);
+            if(priceArea) priceArea.classList.toggle('hidden', !visible);
+        }
         const __origSwitchTab = switchTab;
         switchTab = function(tab){ __origSwitchTab(tab); showTabHelp(tab); updateCoreDataArea(tab); };
     </script>
