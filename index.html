@@ -846,6 +846,38 @@
             const numeric = parseFloat(String(value).replace(/[^\d.]/g, ''));
             return Number.isFinite(numeric) ? numeric : 0;
         }
+        function getSubjectSortMeta(rawName, fallbackTime = 0, index = 0) {
+            const info = parseSubjectInfo(rawName || '');
+            const subject = String(info.mainName || '').trim();
+            const parsedTime = parseDurationHours(info.timeText);
+            const duration = parsedTime || parseDurationHours(fallbackTime);
+            return {
+                subject,
+                subjectKey: subject.replace(/\s+/g, ''),
+                duration,
+                isEmpty: subject ? 0 : 1,
+                index
+            };
+        }
+        function compareSubjectTimeMeta(a, b) {
+            if (a.isEmpty !== b.isEmpty) return a.isEmpty - b.isEmpty;
+            const subjectCompare = a.subjectKey.localeCompare(b.subjectKey, 'ko-KR', { numeric: true, sensitivity: 'base' });
+            if (subjectCompare !== 0) return subjectCompare;
+            if (a.duration !== b.duration) return a.duration - b.duration;
+            return a.index - b.index;
+        }
+        function sortAutoRowsBySubjectTime() {
+            const list = document.getElementById('autoList');
+            if (!list) return;
+            const rows = Array.from(list.querySelectorAll('.auto-row'));
+            rows
+                .map((row, index) => ({
+                    row,
+                    meta: getSubjectSortMeta(row.querySelector('.sub-name')?.value || '', 0, index)
+                }))
+                .sort((a, b) => compareSubjectTimeMeta(a.meta, b.meta))
+                .forEach(item => list.appendChild(item.row));
+        }
         function formatCalendarHourBadge(hours) {
             const numeric = parseDurationHours(hours);
             if (!numeric) return '';
@@ -1175,13 +1207,15 @@
                 adjEl.innerText = (adj > 0 ? '+' : '') + adj.toLocaleString() + '원';
                 adjEl.className = adj === 0 ? "text-gray-300 font-bold" : (adj > 0 ? "text-red-500 font-bold" : "text-[#004094] font-bold");
             }
+            if (currentTab === 'auto') sortAutoRowsBySubjectTime();
             const tbody = document.getElementById('receiptBody');
             tbody.innerHTML = '';
             let subtotal = 0;
             const allEvents = [];
+            const receiptRows = [];
             try {
                 const selector = currentTab === 'auto' ? '#autoList .auto-row' : (currentTab === 'select' ? '#selectList .select-row' : '#manualList .manual-row');
-                document.querySelectorAll(selector).forEach(row => {
+                document.querySelectorAll(selector).forEach((row, rowIndex) => {
                     const rawName = row.querySelector('.sub-name').value;
                     const rate = parseFloat(row.querySelector('.sub-rate').value) || 0;
                     let count = parseFloat(row.querySelector('.sub-count').value) || 0;
@@ -1205,7 +1239,10 @@
                         if (manualTime) info.timeText = manualTime;
                         const badges = buildSubjectBadges(info);
                         const timeDisplay = info.timeText ? `<span class="time-badge badge-base text-optical-center mr-1">${escapeHtml(info.timeText)}</span>` : '';
-                        tbody.innerHTML += `<tr class="border-b border-dashed border-gray-200 last:border-0"><td class="py-2 pl-1 pr-2 align-top no-wrap-cell"><div class="flex items-center flex-wrap gap-y-1 mb-0.5"><span class="font-extrabold text-gray-800 text-base mr-1">${escapeHtml(info.mainName)}</span>${timeDisplay}${badges}</div><div class="text-xs text-gray-500 pl-0.5">${detailStr}</div></td><td class="py-2 pr-1 text-right font-mono text-base font-black text-gray-800 align-top pt-1.5">${rowTotal.toLocaleString()}원</td></tr>`;
+                        receiptRows.push({
+                            sortMeta: getSubjectSortMeta(rawName, durationHours, rowIndex),
+                            html: `<tr class="border-b border-dashed border-gray-200 last:border-0"><td class="py-2 pl-1 pr-2 align-top no-wrap-cell"><div class="flex items-center flex-wrap gap-y-1 mb-0.5"><span class="font-extrabold text-gray-800 text-base mr-1">${escapeHtml(info.mainName)}</span>${timeDisplay}${badges}</div><div class="text-xs text-gray-500 pl-0.5">${detailStr}</div></td><td class="py-2 pr-1 text-right font-mono text-base font-black text-gray-800 align-top pt-1.5">${rowTotal.toLocaleString()}원</td></tr>`
+                        });
                         if(currentTab === 'auto') {
                             const rowId = row.id.replace('arow-', '');
                             const checkedBoxes = row.querySelectorAll('.day-chk:checked');
@@ -1229,6 +1266,10 @@
             } catch (e) {
                 console.error("Row Calc Error", e);
             }
+            tbody.innerHTML = receiptRows
+                .sort((a, b) => compareSubjectTimeMeta(a.sortMeta, b.sortMeta))
+                .map(item => item.html)
+                .join('');
             if (isNaN(subtotal)) subtotal = 0;
             document.getElementById('dispSubtotal').innerText = subtotal.toLocaleString() + '원';
             document.getElementById('dispTotal').innerText = (subtotal + adj).toLocaleString() + '원';
