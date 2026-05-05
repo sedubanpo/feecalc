@@ -344,7 +344,25 @@
                 </div>
                 <div class="editor-body p-4 bg-gray-50 h-[540px] overflow-y-auto custom-scroll">
                     <div id="tab-auto" class="hidden"><div id="autoList" class="space-y-3"></div><button onclick="addAutoRow()" class="mt-4 w-full py-3 border-2 border-dashed border-gray-300 text-gray-400 text-xs font-bold rounded hover:border-[#004094] hover:text-[#004094]">+ 과목 추가</button></div>
-                    <div id="tab-select" class="hidden"><div id="selectList" class="space-y-3"></div><button onclick="addSelectRow()" class="mt-4 w-full py-3 border-2 border-dashed border-gray-300 text-gray-400 text-xs font-bold rounded hover:border-[#004094] hover:text-[#004094]">+ 과목 추가</button></div>
+                    <div id="tab-select" class="hidden">
+                        <div class="mb-3 bg-white p-3 rounded-xl border border-blue-100 shadow-sm">
+                            <div class="flex items-center justify-between gap-3 mb-2">
+                                <h4 class="text-xs font-black text-[#004094]">요일고정 반명 가져오기</h4>
+                                <button type="button" onclick="importAutoRowsToSelect()" class="px-3 py-1.5 rounded-lg bg-[#004094] text-white text-[11px] font-black hover:bg-blue-800">가져오기</button>
+                            </div>
+                            <div class="grid grid-cols-2 gap-2">
+                                <label class="cursor-pointer">
+                                    <input type="radio" name="autoImportRateMode" value="perClass" class="peer hidden" checked>
+                                    <span class="block rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-center text-[11px] font-black text-[#004094] peer-checked:bg-[#004094] peer-checked:text-white">회당</span>
+                                </label>
+                                <label class="cursor-pointer">
+                                    <input type="radio" name="autoImportRateMode" value="perHour" class="peer hidden">
+                                    <span class="block rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-center text-[11px] font-black text-[#004094] peer-checked:bg-[#004094] peer-checked:text-white">시간당</span>
+                                </label>
+                            </div>
+                        </div>
+                        <div id="selectList" class="space-y-3"></div><button onclick="addSelectRow()" class="mt-4 w-full py-3 border-2 border-dashed border-gray-300 text-gray-400 text-xs font-bold rounded hover:border-[#004094] hover:text-[#004094]">+ 과목 추가</button>
+                    </div>
                     <div id="tab-manual" class="hidden"><div id="manualList" class="space-y-3"></div><button onclick="addManualRow()" class="mt-4 w-full py-3 border-2 border-dashed border-gray-300 text-gray-400 text-xs font-bold rounded hover:border-[#004094] hover:text-[#004094]">+ 과목 추가</button></div>
                     
                     <div id="tab-timetable" class="hidden">
@@ -1300,6 +1318,46 @@
             document.getElementById('autoList').insertAdjacentHTML('beforeend', html);
             updateAll();
             renderAutoRowDatePills(id);
+        }
+        function collectAutoRowsForSelectImport() {
+            return Array.from(document.querySelectorAll('#autoList .auto-row')).map((row, index) => {
+                const name = row.querySelector('.sub-name')?.value || '';
+                const rate = parseInt(row.querySelector('.sub-rate')?.value, 10) || 0;
+                const duration = parseDurationHours(parseSubjectInfo(name).timeText);
+                return { name, rate, duration, sortMeta: getSubjectSortMeta(name, duration, index) };
+            }).filter(item => item.name.trim() || item.rate > 0);
+        }
+        function importAutoRowsToSelect() {
+            const sourceRows = collectAutoRowsForSelectImport().sort((a, b) => compareSubjectTimeMeta(a.sortMeta, b.sortMeta));
+            if (!sourceRows.length) {
+                alert('요일고정에 가져올 반명이나 수강료가 없습니다.');
+                return;
+            }
+            const existingRows = document.querySelectorAll('#selectList .select-row');
+            if (existingRows.length && window.confirm('선택형에 이미 과목이 있습니다. 기존 선택형 목록을 비우고 가져올까요?')) {
+                document.getElementById('selectList').innerHTML = '';
+                Object.keys(selectRowDates).forEach(key => delete selectRowDates[key]);
+                activeSelectRowId = null;
+            }
+            const mode = document.querySelector('input[name="autoImportRateMode"]:checked')?.value || 'perClass';
+            let missingTimeCount = 0;
+            sourceRows.forEach(item => {
+                addSelectRow(item.name);
+                const row = document.querySelector('#selectList .select-row:last-child');
+                const rateInput = row?.querySelector('.sub-rate');
+                if (!rateInput) return;
+                let importedRate = item.rate;
+                if (mode === 'perHour') {
+                    if (item.duration) importedRate = Math.round(item.rate * item.duration);
+                    else missingTimeCount++;
+                }
+                rateInput.value = importedRate || '';
+            });
+            document.querySelectorAll('.select-row').forEach(row => row.classList.remove('active-row'));
+            if (activeSelectRowId) document.getElementById(`srow-${activeSelectRowId}`)?.classList.add('active-row');
+            updateAll();
+            renderCalendar();
+            if (missingTimeCount) alert(`${missingTimeCount}개 반명은 시간 정보가 없어 입력된 수강료를 그대로 가져왔습니다.`);
         }
         // (나머지 로직 processPaymentPaste, renderPaymentReceipt 등 V47/V53과 동일)
         function processPaymentPaste() {
