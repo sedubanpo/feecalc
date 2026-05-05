@@ -878,6 +878,17 @@
                 .sort((a, b) => compareSubjectTimeMeta(a.meta, b.meta))
                 .forEach(item => list.appendChild(item.row));
         }
+        function isEditingAutoRowInput() {
+            const active = document.activeElement;
+            return !!(active && active.closest?.('#autoList') && active.matches?.('input.sub-name, input.sub-rate'));
+        }
+        function handleAutoRowEditComplete() {
+            setTimeout(() => {
+                if (currentTab !== 'auto' || isEditingAutoRowInput()) return;
+                sortAutoRowsBySubjectTime();
+                updateAll({ skipAutoSort: true });
+            }, 0);
+        }
         function formatCalendarHourBadge(hours) {
             const numeric = parseDurationHours(hours);
             if (!numeric) return '';
@@ -1193,7 +1204,7 @@
         function processTimetable() { const raw = document.getElementById('ttPasteInput').value; const lines = raw.split('\n'); const dayMap = {}; const splitCols = (line) => line.includes('\t') ? line.split('\t') : line.trim().split(/\s{2,}/); lines.forEach(line => { if(!line.trim()) return; const cols = splitCols(line); const timeStr = (cols[0] || '').trim(); const m = timeStr.match(/^(\d{1,2})\s*[-~]\s*(\d{1,2})시$/); if (!m) return; const startHour = parseInt(m[1], 10); for(let i=1; i<=7 && i<cols.length; i++) { const subject = (cols[i] || '').trim(); if(subject) { const dayIdx = (i === 7) ? 0 : i; if(!dayMap[dayIdx]) dayMap[dayIdx] = []; dayMap[dayIdx].push({ subject, start: startHour }); } } }); ttData = []; for (const [dayIdx, classes] of Object.entries(dayMap)) { classes.sort((a,b) => a.start - b.start); let current = null; classes.forEach(cls => { if (current && current.subject === cls.subject && current.start + current.duration === cls.start) { current.duration++; } else { if(current) ttData.push(current); current = { day: parseInt(dayIdx), subject: cls.subject, start: cls.start, duration: 1 }; } }); if(current) ttData.push(current); } renderTimetableResult(); }
         function renderTtCalendar(events) { const year = parseInt(document.getElementById('targetYear').value); const month = parseInt(document.getElementById('targetMonth').value); document.getElementById('calTitleReceipt').innerText = `${month}월 수업 일정`; const calDiv = document.getElementById('receiptMiniCalGrid'); calDiv.innerHTML = ''; const firstDay = new Date(year, month - 1, 1).getDay(); const lastDate = new Date(year, month, 0).getDate(); for(let i=0; i<firstDay; i++) calDiv.innerHTML += `<div class="receipt-cal-cell bg-gray-50/50"></div>`; for(let i=1; i<=lastDate; i++) { const dayEvents = events.filter(e => e.day === i); let html = `<div class="receipt-cal-cell"><div class="rc-date ${dayEvents.length > 0 ? 'rc-active-date' : ''}">${i}</div>`; dayEvents.forEach(e => { html += renderCalendarEventPill(e, e.isTt ? 'tt-day' : ''); }); html += `</div>`; calDiv.innerHTML += html; } }
 
-        function updateAll() {
+        function updateAll(options = {}) {
             if (currentTab === 'history' || currentTab === 'payment' || currentTab === 'ai' || currentTab === 'timetable') return;
             const name = document.getElementById('studentName').value || '학생명';
             const year = document.getElementById('targetYear').value;
@@ -1207,7 +1218,7 @@
                 adjEl.innerText = (adj > 0 ? '+' : '') + adj.toLocaleString() + '원';
                 adjEl.className = adj === 0 ? "text-gray-300 font-bold" : (adj > 0 ? "text-red-500 font-bold" : "text-[#004094] font-bold");
             }
-            if (currentTab === 'auto') sortAutoRowsBySubjectTime();
+            if (currentTab === 'auto' && !options.skipAutoSort && !isEditingAutoRowInput()) sortAutoRowsBySubjectTime();
             const tbody = document.getElementById('receiptBody');
             tbody.innerHTML = '';
             let subtotal = 0;
@@ -1285,7 +1296,7 @@
         function addAutoRow(nameVal = '') {
             const id = generateSafeId();
             autoRowExcludedDates[id] = new Set();
-            const html = `<div class="bg-white p-4 border border-gray-200 rounded-lg shadow-sm relative group auto-row" id="arow-${id}"><button onclick="removeEl('arow-${id}')" class="absolute top-2 right-2 text-gray-300 hover:text-red-500">✖</button><div class="mb-3"><input type="text" class="sub-name w-full text-base font-bold border-b p-1 focus:outline-none focus:border-[#004094]" placeholder="예: 국어-개별정규-남종언T-3h" value="${escapeHtml(nameVal)}" oninput="updateAll()"></div><div class="flex justify-between mb-3 px-1">${['일','월','화','수','목','금','토'].map((d, i) => `<div><input type="checkbox" id="d-${id}-${i}" value="${i}" class="day-chk hidden" onchange="updateDateContext()"><label for="d-${id}-${i}" class="block w-8 h-8 rounded-full border border-gray-300 text-center leading-7 text-xs cursor-pointer select-none text-gray-400 hover:bg-white hover:border-[#004094] font-bold">${d}</label></div>`).join('')}</div><div class="bg-gray-50 p-2 rounded"><div class="flex gap-2 items-start"><input type="text" id="cnt-${id}" class="sub-count w-8 text-sm text-center bg-transparent font-bold text-[#004094] mt-1.5" readonly value="0"><span class="text-xs font-bold text-gray-400 mt-2">회 ×</span><div class="w-28 shrink-0"><input type="number" class="sub-rate w-full text-sm p-1 border rounded text-right" placeholder="단가" oninput="updateAll()"><div class="rate-preset-row mt-2 flex flex-wrap gap-1.5">${buildRatePresetButtons()}</div></div><div class="flex-1 min-w-0"><div class="text-[10px] font-black text-slate-400 mb-1">수업일 선택해제</div><div class="auto-date-pills flex flex-wrap gap-1.5"></div></div></div></div></div>`;
+            const html = `<div class="bg-white p-4 border border-gray-200 rounded-lg shadow-sm relative group auto-row" id="arow-${id}"><button onclick="removeEl('arow-${id}')" class="absolute top-2 right-2 text-gray-300 hover:text-red-500">✖</button><div class="mb-3"><input type="text" class="sub-name w-full text-base font-bold border-b p-1 focus:outline-none focus:border-[#004094]" placeholder="예: 국어-개별정규-남종언T-3h" value="${escapeHtml(nameVal)}" oninput="updateAll()" onblur="handleAutoRowEditComplete()"></div><div class="flex justify-between mb-3 px-1">${['일','월','화','수','목','금','토'].map((d, i) => `<div><input type="checkbox" id="d-${id}-${i}" value="${i}" class="day-chk hidden" onchange="updateDateContext()"><label for="d-${id}-${i}" class="block w-8 h-8 rounded-full border border-gray-300 text-center leading-7 text-xs cursor-pointer select-none text-gray-400 hover:bg-white hover:border-[#004094] font-bold">${d}</label></div>`).join('')}</div><div class="bg-gray-50 p-2 rounded"><div class="flex gap-2 items-start"><input type="text" id="cnt-${id}" class="sub-count w-8 text-sm text-center bg-transparent font-bold text-[#004094] mt-1.5" readonly value="0"><span class="text-xs font-bold text-gray-400 mt-2">회 ×</span><div class="w-28 shrink-0"><input type="number" class="sub-rate w-full text-sm p-1 border rounded text-right" placeholder="단가" oninput="updateAll()" onblur="handleAutoRowEditComplete()"><div class="rate-preset-row mt-2 flex flex-wrap gap-1.5">${buildRatePresetButtons()}</div></div><div class="flex-1 min-w-0"><div class="text-[10px] font-black text-slate-400 mb-1">수업일 선택해제</div><div class="auto-date-pills flex flex-wrap gap-1.5"></div></div></div></div></div>`;
             document.getElementById('autoList').insertAdjacentHTML('beforeend', html);
             updateAll();
             renderAutoRowDatePills(id);
