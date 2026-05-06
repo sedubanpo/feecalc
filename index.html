@@ -242,7 +242,13 @@
         
             <div id="controlColumn" class="xl:col-span-4 space-y-4">
             <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-200">
-                <h2 class="text-lg font-bold mb-4 text-gray-800 flex items-center gap-2">📅 기본 설정</h2>
+                <div class="flex items-center justify-between gap-3 mb-4">
+                    <h2 class="text-lg font-bold text-gray-800 flex items-center gap-2">📅 기본 설정</h2>
+                    <div class="flex gap-2 shrink-0">
+                        <button type="button" onclick="resetCalculatorForNewStart()" class="px-3 py-2 rounded-lg bg-slate-100 text-slate-600 text-[11px] font-black hover:bg-slate-200">새 계산</button>
+                        <button type="button" onclick="prepareNextMonthCalculation()" class="px-3 py-2 rounded-lg bg-[#004094] text-white text-[11px] font-black hover:bg-blue-800">다음달 계산</button>
+                    </div>
+                </div>
                 <div class="space-y-3">
                     <div>
                         <label class="block text-xs font-bold text-gray-500 mb-1">학생 이름</label>
@@ -647,6 +653,51 @@
         function persistPricePresets() {
             try { localStorage.setItem(PRICE_PRESETS_STORAGE_KEY, JSON.stringify(pricePresets)); } catch (error) {}
         }
+        function applySharedSettingsFromPayload(payload = {}) {
+            let changed = false;
+            if (Array.isArray(payload.pricePresets) && payload.pricePresets.length) {
+                pricePresets = normalizePricePresets(payload.pricePresets);
+                persistPricePresets();
+                renderPricePresetPanel();
+                changed = true;
+            }
+            return changed;
+        }
+        function collectSharedAppSettings() {
+            return {
+                pricePresets: [...pricePresets],
+                updatedAt: new Date().toISOString()
+            };
+        }
+        async function saveSharedAppSettingsToServer() {
+            if (!isServerConfigured()) return false;
+            try {
+                const client = getSupabaseClient();
+                const accessCode = requireServerAccessCode();
+                const { error } = await client.rpc('feecalc_save_app_settings', {
+                    p_access_code: accessCode,
+                    p_settings: collectSharedAppSettings()
+                });
+                if (error) throw error;
+                return true;
+            } catch (error) {
+                return false;
+            }
+        }
+        async function hydrateSharedSettingsFromServerConfig() {
+            if (!isServerConfigured()) return false;
+            try {
+                const client = getSupabaseClient();
+                const accessCode = requireServerAccessCode();
+                const { data, error } = await client.rpc('feecalc_get_app_settings', {
+                    p_access_code: accessCode
+                });
+                if (error) throw error;
+                return applySharedSettingsFromPayload(data || {});
+            } catch (error) {
+                return false;
+            }
+        }
         function formatPresetAmount(amount) { return Number(amount || 0).toLocaleString(); }
         function buildRatePresetButtons() {
             return pricePresets.map(amount => `<button type="button" class="rate-preset-chip" onclick="applyRatePreset(this, ${amount}, event)">${formatPresetAmount(amount)}</button>`).join('');
@@ -675,6 +726,7 @@
             if (input) input.value = '';
             persistPricePresets();
             renderPricePresetPanel();
+            saveSharedAppSettingsToServer();
         }
         function removePricePreset(index) {
             if (pricePresets.length <= 1) { alert('금액 선택지는 최소 1개 이상 필요합니다.'); return; }
@@ -682,6 +734,7 @@
             pricePresets = normalizePricePresets(pricePresets);
             persistPricePresets();
             renderPricePresetPanel();
+            saveSharedAppSettingsToServer();
         }
         function applyRatePreset(button, amount, event) {
             if (event) event.stopPropagation();
@@ -1171,6 +1224,87 @@
         function processSmartPaste() { const rawText = document.getElementById('smartPasteInput').value; if (!rawText.trim()) return; const lines = rawText.split('\n'); lines.forEach(line => { line = line.trim(); if (!line) return; let detectedTime = 0; let cleanName = line; const timeMatch = line.match(/-(\d+(\.\d+)?)h$/i) || line.match(/(\d+(\.\d+)?)h$/i); if (timeMatch) detectedTime = parseFloat(timeMatch[1]); if (currentTab === 'manual') addManualRow(cleanName, detectedTime); else if (currentTab === 'select') addSelectRow(cleanName); else addAutoRow(cleanName); }); document.getElementById('smartPasteInput').value = ''; alert(`${lines.length}개의 과목이 추가되었습니다.`); updateAll(); }
         function resetAndUpdate() { excludedDates.clear(); for (const key in selectRowDates) { selectRowDates[key].clear(); } for (const key in autoRowExcludedDates) { autoRowExcludedDates[key].clear(); } if(currentTab === 'history') updateHistoryView(); else if(currentTab === 'payment') updatePaymentView(); else if(currentTab === 'ai') renderAiResult(); else if(currentTab === 'guide') renderGuideEstimate(); else if(currentTab === 'timetable') updateTimetableView(); else updateDateContext(); }
         function updateDateContext() { if(currentTab === 'history' || currentTab === 'payment' || currentTab === 'ai' || currentTab === 'guide' || currentTab === 'timetable') return; renderCalendar(); recalcAllAutoCounts(); updateAll(); }
+        function setTargetToCurrentMonth() {
+            const now = new Date();
+            document.getElementById('targetYear').value = now.getFullYear();
+            document.getElementById('targetMonth').value = now.getMonth() + 1;
+        }
+        function advanceTargetMonth() {
+            let year = parseInt(document.getElementById('targetYear').value, 10) || new Date().getFullYear();
+            let month = parseInt(document.getElementById('targetMonth').value, 10) || (new Date().getMonth() + 1);
+            month += 1;
+            if (month > 12) {
+                month = 1;
+                year += 1;
+            }
+            document.getElementById('targetYear').value = year;
+            document.getElementById('targetMonth').value = month;
+        }
+        function clearMonthlyState() {
+            excludedDates.clear();
+            Object.keys(autoRowExcludedDates).forEach(key => { autoRowExcludedDates[key] = new Set(); });
+            Object.keys(selectRowDates).forEach(key => { selectRowDates[key] = new Set(); });
+            ttData.forEach(item => { item.manualDates = []; });
+            aiData = [];
+            historyData = [];
+            paymentData = [];
+            currentLoadedRecordId = '';
+            const adjustment = document.getElementById('adjustment');
+            const aiAdjustment = document.getElementById('aiAdjustment');
+            const memo = document.getElementById('recordMemoInput');
+            if (adjustment) adjustment.value = 0;
+            if (aiAdjustment) aiAdjustment.value = 0;
+            if (memo) memo.value = '';
+            ['smartPasteInput', 'ttPasteInput', 'historyPasteInput', 'aiPasteInput', 'paymentPasteInput'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.value = '';
+            });
+            const paymentBody = document.getElementById('paymentGridBody');
+            if (paymentBody) paymentBody.innerHTML = '';
+            document.getElementById('paymentGridArea')?.classList.add('hidden');
+        }
+        function clearAllCalculatorRows() {
+            document.getElementById('autoList').innerHTML = '';
+            document.getElementById('selectList').innerHTML = '';
+            document.getElementById('manualList').innerHTML = '';
+            document.getElementById('guideEstimateList').innerHTML = '';
+            document.getElementById('ttList').innerHTML = '';
+            Object.keys(autoRowExcludedDates).forEach(key => delete autoRowExcludedDates[key]);
+            Object.keys(selectRowDates).forEach(key => delete selectRowDates[key]);
+            activeSelectRowId = null;
+            activeTtRowIndex = null;
+            ttData = [];
+        }
+        function resetCalculatorForNewStart() {
+            if (!window.confirm('현재 입력 중인 계산 내용을 비우고 새 계산을 시작할까요?')) return;
+            document.getElementById('studentName').value = '';
+            clearMonthlyState();
+            clearAllCalculatorRows();
+            setTargetToCurrentMonth();
+            addAutoRow();
+            addGuideEstimateRow();
+            switchTab('auto');
+            updateDateContext();
+            renderServerRecordList();
+            scheduleStudentMemoWidgetRefresh(0);
+        }
+        function prepareNextMonthCalculation() {
+            if (!window.confirm('현재 계산 내용을 바탕으로 다음 달 계산을 시작할까요? 날짜 선택과 월별 조정값은 초기화됩니다.')) return;
+            clearMonthlyState();
+            advanceTargetMonth();
+            activeSelectRowId = document.querySelector('#selectList .select-row')?.id?.replace('srow-', '') || null;
+            document.querySelectorAll('#selectList .select-row').forEach(row => {
+                row.classList.toggle('active-row', row.id === `srow-${activeSelectRowId}`);
+            });
+            renderAllAutoDatePills();
+            switchTab(currentTab);
+            if (currentTab === 'history' || currentTab === 'payment' || currentTab === 'ai') switchTab('auto');
+            else if (currentTab === 'timetable') updateTimetableView();
+            else if (currentTab === 'guide') renderGuideEstimate();
+            else updateDateContext();
+            renderServerRecordList();
+            scheduleStudentMemoWidgetRefresh(0);
+        }
         function getAutoRowExcludedDates(rowId) {
             if (!autoRowExcludedDates[rowId]) autoRowExcludedDates[rowId] = new Set();
             return autoRowExcludedDates[rowId];
@@ -2143,6 +2277,14 @@
             if (token !== memoWidgetToken) return;
             renderStudentMemoWidget(studentName, items.concat(savedItems.filter(Boolean)));
         }
+        async function hydrateSharedSettingsFromLatestServerRecord() {
+            if (!serverRecordHistory.length) return false;
+            for (const record of serverRecordHistory.slice(0, 10)) {
+                const payload = await fetchServerRecordPayload(record);
+                if (applySharedSettingsFromPayload(payload || {})) return true;
+            }
+            return false;
+        }
         function getRecordOpenUrl(recordId) {
             const url = new URL(window.location.href);
             url.searchParams.set('recordId', recordId);
@@ -2384,6 +2526,7 @@
                 setServerRecordStatus('Supabase에 저장 중입니다.', 'info');
                 const client = getSupabaseClient();
                 const accessCode = requireServerAccessCode();
+                await saveSharedAppSettingsToServer();
                 const { data, error } = await client.rpc('feecalc_save_record', {
                     p_access_code: accessCode,
                     p_student_name: payload.studentName || '',
@@ -2469,8 +2612,12 @@
             await refreshServerRecordList(true);
             const recordId = new URLSearchParams(window.location.search).get('recordId');
             if (recordId) await loadServerRecord(recordId, { silent: true });
-            else if (serverRecordHistory.length) setServerRecordStatus(`저장 기록 ${serverRecordHistory.length}건이 준비되었습니다.`, 'success');
-            else setServerRecordStatus('아직 저장된 기록이 없습니다. 첫 저장을 진행해 주세요.', 'info');
+            else {
+                const restoredServerSettings = await hydrateSharedSettingsFromServerConfig();
+                if (!restoredServerSettings) await hydrateSharedSettingsFromLatestServerRecord();
+                if (serverRecordHistory.length) setServerRecordStatus(`저장 기록 ${serverRecordHistory.length}건이 준비되었습니다.`, 'success');
+                else setServerRecordStatus('아직 저장된 기록이 없습니다. 첫 저장을 진행해 주세요.', 'info');
+            }
         }
 
         function collectCoreRows(selector, mapper) { return Array.from(document.querySelectorAll(selector)).map(mapper); }

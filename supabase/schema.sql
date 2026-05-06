@@ -219,10 +219,67 @@ begin
 end;
 $$;
 
+drop function if exists public.feecalc_get_app_settings(text);
+create or replace function public.feecalc_get_app_settings(
+  p_access_code text
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  settings_text text;
+begin
+  if not public.fee_calc_check_access_code(p_access_code) then
+    raise exception '기록 접속 코드가 올바르지 않습니다.';
+  end if;
+
+  select setting_value
+    into settings_text
+  from public.fee_calc_private_settings
+  where setting_key = 'app_settings';
+
+  return coalesce(settings_text::jsonb, '{}'::jsonb);
+end;
+$$;
+
+drop function if exists public.feecalc_save_app_settings(text, jsonb);
+create or replace function public.feecalc_save_app_settings(
+  p_access_code text,
+  p_settings jsonb
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  clean_settings jsonb;
+begin
+  if not public.fee_calc_check_access_code(p_access_code) then
+    raise exception '기록 접속 코드가 올바르지 않습니다.';
+  end if;
+
+  clean_settings := coalesce(p_settings, '{}'::jsonb);
+
+  insert into public.fee_calc_private_settings (setting_key, setting_value, updated_at)
+  values ('app_settings', clean_settings::text, now())
+  on conflict (setting_key)
+  do update set
+    setting_value = excluded.setting_value,
+    updated_at = now();
+
+  return clean_settings;
+end;
+$$;
+
 grant execute on function public.feecalc_list_records(text, integer) to anon, authenticated;
 grant execute on function public.feecalc_get_record(text, uuid) to anon, authenticated;
 grant execute on function public.feecalc_save_record(text, text, integer, integer, text, text, jsonb) to anon, authenticated;
 grant execute on function public.feecalc_delete_record(text, uuid) to anon, authenticated;
+grant execute on function public.feecalc_get_app_settings(text) to anon, authenticated;
+grant execute on function public.feecalc_save_app_settings(text, jsonb) to anon, authenticated;
 
 revoke all on function public.fee_calc_check_access_code(text) from public, anon, authenticated;
 revoke all on function public.set_fee_calc_access_code(text) from public, anon, authenticated;
