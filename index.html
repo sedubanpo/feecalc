@@ -328,7 +328,7 @@
                     내부 기록 서버에 자동 연결됩니다. 별도 접속코드 입력 없이 바로 저장/불러오기를 사용하시면 됩니다.
                 </div>
                 <div class="mb-3">
-                    <input id="serverRecordSearch" type="search" placeholder="이름으로 검색" class="record-search w-full p-2.5 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:border-sky-400 focus:outline-none" oninput="renderServerRecordList()">
+                    <input id="serverRecordSearch" type="search" placeholder="이름으로 검색" class="record-search w-full p-2.5 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:border-sky-400 focus:outline-none" oninput="handleServerRecordSearchInput()">
                 </div>
                 <div id="serverRecordStatus" class="text-[11px] bg-slate-50 text-slate-600 border border-slate-200 rounded-lg px-3 py-2 mb-3">
                     서버 연결 전입니다.
@@ -565,6 +565,7 @@
         const memoPayloadCache = {};
         let memoWidgetTimer = null;
         let memoWidgetToken = 0;
+        let serverRecordSearchTimer = null;
         const SUPABASE_URL = 'https://jtdhvkotlvznedqixsvv.supabase.co';
         const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_hPySjz_ia6iMRfp_WnsaqQ_DmYnpdhs';
         const SUPABASE_TABLE = 'fee_calc_records';
@@ -2295,18 +2296,13 @@
             if (!list) return;
             list.innerHTML = '';
             const keyword = String(document.getElementById('serverRecordSearch')?.value || '').trim();
-            const filteredHistory = !keyword
-                ? serverRecordHistory
-                : serverRecordHistory.filter(record => String(record.studentName || '').includes(keyword));
             if (!serverRecordHistory.length) {
-                list.innerHTML = '<div class="text-[11px] text-gray-400 text-center py-6 border border-dashed border-gray-200 rounded-lg">저장된 기록이 없습니다.</div>';
+                list.innerHTML = keyword
+                    ? '<div class="text-[11px] text-gray-400 text-center py-6 border border-dashed border-gray-200 rounded-lg">검색 결과가 없습니다.</div>'
+                    : '<div class="text-[11px] text-gray-400 text-center py-6 border border-dashed border-gray-200 rounded-lg">저장된 기록이 없습니다.</div>';
                 return;
             }
-            if (!filteredHistory.length) {
-                list.innerHTML = '<div class="text-[11px] text-gray-400 text-center py-6 border border-dashed border-gray-200 rounded-lg">검색 결과가 없습니다.</div>';
-                return;
-            }
-            filteredHistory.forEach(record => {
+            serverRecordHistory.forEach(record => {
                 const isActive = currentLoadedRecordId && currentLoadedRecordId === record.recordId;
                 const wrapper = document.createElement('div');
                 wrapper.className = `record-item p-3 transition ${isActive ? 'record-item-active' : ''}`;
@@ -2337,6 +2333,12 @@
                 });
                 list.appendChild(wrapper);
             });
+        }
+        function handleServerRecordSearchInput() {
+            clearTimeout(serverRecordSearchTimer);
+            const keyword = String(document.getElementById('serverRecordSearch')?.value || '').trim();
+            if (keyword) setServerRecordStatus(`"${keyword}" 이름으로 서버 전체 기록을 검색 중입니다.`, 'info');
+            serverRecordSearchTimer = setTimeout(() => refreshServerRecordList(true), 280);
         }
         async function deleteServerRecord(recordId, event) {
             if (event) event.stopPropagation();
@@ -2554,19 +2556,27 @@
                 if (!silent) setServerRecordStatus('Supabase 연결 정보가 아직 비어 있습니다. 프로젝트 URL과 publishable key를 먼저 연결해주세요.', 'warning');
                 return;
             }
+            const keyword = String(document.getElementById('serverRecordSearch')?.value || '').trim();
             try {
-                if (!silent) setServerRecordStatus('저장 기록을 불러오는 중입니다.', 'info');
+                if (!silent) setServerRecordStatus(keyword ? `"${keyword}" 이름으로 서버 전체 기록을 검색 중입니다.` : '저장 기록을 불러오는 중입니다.', 'info');
                 const client = getSupabaseClient();
                 const accessCode = requireServerAccessCode();
-                const { data, error } = await client.rpc('feecalc_list_records', {
-                    p_access_code: accessCode,
-                    p_limit: 80
-                });
+                const request = keyword
+                    ? client.rpc('feecalc_search_records', {
+                        p_access_code: accessCode,
+                        p_keyword: keyword,
+                        p_limit: 500
+                    })
+                    : client.rpc('feecalc_list_records', {
+                        p_access_code: accessCode,
+                        p_limit: 120
+                    });
+                const { data, error } = await request;
                 if (error) throw error;
                 serverRecordHistory = (data || []).map(mapRecordRow);
                 renderServerRecordList();
                 scheduleStudentMemoWidgetRefresh(0);
-                if (!silent) setServerRecordStatus(`저장 기록 ${serverRecordHistory.length}건을 불러왔습니다.`, 'success');
+                setServerRecordStatus(keyword ? `"${keyword}" 검색 결과 ${serverRecordHistory.length}건을 불러왔습니다.` : `저장 기록 ${serverRecordHistory.length}건을 불러왔습니다.`, 'success');
             } catch (error) {
                 serverRecordHistory = [];
                 renderServerRecordList();
