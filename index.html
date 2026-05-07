@@ -2340,6 +2340,35 @@
             if (keyword) setServerRecordStatus(`"${keyword}" 이름으로 서버 전체 기록을 검색 중입니다.`, 'info');
             serverRecordSearchTimer = setTimeout(() => refreshServerRecordList(true), 280);
         }
+        function isMissingSearchRpcError(error) {
+            const message = String(error?.message || '');
+            const code = String(error?.code || '');
+            return code === 'PGRST202' || (message.includes('feecalc_search_records') && message.includes('schema cache'));
+        }
+        async function fetchServerRecordRows(client, accessCode, keyword) {
+            if (keyword) {
+                const searchResult = await client.rpc('feecalc_search_records', {
+                    p_access_code: accessCode,
+                    p_keyword: keyword,
+                    p_limit: 500
+                });
+                if (!searchResult.error) return { rows: searchResult.data || [], fallback: false };
+                if (!isMissingSearchRpcError(searchResult.error)) throw searchResult.error;
+                const fallbackResult = await client.rpc('feecalc_list_records', {
+                    p_access_code: accessCode,
+                    p_limit: 200
+                });
+                if (fallbackResult.error) throw fallbackResult.error;
+                const rows = (fallbackResult.data || []).filter(record => String(record.student_name || record.studentName || '').includes(keyword));
+                return { rows, fallback: true };
+            }
+            const listResult = await client.rpc('feecalc_list_records', {
+                p_access_code: accessCode,
+                p_limit: 120
+            });
+            if (listResult.error) throw listResult.error;
+            return { rows: listResult.data || [], fallback: false };
+        }
         async function deleteServerRecord(recordId, event) {
             if (event) event.stopPropagation();
             if (!recordId) return;
@@ -2561,22 +2590,15 @@
                 if (!silent) setServerRecordStatus(keyword ? `"${keyword}" 이름으로 서버 전체 기록을 검색 중입니다.` : '저장 기록을 불러오는 중입니다.', 'info');
                 const client = getSupabaseClient();
                 const accessCode = requireServerAccessCode();
-                const request = keyword
-                    ? client.rpc('feecalc_search_records', {
-                        p_access_code: accessCode,
-                        p_keyword: keyword,
-                        p_limit: 500
-                    })
-                    : client.rpc('feecalc_list_records', {
-                        p_access_code: accessCode,
-                        p_limit: 120
-                    });
-                const { data, error } = await request;
-                if (error) throw error;
-                serverRecordHistory = (data || []).map(mapRecordRow);
+                const result = await fetchServerRecordRows(client, accessCode, keyword);
+                serverRecordHistory = (result.rows || []).map(mapRecordRow);
                 renderServerRecordList();
                 scheduleStudentMemoWidgetRefresh(0);
-                setServerRecordStatus(keyword ? `"${keyword}" 검색 결과 ${serverRecordHistory.length}건을 불러왔습니다.` : `저장 기록 ${serverRecordHistory.length}건을 불러왔습니다.`, 'success');
+                if (result.fallback) {
+                    setServerRecordStatus(`Supabase SQL 적용 전이라 최근 200건 안에서 "${keyword}" 검색 결과 ${serverRecordHistory.length}건을 표시합니다.`, 'warning');
+                } else {
+                    setServerRecordStatus(keyword ? `"${keyword}" 검색 결과 ${serverRecordHistory.length}건을 불러왔습니다.` : `저장 기록 ${serverRecordHistory.length}건을 불러왔습니다.`, 'success');
+                }
             } catch (error) {
                 serverRecordHistory = [];
                 renderServerRecordList();
