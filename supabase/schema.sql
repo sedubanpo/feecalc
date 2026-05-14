@@ -16,11 +16,16 @@ create table if not exists public.fee_calc_private_settings (
   updated_at timestamptz not null default now()
 );
 
+create extension if not exists pg_trgm;
+
 create index if not exists fee_calc_records_saved_at_idx
   on public.fee_calc_records (saved_at desc);
 
 create index if not exists fee_calc_records_student_name_idx
   on public.fee_calc_records (student_name);
+
+create index if not exists fee_calc_records_student_name_trgm_idx
+  on public.fee_calc_records using gin (student_name gin_trgm_ops);
 
 alter table public.fee_calc_records enable row level security;
 alter table public.fee_calc_private_settings enable row level security;
@@ -258,6 +263,49 @@ begin
 end;
 $$;
 
+drop function if exists public.feecalc_update_record(text, uuid, text, integer, integer, text, text, jsonb);
+create or replace function public.feecalc_update_record(
+  p_access_code text,
+  p_record_id uuid,
+  p_student_name text,
+  p_target_year integer,
+  p_target_month integer,
+  p_current_tab text,
+  p_total_text text,
+  p_payload jsonb
+)
+returns table (
+  record_id uuid,
+  saved_at timestamptz
+)
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if not public.fee_calc_check_access_code(p_access_code) then
+    raise exception '기록 접속 코드가 올바르지 않습니다.';
+  end if;
+
+  return query
+  update public.fee_calc_records
+  set
+    student_name = coalesce(p_student_name, ''),
+    target_year = p_target_year,
+    target_month = p_target_month,
+    current_tab = coalesce(nullif(p_current_tab, ''), 'auto'),
+    total_text = coalesce(nullif(p_total_text, ''), '0원'),
+    payload = coalesce(p_payload, '{}'::jsonb),
+    saved_at = now()
+  where fee_calc_records.record_id = p_record_id
+  returning fee_calc_records.record_id, fee_calc_records.saved_at;
+
+  if not found then
+    raise exception '갱신할 저장 기록을 찾지 못했습니다.';
+  end if;
+end;
+$$;
+
 drop function if exists public.feecalc_delete_record(text, uuid);
 create or replace function public.feecalc_delete_record(
   p_access_code text,
@@ -337,6 +385,7 @@ grant execute on function public.feecalc_list_records(text, integer) to anon, au
 grant execute on function public.feecalc_search_records(text, text, integer) to anon, authenticated;
 grant execute on function public.feecalc_get_record(text, uuid) to anon, authenticated;
 grant execute on function public.feecalc_save_record(text, text, integer, integer, text, text, jsonb) to anon, authenticated;
+grant execute on function public.feecalc_update_record(text, uuid, text, integer, integer, text, text, jsonb) to anon, authenticated;
 grant execute on function public.feecalc_delete_record(text, uuid) to anon, authenticated;
 grant execute on function public.feecalc_get_app_settings(text) to anon, authenticated;
 grant execute on function public.feecalc_save_app_settings(text, jsonb) to anon, authenticated;
