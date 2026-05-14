@@ -258,6 +258,19 @@
                         <div class="flex-1"><label class="block text-xs font-bold text-gray-500 mb-1">연도</label><input type="number" id="targetYear" class="w-full p-2.5 border border-gray-300 rounded-lg text-center text-sm font-bold" onchange="resetAndUpdate()"></div>
                         <div class="flex-1"><label class="block text-xs font-bold text-gray-500 mb-1">월</label><input type="number" id="targetMonth" min="1" max="12" class="w-full p-2.5 border border-gray-300 rounded-lg text-center text-sm font-bold" onchange="resetAndUpdate()"></div>
                     </div>
+                    <div id="siblingConfigArea" class="rounded-xl border border-slate-100 bg-slate-50/70 p-3">
+                        <label class="flex items-center justify-between gap-3 cursor-pointer">
+                            <span>
+                                <span class="block text-xs font-black text-slate-700">형제/자매 함께 안내</span>
+                                <span class="block text-[10px] leading-4 text-slate-400 mt-0.5">추가 학생의 금액을 합산해 안내서와 문자를 생성합니다.</span>
+                            </span>
+                            <input type="checkbox" id="siblingModeToggle" class="w-4 h-4 accent-[#004094]" onchange="toggleSiblingMode()">
+                        </label>
+                        <div id="siblingPanel" class="hidden mt-3 pt-3 border-t border-slate-200">
+                            <div id="siblingList" class="space-y-2"></div>
+                            <button type="button" onclick="addSiblingRow()" class="mt-2 w-full py-2 border border-dashed border-slate-300 rounded-lg text-[11px] font-black text-slate-500 hover:border-[#004094] hover:text-[#004094]">+ 형제/자매 추가</button>
+                        </div>
+                    </div>
                 </div>
                 <div class="mt-5 pt-4 border-t border-gray-100">
                     <div class="flex justify-between items-center mb-2">
@@ -453,6 +466,7 @@
                             <div class="border-t-2 border-gray-200 pt-2 space-y-1 mb-4">
                                 <div class="flex justify-between text-gray-600 font-bold text-sm"><span>수강료 소계</span><span id="dispSubtotal" class="text-gray-800">0</span></div>
                                 <div class="flex justify-between text-red-500 font-bold text-sm" id="dispAdjRow"><span>이월/초과금 조정</span><span id="dispAdj">0</span></div>
+                                <div id="siblingSummaryArea" class="hidden mt-3 pt-3 border-t border-dashed border-slate-200 space-y-1"></div>
                             </div>
                             <div class="flex justify-between items-center bg-gray-50 p-4 rounded-xl border border-gray-100">
                                 <span id="labelTotal" class="text-base font-black text-gray-800">최종 납부액</span>
@@ -589,6 +603,7 @@
             <div class="border-t-2 border-gray-200 pt-2 space-y-1 mb-4">
                 <div class="flex justify-between text-gray-600 font-bold text-sm"><span>수강료 소계</span><span id="dispSubtotal" class="text-gray-800">0원</span></div>
                 <div class="flex justify-between text-red-500 font-bold text-sm" id="dispAdjRow"><span>이월/초과금 조정</span><span id="dispAdj">0원</span></div>
+                <div id="siblingSummaryArea" class="hidden mt-3 pt-3 border-t border-dashed border-slate-200 space-y-1"></div>
             </div>
             <div class="flex justify-between items-center bg-gray-50 p-4 rounded-xl border border-gray-100">
                 <span id="labelTotal" class="text-base font-black text-gray-800">최종 납부액</span>
@@ -926,6 +941,101 @@
         }
         function togglePasteArea() { const el = document.getElementById('pasteAreaContainer'); if(el) el.classList.toggle('hidden'); }
 
+        function isSiblingModeEnabled() {
+            return !!document.getElementById('siblingModeToggle')?.checked;
+        }
+        function addSiblingRow(nameVal = '', amountVal = '') {
+            const id = generateSafeId();
+            const safeAmount = parseInt(amountVal, 10) || '';
+            const html = `<div class="sibling-row grid grid-cols-[1fr_120px_24px] gap-2 items-center" id="sib-${id}">
+                <input type="text" class="sibling-name p-2 border border-slate-200 rounded-lg text-xs font-bold bg-white focus:outline-none focus:border-[#004094]" placeholder="학생명" value="${escapeHtml(nameVal)}" oninput="refreshGeneratedTextByCurrentMode()">
+                <input type="number" class="sibling-amount p-2 border border-slate-200 rounded-lg text-xs font-bold text-right bg-white focus:outline-none focus:border-[#004094]" placeholder="금액" value="${safeAmount}" oninput="refreshGeneratedTextByCurrentMode()">
+                <button type="button" onclick="removeSiblingRow('sib-${id}')" class="text-slate-300 hover:text-red-500 font-black">×</button>
+            </div>`;
+            document.getElementById('siblingList')?.insertAdjacentHTML('beforeend', html);
+            refreshGeneratedTextByCurrentMode();
+        }
+        function removeSiblingRow(id) {
+            document.getElementById(id)?.remove();
+            if (isSiblingModeEnabled() && !document.querySelector('#siblingList .sibling-row')) addSiblingRow();
+            refreshGeneratedTextByCurrentMode();
+        }
+        function toggleSiblingMode() {
+            const panel = document.getElementById('siblingPanel');
+            const enabled = isSiblingModeEnabled();
+            if (panel) panel.classList.toggle('hidden', !enabled);
+            if (enabled && !document.querySelector('#siblingList .sibling-row')) addSiblingRow();
+            refreshGeneratedTextByCurrentMode();
+        }
+        function collectSiblingRows(includeBlank = false) {
+            if (!isSiblingModeEnabled() && !includeBlank) return [];
+            return Array.from(document.querySelectorAll('#siblingList .sibling-row')).map((row, index) => {
+                const name = row.querySelector('.sibling-name')?.value || '';
+                const amount = parseInt(row.querySelector('.sibling-amount')?.value, 10) || 0;
+                return { name: name.trim(), amount, index };
+            }).filter(item => includeBlank || item.name || item.amount !== 0);
+        }
+        function setSiblingState(enabled = false, rows = []) {
+            const toggle = document.getElementById('siblingModeToggle');
+            const panel = document.getElementById('siblingPanel');
+            const list = document.getElementById('siblingList');
+            if (toggle) toggle.checked = !!enabled;
+            if (panel) panel.classList.toggle('hidden', !enabled);
+            if (list) list.innerHTML = '';
+            (rows || []).forEach(row => addSiblingRow(row.name || '', row.amount || ''));
+            if (enabled && !document.querySelector('#siblingList .sibling-row')) addSiblingRow();
+        }
+        function getPrimaryStudentLabel() {
+            if (currentTab === 'guide') return getGuideEstimateStudentLabel();
+            return document.getElementById('studentName').value || '학생명';
+        }
+        function buildCombinedStudentTotals(primaryName, primaryAmount) {
+            const rows = [{ name: primaryName || '학생명', amount: primaryAmount || 0, isPrimary: true }];
+            collectSiblingRows().forEach(item => rows.push({ name: item.name || `학생 ${item.index + 2}`, amount: item.amount || 0, isPrimary: false }));
+            const total = rows.reduce((sum, item) => sum + item.amount, 0);
+            return { rows, total };
+        }
+        function renderSiblingSummary(primaryName, primaryAmount) {
+            const area = document.getElementById('siblingSummaryArea');
+            if (!area) return primaryAmount || 0;
+            const combined = buildCombinedStudentTotals(primaryName, primaryAmount);
+            const siblings = combined.rows.filter(item => !item.isPrimary);
+            area.classList.toggle('hidden', !siblings.length);
+            if (!siblings.length) {
+                area.innerHTML = '';
+                return primaryAmount || 0;
+            }
+            area.innerHTML = combined.rows.map(item => `
+                <div class="flex justify-between text-slate-600 font-black text-xs">
+                    <span>${escapeHtml(item.name)}${item.isPrimary ? ' 현재 계산' : ''}</span>
+                    <span class="font-mono">${item.amount.toLocaleString()}원</span>
+                </div>
+            `).join('');
+            return combined.total;
+        }
+        function buildCombinedInfoMessage(primaryName, primaryAmount, month, adjustment = 0, options = {}) {
+            const templateType = document.getElementById('messageTemplateType')?.value || 'general';
+            const combined = buildCombinedStudentTotals(primaryName, primaryAmount);
+            const lines = [
+                '※전체 재원생 수강료 안내※',
+                '안녕하세요 에스학원입니다.',
+                '수강료 안내 드립니다.',
+                ''
+            ];
+            if (options.intro) lines.push(options.intro, '');
+            combined.rows.forEach(item => {
+                lines.push(`${item.name} 학생 ${month}월 수강료는 ${item.amount.toLocaleString()} 원 입니다.`);
+            });
+            if (combined.rows.length > 1) lines.push('', `총 납부 금액은 ${combined.total.toLocaleString()} 원입니다.`);
+            if (adjustment !== 0 && !options.hideAdjustment) lines.push(`이전 달의 이월/초과금은 ${adjustment.toLocaleString()} 원입니다.`);
+            else if (!options.hideAdjustment && combined.rows.length === 1) lines.push(`이전 달의 이월/초과금은 ${adjustment.toLocaleString()} 원입니다.`);
+            if (templateType === 'first') lines.push('', buildFirstRegistrationGuideText());
+            lines.push('', buildPaymentGuideText());
+            if (options.footer) lines.push('', options.footer);
+            lines.push('', '감사합니다.');
+            return lines.join('\n');
+        }
+
         // [기본 함수들: getSubjectColorClass, parseSubjectInfo 등]
         function getSubjectColorClass(name, isMakeup, isPredicted) { if (isPredicted) return 'subj-predicted'; if (isMakeup) return 'subj-makeup'; if (!name) return 'subj-default'; const n = name.trim(); if (n.includes('1:1')) return 'subj-oneonone'; if (n.includes('2:1')) return 'subj-twoonone'; if (n.includes('수학')) return 'subj-math'; if (n.includes('국어')) return 'subj-kor'; if (n.includes('영어')) return 'subj-eng'; if (['과학', '화학', '생명', '물리', '지학', '물지'].some(k => n.includes(k))) return 'subj-sci'; if (['사회', '사탐', '사문', '한국사', '세계사', '지리', '한지', '세지', '윤리', '윤사', '역사'].some(k => n.includes(k))) return 'subj-soc'; return 'subj-default'; }
         function parseSubjectInfo(rawName) { let name = rawName || ''; let timeText = ''; const timeMatch = name.match(/-(\d+(\.\d+)?)h/i); if(timeMatch) { timeText = `${timeMatch[1]}시간`; name = name.replace(timeMatch[0], ''); } let teacher = '', type = '', mainName = name.split('-')[0]; const parts = name.split('-'); for (let i=1; i<parts.length; i++) { let part = parts[i].trim(); const parenMatch = part.match(/(.*)\(([^)]+)\)$/); if (parenMatch) { if (parenMatch[1]) type = parenMatch[1]; teacher = parenMatch[2]; } else if (part.toUpperCase().endsWith('T')) teacher = part; else type = part; } return { mainName, teacher, type, timeText }; }
@@ -1057,6 +1167,7 @@
             const needsRestore = !document.getElementById('dispSubtotal')
                 || !document.getElementById('dispAdjRow')
                 || !document.getElementById('dispAdj')
+                || !document.getElementById('siblingSummaryArea')
                 || !document.getElementById('labelTotal')
                 || !document.getElementById('dispTotal');
             if (needsRestore) area.innerHTML = DEFAULT_PRICE_SUMMARY_HTML;
@@ -1122,6 +1233,7 @@
             document.getElementById('paymentGuide').classList.toggle('hidden', tab !== 'payment');
             document.getElementById('aiGuide').classList.toggle('hidden', tab !== 'ai');
             document.getElementById('receiptCalendarArea')?.classList.toggle('hidden', isGuide);
+            document.getElementById('siblingConfigArea')?.classList.toggle('hidden', !['auto', 'select', 'manual', 'guide'].includes(tab));
             if (!isGuide) renderGuideMessages();
             toggleMessageControlVisibility();
             toggleVoucherGuideVisibility();
@@ -1182,9 +1294,14 @@
             if(currentTab === 'history' || currentTab === 'payment') return;
             const name = document.getElementById('studentName').value || '학생명';
             const month = document.getElementById('targetMonth').value;
+            const primaryTotal = totalAmount + adjustment;
+            if (collectSiblingRows().length) {
+                document.getElementById('generatedTextArea').value = buildCombinedInfoMessage(name, primaryTotal, month, adjustment);
+                return;
+            }
             const templateType = document.getElementById('messageTemplateType')?.value || 'general';
             const adjStr = adjustment !== 0 ? adjustment.toLocaleString() : '0';
-            const totalStr = (totalAmount + adjustment).toLocaleString();
+            const totalStr = primaryTotal.toLocaleString();
             const lines = [
                 '※전체 재원생 수강료 안내※',
                 '안녕하세요 에스학원입니다.',
@@ -1281,6 +1398,7 @@
             document.getElementById('studentName').value = '';
             clearMonthlyState();
             clearAllCalculatorRows();
+            setSiblingState(false, []);
             setTargetToCurrentMonth();
             addAutoRow();
             addGuideEstimateRow();
@@ -1461,7 +1579,9 @@
                 .join('');
             if (isNaN(subtotal)) subtotal = 0;
             document.getElementById('dispSubtotal').innerText = subtotal.toLocaleString() + '원';
-            document.getElementById('dispTotal').innerText = (subtotal + adj).toLocaleString() + '원';
+            const primaryTotal = subtotal + adj;
+            const displayTotal = renderSiblingSummary(name, primaryTotal);
+            document.getElementById('dispTotal').innerText = displayTotal.toLocaleString() + '원';
             renderCommonReceiptCalendar(allEvents);
             updateInfoText(subtotal, adj);
         }
@@ -1889,6 +2009,13 @@
         }
         function buildGuideEstimateMessage(rows, summary) {
             const month = document.getElementById('targetMonth').value;
+            if (collectSiblingRows().length) {
+                return buildCombinedInfoMessage(getGuideEstimateStudentLabel(rows), summary.total, month, 0, {
+                    intro: `${month}월 수강료는 최근 수업 참석 현황을 바탕으로 추산한 대략 금액입니다.`,
+                    hideAdjustment: true,
+                    footer: '정확한 금액은 실제 수업 진행 내역에 따라 조정될 수 있습니다.'
+                });
+            }
             const templateType = document.getElementById('messageTemplateType')?.value || 'general';
             const lines = [
                 '※전체 재원생 수강료 안내※',
@@ -1954,7 +2081,8 @@
                 adjEl.innerText = (summary.adjustment > 0 ? '+' : '') + summary.adjustment.toLocaleString() + '원';
                 adjEl.className = summary.adjustment === 0 ? "text-gray-300 font-bold" : (summary.adjustment > 0 ? "text-red-500 font-bold" : "text-[#004094] font-bold");
             }
-            document.getElementById('dispTotal').innerText = summary.total.toLocaleString() + '원';
+            const displayTotal = renderSiblingSummary(label, summary.total);
+            document.getElementById('dispTotal').innerText = displayTotal.toLocaleString() + '원';
             document.getElementById('receiptGuideList').innerHTML = `<li><b>추산 기준:</b> 최근 수업 참석 현황을 바탕으로 계산된 대략 금액입니다.</li>` + normalizeGuideMessages(guideMessages).filter(item => item.text).map(item => `<li><b>${escapeHtml(item.title)}:</b> ${escapeHtml(item.text)}</li>`).join('');
             document.getElementById('generatedTextArea').value = buildGuideEstimateMessage(rows, summary);
         }
@@ -2423,6 +2551,8 @@
                 adjustment: parseInt(document.getElementById('adjustment').value, 10) || 0,
                 aiAdjustment: parseInt(document.getElementById('aiAdjustment')?.value, 10) || 0,
                 recordMemo: getCurrentRecordMemo(),
+                siblingMode: isSiblingModeEnabled(),
+                siblingRows: collectSiblingRows(true).map(item => ({ name: item.name, amount: item.amount })),
                     pricePresets: [...pricePresets],
                     adNotices: [...adNotices],
                     adText: adNotices.join('\n'),
@@ -2452,6 +2582,7 @@
             document.getElementById('adjustment').value = data.adjustment || 0;
             const memoInput = document.getElementById('recordMemoInput');
             if (memoInput) memoInput.value = data.recordMemo || data.memo || '';
+            setSiblingState(!!data.siblingMode, data.siblingRows || []);
             if (document.getElementById('aiAdjustment')) document.getElementById('aiAdjustment').value = data.aiAdjustment || 0;
             if (Array.isArray(data.pricePresets)) {
                 pricePresets = normalizePricePresets(data.pricePresets);
@@ -2661,6 +2792,8 @@
                 targetMonth: parseInt(document.getElementById('targetMonth').value) || (new Date().getMonth()+1),
                 adjustment: parseInt(document.getElementById('adjustment').value) || 0,
                 recordMemo: getCurrentRecordMemo(),
+                siblingMode: isSiblingModeEnabled(),
+                siblingRows: collectSiblingRows(true).map(item => ({ name: item.name, amount: item.amount })),
                     pricePresets: [...pricePresets],
                     adNotices: [...adNotices],
                     adText: adNotices.join('\n'),
@@ -2691,6 +2824,7 @@
                     document.getElementById('adjustment').value = d.adjustment || 0;
                     const memoInput = document.getElementById('recordMemoInput');
                     if (memoInput) memoInput.value = d.recordMemo || d.memo || '';
+                    setSiblingState(!!d.siblingMode, d.siblingRows || []);
                         if (Array.isArray(d.pricePresets)) { pricePresets = normalizePricePresets(d.pricePresets); persistPricePresets(); renderPricePresetPanel(); }
                         if (Array.isArray(d.adNotices) || typeof d.adText === 'string') { adNotices = normalizeNoticeTexts(Array.isArray(d.adNotices) ? d.adNotices : d.adText); persistAdText(); renderAdText(); }
                         if (Array.isArray(d.guideMessages)) { guideMessages = normalizeGuideMessages(d.guideMessages); persistGuideMessages(); renderGuideMessages(); }
