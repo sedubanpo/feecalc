@@ -1395,7 +1395,7 @@
             return '학부모님 연락처로 결제링크 발송드리겠습니다.';
         }
         function buildFirstRegistrationGuideText() {
-            return '첫 등록 수강료는 4주 기준으로 계산하여 안내드립니다.';
+            return '첫 등록 수강료는 선택한 요일 수 × 4주 기준으로 계산하여 안내드립니다.';
         }
         function updateInfoText(totalAmount, adjustment) {
             if(currentTab === 'history' || currentTab === 'payment') return;
@@ -2296,7 +2296,7 @@
                     <div><label class="block text-gray-400 mb-0.5">수업 시간</label><input type="number" class="first-hours w-full p-2 border rounded text-right text-sm font-bold" placeholder="3" value="${safeHours}" oninput="renderFirstRegistrationView()"></div>
                     <div><label class="block text-gray-400 mb-0.5">회당 수강료</label><input type="number" class="sub-rate w-full p-2 border rounded text-right text-sm font-bold" placeholder="0" value="${safeRate}" oninput="renderFirstRegistrationView()"><div class="rate-preset-row mt-2 flex flex-wrap gap-1.5">${buildRatePresetButtons()}</div></div>
                 </div>
-                <div class="mt-3 rounded-lg bg-rose-50 border border-rose-100 px-3 py-2 text-[11px] leading-5 font-bold text-rose-700">첫 등록 청구는 4주 기준 4회로 고정 계산됩니다.</div>
+                <div class="mt-3 rounded-lg bg-rose-50 border border-rose-100 px-3 py-2 text-[11px] leading-5 font-bold text-rose-700">첫 등록 청구는 선택한 요일 수 × 4주 기준으로 계산됩니다.</div>
             </div>`;
             document.getElementById('firstRegList')?.insertAdjacentHTML('beforeend', html);
             renderFirstRegistrationView();
@@ -2329,6 +2329,9 @@
             }
             return dates;
         }
+        function getFirstRegistrationBillingCount(row) {
+            return normalizeWeekdayList(row.weekdays || row.weekday).length * 4;
+        }
         function renderFirstRegistrationCalendar(events) {
             const year = parseInt(document.getElementById('targetYear').value, 10) || new Date().getFullYear();
             const month = parseInt(document.getElementById('targetMonth').value, 10) || (new Date().getMonth() + 1);
@@ -2355,7 +2358,7 @@
                 '안녕하세요 에스학원입니다.',
                 '첫 등록 수강료 안내 드립니다.',
                 '',
-                '첫 등록 수강료는 4주 기준으로 책정됩니다.'
+                '첫 등록 수강료는 선택한 수업 요일 수를 기준으로 4주치 금액이 책정됩니다.'
             ];
             combined.rows.forEach(item => {
                 lines.push(`${item.name} 학생 ${month}월 첫 등록 안내 금액은 ${item.amount.toLocaleString()} 원입니다.`);
@@ -2384,7 +2387,8 @@
             const receiptRows = rows.map((row, index) => {
                 const info = parseSubjectInfo(row.name);
                 if (row.hours) info.timeText = `${row.hours}시간`;
-                const total = row.rate * 4;
+                const billingCount = getFirstRegistrationBillingCount(row);
+                const total = row.rate * billingCount;
                 subtotal += total;
                 const dates = getFirstRegistrationMonthDates(row);
                 dates.forEach(day => calendarEvents.push({ day, name: info.mainName || row.name || '수업', rawName: row.name, durationHours: row.hours }));
@@ -2394,7 +2398,7 @@
                 const dateText = dates.length ? `${dates.join(', ')}일` : '이번 달 표시 일정 없음';
                 return {
                     sortMeta: getSubjectSortMeta(row.name, row.hours, index),
-                    html: `<tr class="border-b border-dashed border-gray-200 last:border-0"><td class="py-2 pl-1 pr-2 align-top no-wrap-cell"><div class="flex items-center flex-wrap gap-y-1 mb-0.5"><span class="font-extrabold text-gray-800 text-base mr-1">${escapeHtml(info.mainName || row.name || '수업')}</span>${timeDisplay}${badges}</div><div class="text-xs text-gray-500 pl-0.5">4주 기준 4회 × ${row.rate.toLocaleString()}원</div><div class="text-[11px] font-bold text-rose-500 pl-0.5 mt-0.5">${weekdayName}요일 등원 / ${escapeHtml(dateText)}</div></td><td class="py-2 pr-1 text-right font-mono text-base font-black text-gray-800 align-top pt-1.5">${total.toLocaleString()}원</td></tr>`
+                    html: `<tr class="border-b border-dashed border-gray-200 last:border-0"><td class="py-2 pl-1 pr-2 align-top no-wrap-cell"><div class="flex items-center flex-wrap gap-y-1 mb-0.5"><span class="font-extrabold text-gray-800 text-base mr-1">${escapeHtml(info.mainName || row.name || '수업')}</span>${timeDisplay}${badges}</div><div class="text-xs text-gray-500 pl-0.5">4주 기준 ${billingCount}회 × ${row.rate.toLocaleString()}원</div><div class="text-[11px] font-bold text-rose-500 pl-0.5 mt-0.5">${weekdayName}요일 등원 / ${escapeHtml(dateText)}</div></td><td class="py-2 pr-1 text-right font-mono text-base font-black text-gray-800 align-top pt-1.5">${total.toLocaleString()}원</td></tr>`
                 };
             });
             tbody.innerHTML = receiptRows.length
@@ -2413,7 +2417,7 @@
             document.getElementById('dispTotal').innerText = displayTotal.toLocaleString() + '원';
             renderCommonReceiptCalendar(calendarEvents);
             renderFirstRegistrationCalendar(calendarEvents);
-            document.getElementById('receiptGuideList').innerHTML = `<li><b>첫 등록:</b> 첫 등록 수강료는 4주 기준으로 책정됩니다.</li><li><b>월말 정산:</b> 월말 정산 작업을 통해 실제 진행 수업 기준의 초과금 또는 이월금을 다음 달 수강료에 반영합니다.</li>` + normalizeGuideMessages(guideMessages).filter(item => item.text).map(item => `<li><b>${escapeHtml(item.title)}:</b> ${escapeHtml(item.text)}</li>`).join('');
+            document.getElementById('receiptGuideList').innerHTML = `<li><b>첫 등록:</b> 첫 등록 수강료는 선택한 요일 수 × 4주 기준으로 책정됩니다.</li><li><b>월말 정산:</b> 월말 정산 작업을 통해 실제 진행 수업 기준의 초과금 또는 이월금을 다음 달 수강료에 반영합니다.</li>` + normalizeGuideMessages(guideMessages).filter(item => item.text).map(item => `<li><b>${escapeHtml(item.title)}:</b> ${escapeHtml(item.text)}</li>`).join('');
             document.getElementById('generatedTextArea').value = buildFirstRegistrationMessage(name, primaryTotal, month, adj, discountInfo);
         }
 
@@ -3187,7 +3191,7 @@
                 select: '선택형: 과목 행 선택 후 달력 날짜를 직접 선택',
                 manual: '변동형: 시간×횟수×단가를 수동 입력',
                 guide: '안내형: 여러 학생의 대략 수강료와 이월/초과금을 함께 안내',
-                first: '첫등록: 4주 기준 수강료를 책정하고, 등원 시작일 이후 해당 요일만 달력에 표시',
+                first: '첫등록: 선택한 요일 수 × 4주 기준으로 수강료를 책정하고, 등원 시작일 이후 해당 요일만 달력에 표시',
                 timetable: '시간표: 노션 시간표를 분석해 계산, 과목 선택 후 달력 날짜 클릭으로 해당 과목 날짜 추가',
                 history: '이력확인: Access 수업 이력을 월별로 확인',
                 ai: 'AI예측: 진행된 수업 패턴으로 남은 수업 예측',
