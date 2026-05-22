@@ -15,6 +15,7 @@
         /* 쉐도우 및 기본 스타일 */
         .receipt-shadow { box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.15); }
         .day-chk:checked + label { background-color: #004094; color: white; border-color: #004094; }
+        .first-weekday:checked + label { background-color: #e11d48; color: white; border-color: #e11d48; }
         .info-list li { margin-bottom: 0.2rem; position: relative; padding-left: 0.7rem; line-height: 1.4; font-size: 0.85rem; }
         .info-list li::before { content: '•'; position: absolute; left: 0; color: #004094; font-weight: bold; top: 0; }
         #infoBox { width: 100%; line-height: 1.5; }
@@ -820,7 +821,7 @@
             input.value = amount;
             if (row?.classList.contains('guide-estimate-row')) renderGuideEstimate();
             else if (row?.classList.contains('first-reg-row')) renderFirstRegistrationView();
-            else updateAll();
+            else refreshGeneratedTextByCurrentMode();
         }
         function normalizeNoticeTexts(value) {
             const source = Array.isArray(value) ? value : (String(value || '').trim() ? [value] : []);
@@ -2203,19 +2204,25 @@
             const month = parseInt(document.getElementById('targetMonth').value, 10) || (new Date().getMonth() + 1);
             return `${year}-${String(month).padStart(2, '0')}-01`;
         }
-        function addFirstRegRow(nameVal = '', weekdayVal = 1, hoursVal = 3, rateVal = '', startDateVal = '') {
+        function normalizeWeekdayList(value, fallback = [1]) {
+            const source = Array.isArray(value) ? value : [value];
+            const days = source.map(day => parseInt(day, 10)).filter(day => Number.isFinite(day) && day >= 0 && day <= 6);
+            const unique = Array.from(new Set(days));
+            return unique.length ? unique : [...fallback];
+        }
+        function addFirstRegRow(nameVal = '', weekdayVal = [1], hoursVal = 3, rateVal = '', startDateVal = '') {
             const id = generateSafeId();
-            const safeWeekday = Math.max(0, Math.min(6, parseInt(weekdayVal, 10) || 0));
+            const safeWeekdays = normalizeWeekdayList(weekdayVal);
             const safeHours = parseFloat(hoursVal) || '';
             const safeRate = parseInt(rateVal, 10) || '';
             const startDate = startDateVal || getDefaultFirstRegStartDate();
-            const dayOptions = ['일', '월', '화', '수', '목', '금', '토'].map((label, index) => `<option value="${index}" ${index === safeWeekday ? 'selected' : ''}>${label}요일</option>`).join('');
+            const dayButtons = ['일', '월', '화', '수', '목', '금', '토'].map((label, index) => `<div><input type="checkbox" id="first-${id}-${index}" value="${index}" class="first-weekday hidden" ${safeWeekdays.includes(index) ? 'checked' : ''} onchange="renderFirstRegistrationView()"><label for="first-${id}-${index}" class="block w-8 h-8 rounded-full border border-gray-300 text-center leading-7 text-xs cursor-pointer select-none text-gray-400 hover:bg-white hover:border-rose-500 font-bold">${label}</label></div>`).join('');
             const html = `<div class="bg-white p-4 border border-rose-100 rounded-lg shadow-sm relative first-reg-row" id="frow-${id}">
                 <button onclick="removeFirstRegRow('frow-${id}')" class="absolute top-2 right-2 text-gray-300 hover:text-red-500">✖</button>
                 <div class="mb-3"><input type="text" class="sub-name w-full text-base font-bold border-b p-1 focus:outline-none focus:border-rose-500" placeholder="예: 수학-개별정규-홍길동T-3h" value="${escapeHtml(nameVal)}" oninput="renderFirstRegistrationView()"></div>
                 <div class="grid grid-cols-2 gap-2 text-xs">
                     <div><label class="block text-gray-400 mb-0.5">등원 시작일</label><input type="date" class="first-start-date w-full p-2 border rounded text-sm font-bold" value="${escapeHtml(startDate)}" onchange="renderFirstRegistrationView()"></div>
-                    <div><label class="block text-gray-400 mb-0.5">수업 요일</label><select class="first-weekday w-full p-2 border rounded text-sm font-bold" onchange="renderFirstRegistrationView()">${dayOptions}</select></div>
+                    <div><label class="block text-gray-400 mb-1">수업 요일</label><div class="flex justify-between px-1">${dayButtons}</div></div>
                     <div><label class="block text-gray-400 mb-0.5">수업 시간</label><input type="number" class="first-hours w-full p-2 border rounded text-right text-sm font-bold" placeholder="3" value="${safeHours}" oninput="renderFirstRegistrationView()"></div>
                     <div><label class="block text-gray-400 mb-0.5">회당 수강료</label><input type="number" class="sub-rate w-full p-2 border rounded text-right text-sm font-bold" placeholder="0" value="${safeRate}" oninput="renderFirstRegistrationView()"><div class="rate-preset-row mt-2 flex flex-wrap gap-1.5">${buildRatePresetButtons()}</div></div>
                 </div>
@@ -2232,11 +2239,11 @@
         function collectFirstRegistrationRows(includeBlank = false) {
             return Array.from(document.querySelectorAll('#firstRegList .first-reg-row')).map((row, index) => {
                 const name = row.querySelector('.sub-name')?.value || '';
-                const weekday = parseInt(row.querySelector('.first-weekday')?.value, 10);
+                const weekdays = Array.from(row.querySelectorAll('.first-weekday:checked')).map(input => parseInt(input.value, 10)).filter(day => Number.isFinite(day));
                 const hours = parseFloat(row.querySelector('.first-hours')?.value) || 0;
                 const rate = parseInt(row.querySelector('.sub-rate')?.value, 10) || 0;
                 const startDate = row.querySelector('.first-start-date')?.value || '';
-                return { name: name.trim(), weekday: Number.isFinite(weekday) ? weekday : 1, hours, rate, startDate, index };
+                return { name: name.trim(), weekdays: normalizeWeekdayList(weekdays), hours, rate, startDate, index };
             }).filter(item => includeBlank || item.name || item.rate || item.startDate);
         }
         function getFirstRegistrationMonthDates(row) {
@@ -2246,8 +2253,9 @@
             const start = row.startDate ? new Date(`${row.startDate}T00:00:00`) : new Date(year, month - 1, 1);
             const startDay = start.getFullYear() === year && start.getMonth() === month - 1 ? start.getDate() : (start > new Date(year, month - 1, lastDate) ? lastDate + 1 : 1);
             const dates = [];
+            const weekdays = normalizeWeekdayList(row.weekdays || row.weekday);
             for (let day = Math.max(1, startDay); day <= lastDate; day++) {
-                if (new Date(year, month - 1, day).getDay() === row.weekday) dates.push(day);
+                if (weekdays.includes(new Date(year, month - 1, day).getDay())) dates.push(day);
             }
             return dates;
         }
@@ -2310,7 +2318,7 @@
                 dates.forEach(day => calendarEvents.push({ day, name: info.mainName || row.name || '수업', rawName: row.name, durationHours: row.hours }));
                 const badges = buildSubjectBadges(info);
                 const timeDisplay = row.hours ? `<span class="time-badge badge-base text-optical-center mr-1">${row.hours}시간</span>` : '';
-                const weekdayName = ['일', '월', '화', '수', '목', '금', '토'][row.weekday] || '';
+                const weekdayName = normalizeWeekdayList(row.weekdays || row.weekday).map(day => ['일', '월', '화', '수', '목', '금', '토'][day]).join('/');
                 const dateText = dates.length ? `${dates.join(', ')}일` : '이번 달 표시 일정 없음';
                 return {
                     sortMeta: getSubjectSortMeta(row.name, row.hours, index),
@@ -2818,7 +2826,7 @@
                 selectRows: collectCoreRows('#selectList .select-row', row => { const id = row.id.replace('srow-', ''); return { name: row.querySelector('.sub-name').value || '', rate: parseInt(row.querySelector('.sub-rate').value, 10) || 0, dates: Array.from(selectRowDates[id] || []).map(n => parseInt(n, 10)) }; }),
                 manualRows: collectCoreRows('#manualList .manual-row', row => ({ name: row.querySelector('.sub-name').value || '', time: parseFloat(row.querySelector('.sub-time').value) || 0, count: parseFloat(row.querySelector('.sub-count').value) || 0, rate: parseInt(row.querySelector('.sub-rate').value, 10) || 0 })),
                 guideRows: collectGuideEstimateRows().map(item => ({ name: item.name, baseAmount: item.baseAmount, adjustment: item.adjustment })),
-                firstRows: collectFirstRegistrationRows(true).map(item => ({ name: item.name, weekday: item.weekday, hours: item.hours, rate: item.rate, startDate: item.startDate })),
+                firstRows: collectFirstRegistrationRows(true).map(item => ({ name: item.name, weekdays: item.weekdays, hours: item.hours, rate: item.rate, startDate: item.startDate })),
                 ttRows: (ttData || []).map(item => ({ day: parseInt(item.day, 10) || 0, subject: item.subject || '', start: parseInt(item.start, 10) || 0, duration: parseInt(item.duration, 10) || 1, price: parseInt(item.price, 10) || 0, manualDates: Array.from(item.manualDates || []).map(n => parseInt(n, 10)).filter(n => !isNaN(n)) })),
                 historyData: JSON.parse(JSON.stringify(historyData || [])),
                 aiData: JSON.parse(JSON.stringify(aiData || [])),
@@ -2900,7 +2908,7 @@
             });
             if (!document.querySelector('#guideEstimateList .guide-estimate-row')) addGuideEstimateRow();
             (data.firstRows || []).forEach(rowData => {
-                addFirstRegRow(rowData.name || '', rowData.weekday ?? 1, rowData.hours || '', rowData.rate || '', rowData.startDate || '');
+                addFirstRegRow(rowData.name || '', rowData.weekdays || rowData.weekday || [1], rowData.hours || '', rowData.rate || '', rowData.startDate || '');
             });
             if (!document.querySelector('#firstRegList .first-reg-row')) addFirstRegRow();
 
