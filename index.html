@@ -259,6 +259,14 @@
                         <div class="flex-1"><label class="block text-xs font-bold text-gray-500 mb-1">연도</label><input type="number" id="targetYear" class="w-full p-2.5 border border-gray-300 rounded-lg text-center text-sm font-bold" onchange="resetAndUpdate()"></div>
                         <div class="flex-1"><label class="block text-xs font-bold text-gray-500 mb-1">월</label><input type="number" id="targetMonth" min="1" max="12" class="w-full p-2.5 border border-gray-300 rounded-lg text-center text-sm font-bold" onchange="resetAndUpdate()"></div>
                     </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 mb-1">퍼센트 할인 (%)</label>
+                        <div class="flex items-center gap-2">
+                            <input type="number" id="discountRate" min="0" max="100" step="0.1" value="0" class="flex-1 p-2.5 border border-rose-200 rounded-lg text-right text-sm font-bold focus:border-rose-500 focus:outline-none" placeholder="0" oninput="handleDiscountRateInput()">
+                            <span class="text-sm font-black text-rose-500">%</span>
+                        </div>
+                        <p class="mt-1 text-[10px] leading-4 text-slate-400">입력한 비율만큼 수강료 소계에서 차감됩니다.</p>
+                    </div>
                     <div id="siblingConfigArea" class="rounded-xl border border-slate-100 bg-slate-50/70 p-3">
                         <label class="flex items-center justify-between gap-3 cursor-pointer">
                             <span>
@@ -476,6 +484,7 @@
                         <div id="priceSummaryArea">
                             <div class="border-t-2 border-gray-200 pt-2 space-y-1 mb-4">
                                 <div class="flex justify-between text-gray-600 font-bold text-sm"><span>수강료 소계</span><span id="dispSubtotal" class="text-gray-800">0</span></div>
+                                <div class="flex justify-between text-rose-500 font-bold text-sm hidden" id="dispDiscountRow"><span>퍼센트 할인</span><span id="dispDiscount">0</span></div>
                                 <div class="flex justify-between text-red-500 font-bold text-sm" id="dispAdjRow"><span>이월/초과금 조정</span><span id="dispAdj">0</span></div>
                                 <div id="siblingSummaryArea" class="hidden mt-3 pt-3 border-t border-dashed border-slate-200 space-y-1"></div>
                             </div>
@@ -661,6 +670,7 @@
         const DEFAULT_PRICE_SUMMARY_HTML = `
             <div class="border-t-2 border-gray-200 pt-2 space-y-1 mb-4">
                 <div class="flex justify-between text-gray-600 font-bold text-sm"><span>수강료 소계</span><span id="dispSubtotal" class="text-gray-800">0원</span></div>
+                <div class="flex justify-between text-rose-500 font-bold text-sm hidden" id="dispDiscountRow"><span>퍼센트 할인</span><span id="dispDiscount">0원</span></div>
                 <div class="flex justify-between text-red-500 font-bold text-sm" id="dispAdjRow"><span>이월/초과금 조정</span><span id="dispAdj">0원</span></div>
                 <div id="siblingSummaryArea" class="hidden mt-3 pt-3 border-t border-dashed border-slate-200 space-y-1"></div>
             </div>
@@ -1098,6 +1108,34 @@
             return lines.join('\n');
         }
 
+        function getDiscountRate() {
+            const input = document.getElementById('discountRate');
+            const value = parseFloat(input?.value);
+            if (!Number.isFinite(value)) return 0;
+            return Math.min(100, Math.max(0, value));
+        }
+        function formatDiscountRate(rate = getDiscountRate()) {
+            return Number.isInteger(rate) ? String(rate) : rate.toFixed(1).replace(/\.0$/, '');
+        }
+        function getPercentDiscountInfo(baseAmount = 0) {
+            const rate = getDiscountRate();
+            const safeBase = Math.max(0, parseFloat(baseAmount) || 0);
+            const amount = rate > 0 ? Math.round(safeBase * rate / 100) : 0;
+            return { rate, amount, discountedBase: Math.max(0, safeBase - amount) };
+        }
+        function updateDiscountSummaryRow(discountInfo = getPercentDiscountInfo(0)) {
+            const row = document.getElementById('dispDiscountRow');
+            const value = document.getElementById('dispDiscount');
+            if (!row || !value) return;
+            const amount = discountInfo.amount || 0;
+            row.classList.toggle('hidden', amount <= 0);
+            value.innerText = amount > 0 ? `-${amount.toLocaleString()}원 (${formatDiscountRate(discountInfo.rate)}%)` : '0원';
+        }
+        function getDiscountMessageLine(discountInfo = getPercentDiscountInfo(0)) {
+            if (!discountInfo.amount) return '';
+            return `${formatDiscountRate(discountInfo.rate)}% 할인 ${discountInfo.amount.toLocaleString()}원이 반영되어 있습니다.`;
+        }
+
         // [기본 함수들: getSubjectColorClass, parseSubjectInfo 등]
         function getSubjectColorClass(name, isMakeup, isPredicted) { if (isPredicted) return 'subj-predicted'; if (isMakeup) return 'subj-makeup'; if (!name) return 'subj-default'; const n = name.trim(); if (n.includes('1:1')) return 'subj-oneonone'; if (n.includes('2:1')) return 'subj-twoonone'; if (n.includes('수학')) return 'subj-math'; if (n.includes('국어')) return 'subj-kor'; if (n.includes('영어')) return 'subj-eng'; if (['과학', '화학', '생명', '물리', '지학', '물지'].some(k => n.includes(k))) return 'subj-sci'; if (['사회', '사탐', '사문', '한국사', '세계사', '지리', '한지', '세지', '윤리', '윤사', '역사'].some(k => n.includes(k))) return 'subj-soc'; return 'subj-default'; }
         function parseSubjectInfo(rawName) { let name = rawName || ''; let timeText = ''; const timeMatch = name.match(/-(\d+(\.\d+)?)h/i); if(timeMatch) { timeText = `${timeMatch[1]}시간`; name = name.replace(timeMatch[0], ''); } let teacher = '', type = '', mainName = name.split('-')[0]; const parts = name.split('-'); for (let i=1; i<parts.length; i++) { let part = parts[i].trim(); const parenMatch = part.match(/(.*)\(([^)]+)\)$/); if (parenMatch) { if (parenMatch[1]) type = parenMatch[1]; teacher = parenMatch[2]; } else if (part.toUpperCase().endsWith('T')) teacher = part; else type = part; } return { mainName, teacher, type, timeText }; }
@@ -1227,6 +1265,8 @@
             const area = document.getElementById('priceSummaryArea');
             if (!area) return;
             const needsRestore = !document.getElementById('dispSubtotal')
+                || !document.getElementById('dispDiscountRow')
+                || !document.getElementById('dispDiscount')
                 || !document.getElementById('dispAdjRow')
                 || !document.getElementById('dispAdj')
                 || !document.getElementById('siblingSummaryArea')
@@ -1361,9 +1401,13 @@
             if(currentTab === 'history' || currentTab === 'payment') return;
             const name = document.getElementById('studentName').value || '학생명';
             const month = document.getElementById('targetMonth').value;
-            const primaryTotal = totalAmount + adjustment;
+            const discountInfo = getPercentDiscountInfo(totalAmount);
+            const primaryTotal = discountInfo.discountedBase + adjustment;
+            const discountLine = getDiscountMessageLine(discountInfo);
             if (collectSiblingRows().length) {
-                document.getElementById('generatedTextArea').value = buildCombinedInfoMessage(name, primaryTotal, month, adjustment);
+                document.getElementById('generatedTextArea').value = buildCombinedInfoMessage(name, primaryTotal, month, adjustment, {
+                    footer: discountLine
+                });
                 return;
             }
             const templateType = document.getElementById('messageTemplateType')?.value || 'general';
@@ -1380,20 +1424,26 @@
             if (templateType === 'first') {
                 lines.push('', buildFirstRegistrationGuideText());
             }
+            if (discountLine) lines.push(discountLine);
             lines.push('', buildPaymentGuideText(), '', '감사합니다.');
             document.getElementById('generatedTextArea').value = lines.join('\n');
         }
-        function updateHistoryInfoText(summary) {
+        function updateHistoryInfoText(summary, discountInfo = getPercentDiscountInfo(summary.totalAmount)) {
             const today = new Date();
             const todayText = `${today.getFullYear()}년 ${today.getMonth() + 1}월 ${today.getDate()}일`;
             const name = document.getElementById('studentName').value || '학생명';
             const month = document.getElementById('targetMonth').value;
-            const finalTotal = summary.totalAmount + summary.adjustment;
+            const finalTotal = discountInfo.discountedBase + summary.adjustment;
+            const discountLine = getDiscountMessageLine(discountInfo);
             const adjustmentLine = summary.adjustment === 0
                 ? '현재 이월/초과금 조정은 없습니다.'
                 : `이월/초과금 조정 ${summary.adjustment > 0 ? '+' : ''}${summary.adjustment.toLocaleString()}원이 함께 반영되어 있습니다.`;
-            const text = `안녕하세요. 에스에듀 반포관입니다.\n\n${name} 학생의 ${month}월 수업 이력을 안내드립니다.\n${todayText} 기준 현재까지 입력된 수업은 총 ${summary.totalCount}회 (${summary.totalHours.toLocaleString()}시간)이며,\n누적 수업 금액은 ${summary.totalAmount.toLocaleString()}원입니다.\n${adjustmentLine}\n따라서 현재까지 반영 금액은 ${finalTotal.toLocaleString()}원입니다.\n\n확인 부탁드리며, 수정이 필요한 내용이 있으시면 편하게 말씀해주세요.\n감사합니다.`;
+            const text = `안녕하세요. 에스에듀 반포관입니다.\n\n${name} 학생의 ${month}월 수업 이력을 안내드립니다.\n${todayText} 기준 현재까지 입력된 수업은 총 ${summary.totalCount}회 (${summary.totalHours.toLocaleString()}시간)이며,\n누적 수업 금액은 ${summary.totalAmount.toLocaleString()}원입니다.${discountLine ? `\n${discountLine}` : ''}\n${adjustmentLine}\n따라서 현재까지 반영 금액은 ${finalTotal.toLocaleString()}원입니다.\n\n확인 부탁드리며, 수정이 필요한 내용이 있으시면 편하게 말씀해주세요.\n감사합니다.`;
             document.getElementById('generatedTextArea').value = text;
+        }
+        function handleDiscountRateInput() {
+            if (currentTab === 'payment') { renderPaymentReceipt(); return; }
+            refreshGeneratedTextByCurrentMode();
         }
         function handleAdjustmentInput() {
             if (currentTab === 'history') { updateHistoryView(); return; }
@@ -1446,9 +1496,11 @@
             currentLoadedRecordId = '';
             const adjustment = document.getElementById('adjustment');
             const aiAdjustment = document.getElementById('aiAdjustment');
+            const discountRate = document.getElementById('discountRate');
             const memo = document.getElementById('recordMemoInput');
             if (clearAdjustments && adjustment) adjustment.value = 0;
             if (clearAdjustments && aiAdjustment) aiAdjustment.value = 0;
+            if (clearAdjustments && discountRate) discountRate.value = 0;
             if (clearMemo && memo) memo.value = '';
             ['smartPasteInput', 'ttPasteInput', 'historyPasteInput', 'aiPasteInput', 'paymentPasteInput'].forEach(id => {
                 const el = document.getElementById(id);
@@ -1691,7 +1743,9 @@
                 .join('');
             if (isNaN(subtotal)) subtotal = 0;
             document.getElementById('dispSubtotal').innerText = subtotal.toLocaleString() + '원';
-            const primaryTotal = subtotal + adj;
+            const discountInfo = getPercentDiscountInfo(subtotal);
+            updateDiscountSummaryRow(discountInfo);
+            const primaryTotal = discountInfo.discountedBase + adj;
             const displayTotal = renderSiblingSummary(name, primaryTotal);
             document.getElementById('dispTotal').innerText = displayTotal.toLocaleString() + '원';
             renderCommonReceiptCalendar(allEvents);
@@ -1878,9 +1932,12 @@
                     tbody.innerHTML += `<tr class="border-b border-dashed border-gray-200 bg-purple-50"><td class="py-2 pl-1 pr-2 align-top"><div class="flex items-center gap-2"><span class="font-bold text-purple-700">기납부 확인</span></div></td><td class="py-2 pr-1 text-right font-mono text-base font-bold text-purple-700 align-top pt-1.5">-${amount.toLocaleString()}원</td></tr>`;
                 }
             });
-            const balance = (totalTuition - totalDiscount) - totalPaid;
+            const netTuitionBeforePercent = Math.max(0, totalTuition - totalDiscount);
+            const percentDiscountInfo = getPercentDiscountInfo(netTuitionBeforePercent);
+            const balance = percentDiscountInfo.discountedBase - totalPaid;
             const discountRow = totalDiscount > 0 ? `<div class="flex justify-between text-red-500 font-bold text-lg"><span>총 할인액</span><span>-${totalDiscount.toLocaleString()}원</span></div>` : '';
-            const summaryHtml = `<div class="border-t-2 border-gray-200 pt-3 space-y-2 mb-6"><div class="flex justify-between text-gray-600 font-bold text-lg"><span>수강료/초과금 총액</span><span>${totalTuition.toLocaleString()}원</span></div>${discountRow}<div class="flex justify-between text-purple-600 font-bold text-lg"><span>기납부 총액</span><span>-${totalPaid.toLocaleString()}원</span></div></div><div class="flex justify-between items-center bg-gray-50 p-5 rounded-xl border border-gray-100"><span class="text-xl font-black text-gray-800">미납/차액 합계</span><span class="text-4xl font-black ${balance > 0 ? 'text-red-600' : 'text-blue-600'}">${balance.toLocaleString()}원</span></div>`;
+            const percentDiscountRow = percentDiscountInfo.amount > 0 ? `<div class="flex justify-between text-rose-500 font-bold text-lg"><span>퍼센트 할인 (${formatDiscountRate(percentDiscountInfo.rate)}%)</span><span>-${percentDiscountInfo.amount.toLocaleString()}원</span></div>` : '';
+            const summaryHtml = `<div class="border-t-2 border-gray-200 pt-3 space-y-2 mb-6"><div class="flex justify-between text-gray-600 font-bold text-lg"><span>수강료/초과금 총액</span><span>${totalTuition.toLocaleString()}원</span></div>${discountRow}${percentDiscountRow}<div class="flex justify-between text-purple-600 font-bold text-lg"><span>기납부 총액</span><span>-${totalPaid.toLocaleString()}원</span></div></div><div class="flex justify-between items-center bg-gray-50 p-5 rounded-xl border border-gray-100"><span class="text-xl font-black text-gray-800">미납/차액 합계</span><span class="text-4xl font-black ${balance > 0 ? 'text-red-600' : 'text-blue-600'}">${balance.toLocaleString()}원</span></div>`;
             document.getElementById('priceSummaryArea').innerHTML = summaryHtml;
             document.getElementById('priceSummaryArea').classList.remove('hidden');
         }
@@ -2011,14 +2068,18 @@
                 </tr>`;
             });
 
+            const discountInfo = getPercentDiscountInfo(summary.totalAmount);
+            const discountRow = discountInfo.amount > 0 ? `<div class="flex justify-between text-rose-500 font-bold text-sm"><span>퍼센트 할인 (${formatDiscountRate(discountInfo.rate)}%)</span><span>-${discountInfo.amount.toLocaleString()}원</span></div>` : '';
+            const finalTotal = discountInfo.discountedBase + adjustment;
             summaryArea.innerHTML = `<div class="border-t-2 border-gray-200 pt-3 space-y-2 mb-5">
                 <div class="flex justify-between text-gray-600 font-bold text-sm"><span>현재까지 입력 수업</span><span>${summary.totalCount}회 / ${summary.totalHours.toLocaleString()}시간</span></div>
                 <div class="flex justify-between text-gray-700 font-bold text-sm"><span>수업 누계</span><span>${summary.totalAmount.toLocaleString()}원</span></div>
+                ${discountRow}
                 <div class="flex justify-between ${adjustment === 0 ? 'text-gray-400' : 'text-red-500'} font-bold text-sm"><span>이월/초과금 조정</span><span>${adjustment > 0 ? '+' : ''}${adjustment.toLocaleString()}원</span></div>
             </div>
             <div class="flex justify-between items-center bg-gray-50 p-4 rounded-xl border border-gray-100">
                 <span class="text-base font-black text-gray-800">현재까지 발생 금액</span>
-                <span class="text-3xl font-black text-green-600">${(summary.totalAmount + adjustment).toLocaleString()}원</span>
+                <span class="text-3xl font-black text-green-600">${finalTotal.toLocaleString()}원</span>
             </div>`;
             summaryArea.classList.remove('hidden');
 
@@ -2028,7 +2089,7 @@
                 rawName: item.subject,
                 isMakeup: item.isMakeup
             })));
-            updateHistoryInfoText(summary);
+            updateHistoryInfoText(summary, discountInfo);
         }
         // (AI 예측 로직 생략 - V45와 동일)
         function processAiPrediction() { const raw = document.getElementById('aiPasteInput').value; const lines = raw.split('\n'); const year = parseInt(document.getElementById('targetYear').value); const month = parseInt(document.getElementById('targetMonth').value); let parsedData = []; lines.forEach(line => { const cols = line.split('\t'); if(cols.length < 5) return; const dateMatch = line.match(/(\d+)\/(\d+)/); if (!dateMatch) return; const numbers = cols.map(c => parseInt(c.replace(/,/g, ''))).filter(n => !isNaN(n)); const amountObj = numbers.map((val, idx) => ({ val, hasComma: cols[idx].includes(','), isId: idx === 0 && /^\d{5,6}$/.test(cols[idx].trim()) })).filter(n => !n.isId).sort((a,b) => (b.hasComma - a.hasComma) || (b.val - a.val))[0]; const amount = amountObj ? amountObj.val : 0; if(amount > 0 && !line.includes('납부') && !line.includes('결제')) { const day = parseInt(dateMatch[2]); const subjKw = cols.find(c => ['수학','영어','국어','과학'].some(k => c.includes(k))); parsedData.push({ name: subjKw || '기타 수업', amount: amount, day: day, type: 'existing' }); } }); const patterns = {}; let maxDay = 0; parsedData.forEach(d => { const key = d.name; if (!patterns[key]) patterns[key] = { days: new Set(), price: d.amount }; const date = new Date(year, month - 1, d.day); patterns[key].days.add(date.getDay()); if(d.day > maxDay) maxDay = d.day; }); const lastDate = new Date(year, month, 0).getDate(); const predictedData = []; for (let d = maxDay + 1; d <= lastDate; d++) { const targetDate = new Date(year, month - 1, d); const dayOfWeek = targetDate.getDay(); for (const [key, pat] of Object.entries(patterns)) { if (pat.days.has(dayOfWeek)) { predictedData.push({ name: key, amount: pat.price, day: d, type: 'predicted' }); } } } aiData = [...parsedData, ...predictedData].sort((a, b) => a.day - b.day); renderAiResult(); }
@@ -2064,14 +2125,17 @@
                 tbody.innerHTML += `<tr class="border-b border-dashed border-gray-200"><td class="py-3 pl-1 pr-2 align-top"><div class="flex items-center flex-wrap gap-y-1 mb-1"><span class="font-extrabold text-gray-800 text-lg mr-1">${escapeHtml(info.mainName)}</span>${timeDisplay}${badges}</div><div class="text-sm text-gray-500 pl-0.5">${detailText}</div></td><td class="py-3 pr-1 text-right font-mono text-lg font-black text-gray-800 align-top pt-2.5">${data.amount.toLocaleString()}원</td></tr>`;
             }
             const adj = parseInt(document.getElementById('aiAdjustment').value) || 0;
-            const finalTotal = totalAmount + adj;
+            const discountInfo = getPercentDiscountInfo(totalAmount);
+            const finalTotal = discountInfo.discountedBase + adj;
             document.getElementById('dispSubtotal').innerText = totalAmount.toLocaleString() + '원';
+            updateDiscountSummaryRow(discountInfo);
             const adjRow = document.getElementById('dispAdjRow');
             if(adjRow) {
                 adjRow.innerHTML = `<span>이월/초과금 조정</span><span class="${adj===0?'text-gray-300':'text-red-500'}">${(adj>0?'+':'')+adj.toLocaleString()}원</span>`;
             }
             document.getElementById('dispTotal').innerText = finalTotal.toLocaleString() + '원';
             renderCommonReceiptCalendar(aiData.map(d => ({ day: d.day, name: parseSubjectInfo(d.name).mainName, rawName: d.name, isPredicted: d.type === 'predicted', durationHours: parseDurationHours(parseSubjectInfo(d.name).timeText) })));
+            updateInfoText(totalAmount, adj);
         }
 
         function addGuideEstimateRow(nameVal = '', amountVal = '', adjustmentVal = '') {
@@ -2121,11 +2185,12 @@
         }
         function buildGuideEstimateMessage(rows, summary) {
             const month = document.getElementById('targetMonth').value;
+            const discountLine = getDiscountMessageLine(summary.discountInfo || getPercentDiscountInfo(summary.base || 0));
             if (collectSiblingRows().length) {
                 return buildCombinedInfoMessage(getGuideEstimateStudentLabel(rows), summary.total, month, 0, {
                     intro: `${month}월 수강료는 최근 수업 참석 현황을 바탕으로 추산한 대략 금액입니다.`,
                     hideAdjustment: true,
-                    footer: '정확한 금액은 실제 수업 진행 내역에 따라 조정될 수 있습니다.'
+                    footer: [discountLine, '정확한 금액은 실제 수업 진행 내역에 따라 조정될 수 있습니다.'].filter(Boolean).join('\n')
                 });
             }
             const templateType = document.getElementById('messageTemplateType')?.value || 'general';
@@ -2143,6 +2208,7 @@
                     : `이월/초과금 ${item.adjustment > 0 ? '+' : ''}${item.adjustment.toLocaleString()}원`;
                 lines.push(`${name} 학생: 추산 수강료 ${item.baseAmount.toLocaleString()}원, ${adjustmentText}, 안내 금액 ${item.total.toLocaleString()}원`);
             });
+            if (discountLine) lines.push(discountLine);
             lines.push('', `총 안내 금액은 ${summary.total.toLocaleString()}원입니다.`);
             if (templateType === 'first') lines.push('', buildFirstRegistrationGuideText());
             lines.push('', buildPaymentGuideText(), '', '정확한 금액은 실제 수업 진행 내역에 따라 조정될 수 있습니다.', '감사합니다.');
@@ -2193,6 +2259,10 @@
                 adjEl.innerText = (summary.adjustment > 0 ? '+' : '') + summary.adjustment.toLocaleString() + '원';
                 adjEl.className = summary.adjustment === 0 ? "text-gray-300 font-bold" : (summary.adjustment > 0 ? "text-red-500 font-bold" : "text-[#004094] font-bold");
             }
+            const discountInfo = getPercentDiscountInfo(summary.base);
+            summary.discountInfo = discountInfo;
+            summary.total = discountInfo.discountedBase + summary.adjustment;
+            updateDiscountSummaryRow(discountInfo);
             const displayTotal = renderSiblingSummary(label, summary.total);
             document.getElementById('dispTotal').innerText = displayTotal.toLocaleString() + '원';
             document.getElementById('receiptGuideList').innerHTML = `<li><b>추산 기준:</b> 최근 수업 참석 현황을 바탕으로 계산된 대략 금액입니다.</li>` + normalizeGuideMessages(guideMessages).filter(item => item.text).map(item => `<li><b>${escapeHtml(item.title)}:</b> ${escapeHtml(item.text)}</li>`).join('');
@@ -2278,7 +2348,7 @@
                 calDiv.appendChild(div);
             }
         }
-        function buildFirstRegistrationMessage(primaryName, primaryTotal, month, adjustment = 0) {
+        function buildFirstRegistrationMessage(primaryName, primaryTotal, month, adjustment = 0, discountInfo = getPercentDiscountInfo(0)) {
             const combined = buildCombinedStudentTotals(primaryName, primaryTotal);
             const lines = [
                 '※첫 등록 수강료 안내※',
@@ -2291,6 +2361,8 @@
                 lines.push(`${item.name} 학생 ${month}월 첫 등록 안내 금액은 ${item.amount.toLocaleString()} 원입니다.`);
             });
             if (combined.rows.length > 1) lines.push('', `총 납부 금액은 ${combined.total.toLocaleString()} 원입니다.`);
+            const discountLine = getDiscountMessageLine(discountInfo);
+            if (discountLine) lines.push(discountLine);
             if (adjustment !== 0) lines.push(`이월/초과금 조정 ${adjustment > 0 ? '+' : ''}${adjustment.toLocaleString()} 원이 함께 반영되어 있습니다.`);
             lines.push('', '월말 정산 작업을 통해 실제 진행 수업 기준의 초과금 또는 이월금을 다음 달 수강료에 반영합니다.');
             lines.push('', buildPaymentGuideText(), '', '감사합니다.');
@@ -2334,13 +2406,15 @@
                 adjEl.innerText = (adj > 0 ? '+' : '') + adj.toLocaleString() + '원';
                 adjEl.className = adj === 0 ? "text-gray-300 font-bold" : (adj > 0 ? "text-red-500 font-bold" : "text-[#004094] font-bold");
             }
-            const primaryTotal = subtotal + adj;
+            const discountInfo = getPercentDiscountInfo(subtotal);
+            updateDiscountSummaryRow(discountInfo);
+            const primaryTotal = discountInfo.discountedBase + adj;
             const displayTotal = renderSiblingSummary(name, primaryTotal);
             document.getElementById('dispTotal').innerText = displayTotal.toLocaleString() + '원';
             renderCommonReceiptCalendar(calendarEvents);
             renderFirstRegistrationCalendar(calendarEvents);
             document.getElementById('receiptGuideList').innerHTML = `<li><b>첫 등록:</b> 첫 등록 수강료는 4주 기준으로 책정됩니다.</li><li><b>월말 정산:</b> 월말 정산 작업을 통해 실제 진행 수업 기준의 초과금 또는 이월금을 다음 달 수강료에 반영합니다.</li>` + normalizeGuideMessages(guideMessages).filter(item => item.text).map(item => `<li><b>${escapeHtml(item.title)}:</b> ${escapeHtml(item.text)}</li>`).join('');
-            document.getElementById('generatedTextArea').value = buildFirstRegistrationMessage(name, primaryTotal, month, adj);
+            document.getElementById('generatedTextArea').value = buildFirstRegistrationMessage(name, primaryTotal, month, adj, discountInfo);
         }
 
         function setActiveTtRow(idx) { activeTtRowIndex = idx; document.querySelectorAll('#ttList > div').forEach((row, i) => row.classList.toggle('active-row', i === idx)); renderCalendar(); }
@@ -2476,8 +2550,10 @@
                 const timeDisplay = `<span class="time-badge badge-base text-optical-center mr-1">${g.duration}시간</span>`;
                 tbody.innerHTML += `<tr class="border-b border-dashed border-gray-200"><td class="py-2 pl-1 pr-2 align-top"><div class="flex items-center flex-wrap gap-y-1 mb-0.5"><span class="font-extrabold text-gray-800 text-base mr-1">${escapeHtml(g.info.mainName)}</span>${timeDisplay}${badges}</div><div class="text-xs text-gray-500 pl-0.5">월 ${g.count}회 × ${g.price.toLocaleString()}원</div></td><td class="py-2 pr-1 text-right font-mono text-base font-black text-gray-800 align-top pt-1.5">${g.total.toLocaleString()}원</td></tr>`;
             });
-            const finalTotal = totalAmount + adj;
+            const discountInfo = getPercentDiscountInfo(totalAmount);
+            const finalTotal = discountInfo.discountedBase + adj;
             document.getElementById('dispSubtotal').innerText = totalAmount.toLocaleString() + '원';
+            updateDiscountSummaryRow(discountInfo);
             const adjRow = document.getElementById('dispAdjRow');
             if(adjRow) adjRow.innerHTML = `<span>이월/초과금 조정</span><span class="${adj===0?'text-gray-300':'text-red-500'}">${(adj>0?'+':'')+adj.toLocaleString()}원</span>`;
             document.getElementById('dispTotal').innerText = finalTotal.toLocaleString() + '원';
@@ -2813,6 +2889,7 @@
                 targetYear: parseInt(document.getElementById('targetYear').value, 10) || new Date().getFullYear(),
                 targetMonth: parseInt(document.getElementById('targetMonth').value, 10) || (new Date().getMonth() + 1),
                 adjustment: parseInt(document.getElementById('adjustment').value, 10) || 0,
+                discountRate: getDiscountRate(),
                 aiAdjustment: parseInt(document.getElementById('aiAdjustment')?.value, 10) || 0,
                 recordMemo: getCurrentRecordMemo(),
                 siblingMode: isSiblingModeEnabled(),
@@ -2845,6 +2922,8 @@
             document.getElementById('targetYear').value = data.targetYear || new Date().getFullYear();
             document.getElementById('targetMonth').value = data.targetMonth || (new Date().getMonth() + 1);
             document.getElementById('adjustment').value = data.adjustment || 0;
+            const discountRateInput = document.getElementById('discountRate');
+            if (discountRateInput) discountRateInput.value = data.discountRate ?? data.discountPercent ?? 0;
             const memoInput = document.getElementById('recordMemoInput');
             if (memoInput) memoInput.value = data.recordMemo || data.memo || '';
             setSiblingState(!!data.siblingMode, data.siblingRows || []);
