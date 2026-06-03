@@ -267,6 +267,15 @@
                         </div>
                         <p class="mt-1 text-[10px] leading-4 text-slate-400">입력한 비율만큼 수강료 소계에서 차감됩니다.</p>
                     </div>
+                    <div id="calendarDisplayOptionArea" class="rounded-xl border border-slate-100 bg-slate-50/70 p-3">
+                        <label class="flex items-center justify-between gap-3 cursor-pointer">
+                            <span>
+                                <span class="block text-xs font-black text-slate-700">캘린더 숨김</span>
+                                <span class="block text-[10px] leading-4 text-slate-400 mt-0.5">수업 일정 뱃지를 숨기고 월간 달력만 표시합니다.</span>
+                            </span>
+                            <input type="checkbox" id="hideReceiptCalendarDetails" class="w-4 h-4 accent-[#004094]" onchange="handleCalendarDisplayOptionChange()">
+                        </label>
+                    </div>
                     <div id="siblingConfigArea" class="rounded-xl border border-slate-100 bg-slate-50/70 p-3">
                         <label class="flex items-center justify-between gap-3 cursor-pointer">
                             <span>
@@ -1275,6 +1284,22 @@
             if (needsRestore) area.innerHTML = DEFAULT_PRICE_SUMMARY_HTML;
             area.classList.remove('hidden');
         }
+        function shouldShowCalendarDisplayOption(tab = currentTab) {
+            return ['auto', 'manual', 'guide'].includes(tab);
+        }
+        function isReceiptCalendarDetailsHidden() {
+            return !!document.getElementById('hideReceiptCalendarDetails')?.checked;
+        }
+        function handleCalendarDisplayOptionChange() {
+            if (currentTab === 'guide') { renderGuideEstimate(); return; }
+            if (currentTab === 'manual' || currentTab === 'auto') { updateAll(); return; }
+            refreshGeneratedTextByCurrentMode();
+        }
+        function updateReceiptCalendarVisibility() {
+            const area = document.getElementById('receiptCalendarArea');
+            if (!area) return;
+            area.classList.toggle('hidden', currentTab === 'guide' && !isReceiptCalendarDetailsHidden());
+        }
 
         function switchTab(tab) {
             currentTab = tab;
@@ -1337,7 +1362,8 @@
             document.getElementById('historyGuide').classList.toggle('hidden', tab !== 'history');
             document.getElementById('paymentGuide').classList.toggle('hidden', tab !== 'payment');
             document.getElementById('aiGuide').classList.toggle('hidden', tab !== 'ai');
-            document.getElementById('receiptCalendarArea')?.classList.toggle('hidden', isGuide);
+            document.getElementById('calendarDisplayOptionArea')?.classList.toggle('hidden', !shouldShowCalendarDisplayOption(tab));
+            updateReceiptCalendarVisibility();
             document.getElementById('siblingConfigArea')?.classList.toggle('hidden', !['auto', 'select', 'manual', 'guide', 'first'].includes(tab));
             if (!isGuide) renderGuideMessages();
             toggleMessageControlVisibility();
@@ -1637,7 +1663,26 @@
         }
         function recalcRow(rowIdSuffix, type) { const year = parseInt(document.getElementById('targetYear').value); const month = parseInt(document.getElementById('targetMonth').value); const row = document.getElementById(type === 'auto' ? `arow-${rowIdSuffix}` : `srow-${rowIdSuffix}`); if (!row) return; let count = 0; if (type === 'auto') { const selectedDays = []; const rowExcluded = getAutoRowExcludedDates(rowIdSuffix); row.querySelectorAll('.day-chk:checked').forEach(c => selectedDays.push(parseInt(c.value))); const date = new Date(year, month - 1, 1); while (date.getMonth() === month - 1) { if (selectedDays.includes(date.getDay()) && !excludedDates.has(date.getDate()) && !rowExcluded.has(date.getDate())) count++; date.setDate(date.getDate() + 1); } renderAutoRowDatePills(rowIdSuffix); } else { count = selectRowDates[rowIdSuffix] ? selectRowDates[rowIdSuffix].size : 0; } const cntInput = row.querySelector('.sub-count'); if(cntInput) cntInput.value = count; }
         function recalcAllAutoCounts() { document.querySelectorAll('.auto-row').forEach(row => recalcRow(row.id.replace('arow-', ''), 'auto')); document.querySelectorAll('.select-row').forEach(row => recalcRow(row.id.replace('srow-', ''), 'select')); }
+        function renderPlainReceiptCalendar() {
+            const year = parseInt(document.getElementById('targetYear').value);
+            const month = parseInt(document.getElementById('targetMonth').value);
+            document.getElementById('calTitleReceipt').innerText = `${month}월 달력`;
+            const calDiv = document.getElementById('receiptMiniCalGrid');
+            calDiv.innerHTML = '';
+            const firstDay = new Date(year, month - 1, 1).getDay();
+            const lastDate = new Date(year, month, 0).getDate();
+            for(let i=0; i<firstDay; i++) calDiv.innerHTML += `<div class="receipt-cal-cell bg-gray-50/50"></div>`;
+            for(let i=1; i<=lastDate; i++) {
+                calDiv.innerHTML += `<div class="receipt-cal-cell"><div class="rc-date">${i}</div></div>`;
+            }
+        }
         function renderCommonReceiptCalendar(events) {
+            if (shouldShowCalendarDisplayOption() && isReceiptCalendarDetailsHidden()) {
+                renderPlainReceiptCalendar();
+                updateReceiptCalendarVisibility();
+                return;
+            }
+            updateReceiptCalendarVisibility();
             const year = parseInt(document.getElementById('targetYear').value);
             const month = parseInt(document.getElementById('targetMonth').value);
             document.getElementById('calTitleReceipt').innerText = `${month}월 수업 일정`;
@@ -2265,6 +2310,8 @@
             updateDiscountSummaryRow(discountInfo);
             const displayTotal = renderSiblingSummary(label, summary.total);
             document.getElementById('dispTotal').innerText = displayTotal.toLocaleString() + '원';
+            if (isReceiptCalendarDetailsHidden()) renderPlainReceiptCalendar();
+            updateReceiptCalendarVisibility();
             document.getElementById('receiptGuideList').innerHTML = `<li><b>추산 기준:</b> 최근 수업 참석 현황을 바탕으로 계산된 대략 금액입니다.</li>` + normalizeGuideMessages(guideMessages).filter(item => item.text).map(item => `<li><b>${escapeHtml(item.title)}:</b> ${escapeHtml(item.text)}</li>`).join('');
             document.getElementById('generatedTextArea').value = buildGuideEstimateMessage(rows, summary);
         }
@@ -2517,6 +2564,9 @@
             restoreDefaultPriceSummaryArea();
             const year = parseInt(document.getElementById('targetYear').value);
             const month = parseInt(document.getElementById('targetMonth').value);
+            const name = document.getElementById('studentName').value || '학생명';
+            document.getElementById('dispName').innerText = name;
+            document.getElementById('dispDate').innerText = `${year}년 ${month}월분`;
             const tbody = document.getElementById('receiptBody');
             tbody.innerHTML = '';
             let totalAmount = 0;
@@ -2894,6 +2944,7 @@
                 targetMonth: parseInt(document.getElementById('targetMonth').value, 10) || (new Date().getMonth() + 1),
                 adjustment: parseInt(document.getElementById('adjustment').value, 10) || 0,
                 discountRate: getDiscountRate(),
+                hideReceiptCalendarDetails: isReceiptCalendarDetailsHidden(),
                 aiAdjustment: parseInt(document.getElementById('aiAdjustment')?.value, 10) || 0,
                 recordMemo: getCurrentRecordMemo(),
                 siblingMode: isSiblingModeEnabled(),
@@ -2928,6 +2979,8 @@
             document.getElementById('adjustment').value = data.adjustment || 0;
             const discountRateInput = document.getElementById('discountRate');
             if (discountRateInput) discountRateInput.value = data.discountRate ?? data.discountPercent ?? 0;
+            const hideCalendarInput = document.getElementById('hideReceiptCalendarDetails');
+            if (hideCalendarInput) hideCalendarInput.checked = !!data.hideReceiptCalendarDetails;
             const memoInput = document.getElementById('recordMemoInput');
             if (memoInput) memoInput.value = data.recordMemo || data.memo || '';
             setSiblingState(!!data.siblingMode, data.siblingRows || []);
