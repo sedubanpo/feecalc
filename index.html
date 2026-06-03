@@ -37,6 +37,7 @@
         .rc-subject { width: 100%; text-align: center; padding: 3px 4px; border-radius: 6px; margin-bottom: 2px; font-weight: 800; line-height: 1.1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; overflow: hidden; min-height: 26px; }
         .rc-subject-label { display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.68rem; font-weight: 900; }
         .rc-subject-time { display: block; margin-left: 0; font-size: 0.58rem; font-weight: 900; letter-spacing: -0.01em; opacity: 0.95; white-space: nowrap; }
+        .rc-type-badge { display: inline-flex; align-items: center; justify-content: center; height: 13px; min-width: 20px; padding: 0 3px; border-radius: 999px; font-size: 0.5rem; font-weight: 1000; line-height: 1; background-color: #be123c; color: white; box-shadow: 0 1px 2px rgba(15, 23, 42, 0.12); }
         
         .subj-default { background-color: #eaf2ff; color: #486581; }
         .subj-math { background-color: #d9e8ff; color: #355c9a; }
@@ -1221,8 +1222,11 @@
             const colorClass = getSubjectColorClass(event.rawName || event.name, event.isMakeup, event.isPredicted);
             const durationClass = getCalendarDurationClass(event.durationHours);
             const timeBadge = formatCalendarHourBadge(event.durationHours);
+            const subjectInfo = parseSubjectInfo(event.rawName || event.name || '');
+            const isOneOnOne = String(subjectInfo.type || event.rawName || event.name || '').includes('1:1');
+            const typeBadge = isOneOnOne ? '<span class="rc-type-badge">1:1</span>' : '';
             const classes = ['rc-subject', 'shadow-sm', 'text-optical-center', colorClass, durationClass, extraClass].filter(Boolean).join(' ');
-            return `<span class="${classes}"><span class="rc-subject-label">${escapeHtml(event.name)}</span>${timeBadge ? `<span class="rc-subject-time">${timeBadge}</span>` : ''}</span>`;
+            return `<span class="${classes}"><span class="rc-subject-label">${escapeHtml(event.name)}</span>${typeBadge}${timeBadge ? `<span class="rc-subject-time">${timeBadge}</span>` : ''}</span>`;
         }
         function parseAccessTime(tStr) { if(!tStr) return ''; const isPM = tStr.includes('오후'); let [h, m] = tStr.replace('오전', '').replace('오후', '').trim().split(':'); h = parseInt(h); if(isPM && h !== 12) h += 12; if(!isPM && h === 12) h = 0; return `${h}:${m}`; }
         function formatCompactTimePart(timeText) {
@@ -1295,14 +1299,14 @@
             area.classList.remove('hidden');
         }
         function shouldShowCalendarDisplayOption(tab = currentTab) {
-            return ['auto', 'manual', 'guide'].includes(tab);
+            return ['auto', 'select', 'manual', 'guide'].includes(tab);
         }
         function isReceiptCalendarDetailsHidden() {
             return !!document.getElementById('hideReceiptCalendarDetails')?.checked;
         }
         function handleCalendarDisplayOptionChange() {
             if (currentTab === 'guide') { renderGuideEstimate(); return; }
-            if (currentTab === 'manual' || currentTab === 'auto') { updateAll(); return; }
+            if (currentTab === 'manual' || currentTab === 'auto' || currentTab === 'select') { updateAll(); return; }
             refreshGeneratedTextByCurrentMode();
         }
         function updateReceiptCalendarVisibility() {
