@@ -1144,6 +1144,16 @@
             if (!discountInfo.amount) return '';
             return `${formatDiscountRate(discountInfo.rate)}% 할인 ${discountInfo.amount.toLocaleString()}원이 반영되어 있습니다.`;
         }
+        function getAdjustmentTextClass(value) {
+            const amount = parseFloat(value) || 0;
+            if (amount === 0) return 'text-gray-300';
+            return amount > 0 ? 'text-[#004094]' : 'text-red-500';
+        }
+        function formatCarryoverAdjustment(value) {
+            const amount = parseFloat(value) || 0;
+            if (amount === 0) return '이월/초과금 0원';
+            return `${amount > 0 ? '초과금' : '이월금'} ${amount > 0 ? '+' : ''}${amount.toLocaleString()}원`;
+        }
 
         // [기본 함수들: getSubjectColorClass, parseSubjectInfo 등]
         function getSubjectColorClass(name, isMakeup, isPredicted) { if (isPredicted) return 'subj-predicted'; if (isMakeup) return 'subj-makeup'; if (!name) return 'subj-default'; const n = name.trim(); if (n.includes('1:1')) return 'subj-oneonone'; if (n.includes('2:1')) return 'subj-twoonone'; if (n.includes('수학')) return 'subj-math'; if (n.includes('국어')) return 'subj-kor'; if (n.includes('영어')) return 'subj-eng'; if (['과학', '화학', '생명', '물리', '지학', '물지'].some(k => n.includes(k))) return 'subj-sci'; if (['사회', '사탐', '사문', '한국사', '세계사', '지리', '한지', '세지', '윤리', '윤사', '역사'].some(k => n.includes(k))) return 'subj-soc'; return 'subj-default'; }
@@ -2248,9 +2258,7 @@
             ];
             rows.forEach(item => {
                 const name = item.name || `학생 ${item.index + 1}`;
-                const adjustmentText = item.adjustment === 0
-                    ? '이월/초과금 0원'
-                    : `이월/초과금 ${item.adjustment > 0 ? '+' : ''}${item.adjustment.toLocaleString()}원`;
+                const adjustmentText = formatCarryoverAdjustment(item.adjustment);
                 lines.push(`${name} 학생: 추산 수강료 ${item.baseAmount.toLocaleString()}원, ${adjustmentText}, 안내 금액 ${item.total.toLocaleString()}원`);
             });
             if (discountLine) lines.push(discountLine);
@@ -2281,7 +2289,7 @@
             } else {
                 tbody.innerHTML = rows.map(item => {
                     const name = item.name || `학생 ${item.index + 1}`;
-                    const adjClass = item.adjustment === 0 ? 'text-slate-300' : (item.adjustment > 0 ? 'text-red-500' : 'text-[#004094]');
+                    const adjClass = item.adjustment === 0 ? 'text-slate-300' : getAdjustmentTextClass(item.adjustment);
                     return `<tr class="border-b border-dashed border-gray-200 last:border-0">
                         <td class="py-3 pl-1 pr-2 align-top">
                             <div class="flex items-center flex-wrap gap-2 mb-1">
@@ -2289,7 +2297,7 @@
                                 <span class="badge-base time-badge text-optical-center">추산</span>
                             </div>
                             <div class="text-xs text-gray-500 pl-0.5">최근 수업 참석 현황 기준 대략 안내</div>
-                            <div class="text-xs ${adjClass} font-black pl-0.5 mt-0.5">이월/초과금 ${item.adjustment > 0 ? '+' : ''}${item.adjustment.toLocaleString()}원</div>
+                            <div class="text-xs ${adjClass} font-black pl-0.5 mt-0.5">${formatCarryoverAdjustment(item.adjustment)}</div>
                         </td>
                         <td class="py-3 pr-1 text-right align-top">
                             <div class="font-mono text-base font-black text-gray-800">${item.total.toLocaleString()}원</div>
@@ -2302,7 +2310,7 @@
             const adjEl = document.getElementById('dispAdj');
             if (adjEl) {
                 adjEl.innerText = (summary.adjustment > 0 ? '+' : '') + summary.adjustment.toLocaleString() + '원';
-                adjEl.className = summary.adjustment === 0 ? "text-gray-300 font-bold" : (summary.adjustment > 0 ? "text-red-500 font-bold" : "text-[#004094] font-bold");
+                adjEl.className = `${getAdjustmentTextClass(summary.adjustment)} font-bold`;
             }
             const discountInfo = getPercentDiscountInfo(summary.base);
             summary.discountInfo = discountInfo;
