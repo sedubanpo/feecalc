@@ -2239,8 +2239,15 @@
         }
         function getGuideEstimateStudentLabel(rows = collectGuideEstimateRows()) {
             const names = rows.map(item => item.name).filter(Boolean);
-            if (!names.length) return '안내형';
+            const fallbackName = (document.getElementById('studentName')?.value || '').trim();
+            if (!names.length) return fallbackName || '안내형';
             return names.slice(0, 3).join(', ') + (names.length > 3 ? ` 외 ${names.length - 3}명` : '');
+        }
+        function getGuideEstimateRowName(item, rows = collectGuideEstimateRows()) {
+            const fallbackName = (document.getElementById('studentName')?.value || '').trim();
+            if (item.name) return item.name;
+            if (rows.length <= 1 && fallbackName) return fallbackName;
+            return `학생 ${item.index + 1}`;
         }
         function buildGuideEstimateMessage(rows, summary) {
             const month = document.getElementById('targetMonth').value;
@@ -2261,7 +2268,7 @@
                 `${month}월 수강료는 최근 수업 참석 현황을 바탕으로 추산한 대략 금액입니다.`
             ];
             rows.forEach(item => {
-                const name = item.name || `학생 ${item.index + 1}`;
+                const name = getGuideEstimateRowName(item, rows);
                 const adjustmentText = formatCarryoverAdjustment(item.adjustment);
                 lines.push(`${name} 학생: 추산 수강료 ${item.baseAmount.toLocaleString()}원, ${adjustmentText}, 안내 금액 ${item.total.toLocaleString()}원`);
             });
@@ -2292,7 +2299,7 @@
                 tbody.innerHTML = `<tr><td colspan="2" class="py-8 text-center text-sm font-bold text-slate-400">학생별 추산 금액을 입력해주세요.</td></tr>`;
             } else {
                 tbody.innerHTML = rows.map(item => {
-                    const name = item.name || `학생 ${item.index + 1}`;
+                    const name = getGuideEstimateRowName(item, rows);
                     const adjClass = item.adjustment === 0 ? 'text-slate-300' : getAdjustmentTextClass(item.adjustment);
                     return `<tr class="border-b border-dashed border-gray-200 last:border-0">
                         <td class="py-3 pl-1 pr-2 align-top">
