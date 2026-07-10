@@ -1299,7 +1299,7 @@
             area.classList.remove('hidden');
         }
         function shouldShowCalendarDisplayOption(tab = currentTab) {
-            return ['auto', 'select', 'manual', 'guide'].includes(tab);
+            return ['auto', 'select', 'manual', 'guide', 'ai'].includes(tab);
         }
         function isReceiptCalendarDetailsHidden() {
             return !!document.getElementById('hideReceiptCalendarDetails')?.checked;
@@ -2036,8 +2036,8 @@
                 tbody.innerHTML += `<tr class="border-b border-slate-200"><td colspan="2" class="py-3 px-1"><div class="rounded-lg border border-blue-100 bg-blue-50/60 px-3 py-2"><div class="text-[10px] font-black text-slate-500 mb-1">이월/초과금 조정</div>${rowsHtml}</div></td></tr>`;
             }
             if (paymentRows.length) {
-                const rowsHtml = paymentRows.map(item => `<div class="flex justify-between gap-3 py-1 text-[11px] font-black text-purple-700"><span class="truncate">${escapeHtml(item.name || '기납부')}</span><span class="font-mono shrink-0">-${item.amount.toLocaleString()}원</span></div>`).join('');
-                tbody.innerHTML += `<tr><td colspan="2" class="py-3 px-1"><div class="rounded-lg border border-purple-100 bg-purple-50/70 px-3 py-2"><div class="text-[10px] font-black text-purple-500 mb-1">기납부 내역</div>${rowsHtml}</div></td></tr>`;
+                const rowsHtml = paymentRows.map(item => `<div class="flex items-baseline justify-between gap-3 border-b border-purple-100 py-2 text-purple-600 font-bold"><span class="min-w-0 truncate text-sm">${escapeHtml(item.name || '기납부')}</span><span class="font-mono shrink-0 text-base font-black">-${item.amount.toLocaleString()}원</span></div>`).join('');
+                tbody.innerHTML += `<tr><td colspan="2" class="py-3 px-1 border-t-2 border-slate-200"><div class="text-[10px] font-black text-purple-500 mb-1.5">기납부 내역</div><div class="grid grid-cols-2 gap-x-6 gap-y-0">${rowsHtml}</div></td></tr>`;
             }
             const netTuitionBeforePercent = Math.max(0, totalTuition - totalDiscount);
             const percentDiscountInfo = getPercentDiscountInfo(netTuitionBeforePercent);
@@ -2200,7 +2200,61 @@
             updateHistoryInfoText(summary, discountInfo);
         }
         // (AI 예측 로직 생략 - V45와 동일)
-        function processAiPrediction() { const raw = document.getElementById('aiPasteInput').value; const lines = raw.split('\n'); const year = parseInt(document.getElementById('targetYear').value); const month = parseInt(document.getElementById('targetMonth').value); let parsedData = []; lines.forEach(line => { const cols = line.split('\t'); if(cols.length < 5) return; const dateMatch = line.match(/(\d+)\/(\d+)/); if (!dateMatch) return; const numbers = cols.map(c => parseInt(c.replace(/,/g, ''))).filter(n => !isNaN(n)); const amountObj = numbers.map((val, idx) => ({ val, hasComma: cols[idx].includes(','), isId: idx === 0 && /^\d{5,6}$/.test(cols[idx].trim()) })).filter(n => !n.isId).sort((a,b) => (b.hasComma - a.hasComma) || (b.val - a.val))[0]; const amount = amountObj ? amountObj.val : 0; if(amount > 0 && !line.includes('납부') && !line.includes('결제')) { const day = parseInt(dateMatch[2]); const subjKw = cols.find(c => ['수학','영어','국어','과학'].some(k => c.includes(k))); parsedData.push({ name: subjKw || '기타 수업', amount: amount, day: day, type: 'existing' }); } }); const patterns = {}; let maxDay = 0; parsedData.forEach(d => { const key = d.name; if (!patterns[key]) patterns[key] = { days: new Set(), price: d.amount }; const date = new Date(year, month - 1, d.day); patterns[key].days.add(date.getDay()); if(d.day > maxDay) maxDay = d.day; }); const lastDate = new Date(year, month, 0).getDate(); const predictedData = []; for (let d = maxDay + 1; d <= lastDate; d++) { const targetDate = new Date(year, month - 1, d); const dayOfWeek = targetDate.getDay(); for (const [key, pat] of Object.entries(patterns)) { if (pat.days.has(dayOfWeek)) { predictedData.push({ name: key, amount: pat.price, day: d, type: 'predicted' }); } } } aiData = [...parsedData, ...predictedData].sort((a, b) => a.day - b.day); renderAiResult(); }
+        function processAiPrediction() {
+            const raw = document.getElementById('aiPasteInput').value;
+            const lines = raw.split('\n');
+            const year = parseInt(document.getElementById('targetYear').value);
+            const month = parseInt(document.getElementById('targetMonth').value);
+            const subjectKeywords = ['수학', '영어', '국어', '과학', '사회', '사탐', '세지', '한지', '사문', '윤사', '생윤', '한국사', '세계사', '동사', '경제', '정법', '법정', '지리', '물리', '화학', '생명', '지학'];
+            const parsedData = [];
+
+            lines.forEach(line => {
+                const cols = line.split('\t');
+                if (cols.length < 5) return;
+                const dateMatch = line.match(/(\d+)\/(\d+)/);
+                if (!dateMatch) return;
+                const attendance = String(cols[4] || '').trim();
+                if (/취소|결석/.test(attendance)) return;
+                const numbers = cols.map(c => parseInt(c.replace(/,/g, ''), 10)).filter(n => !isNaN(n));
+                const amountObj = numbers
+                    .map((val, idx) => ({ val, hasComma: cols[idx].includes(','), isId: idx === 0 && /^\d{5,6}$/.test(cols[idx].trim()) }))
+                    .filter(n => !n.isId)
+                    .sort((a, b) => (b.hasComma - a.hasComma) || (b.val - a.val))[0];
+                const amount = amountObj ? amountObj.val : 0;
+                if (amount <= 0 || line.includes('납부') || line.includes('결제')) return;
+
+                const rawClassName = String(cols[2] || '').trim();
+                const subjectCell = subjectKeywords.some(keyword => rawClassName.includes(keyword))
+                    ? rawClassName
+                    : cols.find(cell => subjectKeywords.some(keyword => String(cell).includes(keyword)));
+                parsedData.push({
+                    name: subjectCell || rawClassName || '기타 수업',
+                    amount,
+                    day: parseInt(dateMatch[2], 10),
+                    type: 'existing'
+                });
+            });
+
+            const patterns = {};
+            let maxDay = 0;
+            parsedData.forEach(item => {
+                const key = item.name;
+                if (!patterns[key]) patterns[key] = { days: new Set(), price: item.amount };
+                patterns[key].days.add(new Date(year, month - 1, item.day).getDay());
+                if (item.day > maxDay) maxDay = item.day;
+            });
+
+            const lastDate = new Date(year, month, 0).getDate();
+            const predictedData = [];
+            for (let day = maxDay + 1; day <= lastDate; day++) {
+                const weekday = new Date(year, month - 1, day).getDay();
+                Object.entries(patterns).forEach(([name, pattern]) => {
+                    if (pattern.days.has(weekday)) predictedData.push({ name, amount: pattern.price, day, type: 'predicted' });
+                });
+            }
+            aiData = [...parsedData, ...predictedData].sort((a, b) => a.day - b.day || a.name.localeCompare(b.name, 'ko-KR'));
+            renderAiResult();
+        }
         function renderAiResult() {
             if (currentTab !== 'ai') return;
             const listArea = document.getElementById('aiList');
