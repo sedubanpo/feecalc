@@ -1916,6 +1916,7 @@
             header.forEach((h, i) => { idxMap[normalize(h)] = i; });
 
             const payKeywords = ['납부', '결제', '카드', '현금', '서울페이', '제로페이', '계좌이체', '이체'];
+            const adjustmentKeywords = ['초과금', '이월금'];
             const subjKeywords = ['수학', '영어', '국어', '과학', '사회', '이월', '초과금'];
             let added = 0;
 
@@ -1927,8 +1928,10 @@
 
                 const itemText = String(getCell(cols, idxMap, ['항목'])).trim();
                 const classText = String(getCell(cols, idxMap, ['반명'])).trim();
+                const studentText = String(getCell(cols, idxMap, ['이름'])).trim();
                 const payTypeText = String(getCell(cols, idxMap, ['결제구분'])).trim();
                 const paidAtText = String(getCell(cols, idxMap, ['납부'])).trim();
+                if (!itemText && !classText && !studentText && !payTypeText && !paidAtText) return;
                 let amountSigned = getMoney(cols, idxMap, ['정산금', '수업금', '금액', '수강료']);
                 if (amountSigned === null) {
                     const nums = cols.map(parseMoney).filter(n => n !== null && Math.abs(n) >= 1000);
@@ -1937,6 +1940,7 @@
                 if (amountSigned === null || amountSigned === 0) return;
 
                 const isPaymentRow = payKeywords.some(k => itemText.includes(k) || payTypeText.includes(k) || rowText.includes(k)) || !!paidAtText || amountSigned < 0;
+                const isAdjustmentRow = !isPaymentRow && adjustmentKeywords.some(k => itemText.includes(k) || classText.includes(k));
                 let type = 'class';
                 let name = '기타 수업';
                 let amount = Math.abs(amountSigned);
@@ -1945,7 +1949,13 @@
 
                 if (isPaymentRow) {
                     type = 'payment';
-                    name = '기납부 확인';
+                    name = classText || itemText || '기납부 확인';
+                } else if (isAdjustmentRow) {
+                    type = 'adjustment';
+                    name = itemText || classText || '조정';
+                    amount = amountSigned;
+                    if (name.includes('이월금') && amount > 0) amount *= -1;
+                    if (name.includes('초과금') && amount < 0) amount *= -1;
                 } else {
                     const subj = cols.find(c => subjKeywords.some(k => String(c).includes(k)));
                     name = itemText || classText || subj || '기타 수업';
@@ -1954,9 +1964,9 @@
                     discount = (discountRaw !== null && Math.abs(discountRaw) >= 1000) ? Math.abs(discountRaw) : 0;
                 }
 
-                if (amount <= 0) return;
+                if (type === 'adjustment' ? amount === 0 : amount <= 0) return;
                 const tr = document.createElement('tr');
-                tr.innerHTML = `<td><select class="grid-select" onchange="renderPaymentReceipt()"><option value="class" ${type==='class'?'selected':''}>수업</option><option value="payment" ${type==='payment'?'selected':''}>납부</option></select></td><td><input type="text" class="grid-input" value="${escapeHtml(name)}" oninput="renderPaymentReceipt()" data-hours="${hours}"></td><td><input type="number" class="grid-input text-right" value="${amount}" oninput="renderPaymentReceipt()"></td><td><input type="number" class="grid-input text-right" value="${discount}" oninput="renderPaymentReceipt()"></td><td class="grid-btn-del" onclick="this.closest('tr').remove(); renderPaymentReceipt()">X</td>`;
+                tr.innerHTML = `<td><select class="grid-select" onchange="renderPaymentReceipt()"><option value="class" ${type==='class'?'selected':''}>수업</option><option value="adjustment" ${type==='adjustment'?'selected':''}>조정</option><option value="payment" ${type==='payment'?'selected':''}>납부</option></select></td><td><input type="text" class="grid-input" value="${escapeHtml(name)}" oninput="renderPaymentReceipt()" data-hours="${hours}"></td><td><input type="number" class="grid-input text-right" value="${amount}" oninput="renderPaymentReceipt()"></td><td><input type="number" class="grid-input text-right" value="${discount}" oninput="renderPaymentReceipt()"></td><td class="grid-btn-del" onclick="this.closest('tr').remove(); renderPaymentReceipt()">X</td>`;
                 tbody.appendChild(tr);
                 added++;
             });
@@ -1970,33 +1980,71 @@
             const gridRows = document.querySelectorAll('#paymentGridBody tr');
             const tbody = document.getElementById('receiptBody');
             tbody.innerHTML = '';
-            let totalTuition = 0, totalPaid = 0, totalDiscount = 0;
+            let totalTuition = 0, totalPaid = 0, totalDiscount = 0, totalAdjustment = 0;
+            const subjectGroups = new Map();
+            const paymentRows = [];
+            const adjustmentRows = [];
             gridRows.forEach(row => {
-                const type = row.querySelector('select').value;
+                const selectedType = row.querySelector('select').value;
                 const nameInput = row.querySelectorAll('input')[0];
                 const name = nameInput.value;
                 const hours = parseFloat(nameInput.dataset.hours) || 0;
-                const amount = parseInt(row.querySelectorAll('input')[1].value) || 0;
+                const rawAmount = parseInt(row.querySelectorAll('input')[1].value) || 0;
                 const discount = parseInt(row.querySelectorAll('input')[2].value) || 0;
+                const isAdjustmentName = /초과금|이월금/.test(name);
+                const type = selectedType === 'class' && isAdjustmentName ? 'adjustment' : selectedType;
                 if (type === 'class') {
+                    const amount = Math.abs(rawAmount);
                     totalTuition += amount;
                     totalDiscount += discount;
                     const info = parseSubjectInfo(name);
-                    const badges = buildSubjectBadges(info);
-                    const timeDisplay = hours > 0 ? `<span class="time-badge badge-base text-optical-center mr-1">${hours}시간</span>` : (info.timeText ? `<span class="time-badge badge-base text-optical-center mr-1">${escapeHtml(info.timeText)}</span>` : '');
-                    const discountText = discount > 0 ? `<div class="text-xs text-red-500 mt-0.5">할인: -${discount.toLocaleString()}</div>` : '';
-                    tbody.innerHTML += `<tr class="border-b border-dashed border-gray-200"><td class="py-2 pl-1 pr-2 align-top"><div class="flex items-center flex-wrap gap-y-1 mb-0.5"><span class="font-extrabold text-gray-800 text-base mr-1">${escapeHtml(info.mainName)}</span>${timeDisplay}${badges}</div><div class="text-xs text-gray-500 pl-0.5">${escapeHtml(name)}</div>${discountText}</td><td class="py-2 pr-1 text-right font-mono text-base font-black text-gray-800 align-top pt-1.5">${amount.toLocaleString()}원</td></tr>`;
-                } else {
+                    const groupName = info.mainName || '기타 수업';
+                    if (!subjectGroups.has(groupName)) subjectGroups.set(groupName, { total: 0, items: [] });
+                    const group = subjectGroups.get(groupName);
+                    group.total += amount;
+                    group.items.push({ info, name, hours, amount, discount });
+                } else if (type === 'payment') {
+                    const amount = Math.abs(rawAmount);
                     totalPaid += amount;
-                    tbody.innerHTML += `<tr class="border-b border-dashed border-gray-200 bg-purple-50"><td class="py-2 pl-1 pr-2 align-top"><div class="flex items-center gap-2"><span class="font-bold text-purple-700">기납부 확인</span></div></td><td class="py-2 pr-1 text-right font-mono text-base font-bold text-purple-700 align-top pt-1.5">-${amount.toLocaleString()}원</td></tr>`;
+                    paymentRows.push({ name, amount });
+                } else {
+                    let amount = rawAmount;
+                    if (name.includes('이월금') && amount > 0) amount *= -1;
+                    if (name.includes('초과금') && amount < 0) amount *= -1;
+                    totalAdjustment += amount;
+                    adjustmentRows.push({ name, amount });
                 }
             });
+
+            subjectGroups.forEach((group, subject) => {
+                const itemRows = group.items.map(item => {
+                    const typeText = item.info.type || '수업';
+                    const teacherText = item.info.teacher ? ` · ${item.info.teacher}` : '';
+                    const hourText = item.hours > 0 ? `${item.hours}시간` : (item.info.timeText || '');
+                    const discountText = item.discount > 0 ? `<span class="text-rose-500">할인 -${item.discount.toLocaleString()}원</span>` : '';
+                    return `<div class="grid grid-cols-[1fr_auto] gap-3 py-1.5 border-t border-slate-100 first:border-t-0 text-[11px]"><div class="min-w-0 flex items-center gap-1.5"><span class="shrink-0 rounded px-1.5 py-0.5 ${typeText.includes('1:1') ? 'bg-rose-700 text-white' : 'bg-slate-100 text-slate-600'} font-black">${escapeHtml(typeText)}</span><span class="truncate font-bold text-slate-600">${escapeHtml(`${teacherText.replace(' · ', '')}${hourText ? ` · ${hourText}` : ''}`.replace(/^ · /, '')) || escapeHtml(item.name)}</span>${discountText}</div><span class="font-mono font-black text-slate-800">${item.amount.toLocaleString()}원</span></div>`;
+                }).join('');
+                tbody.innerHTML += `<tr class="border-b-2 border-slate-200"><td colspan="2" class="py-3 px-1"><div class="flex items-baseline justify-between gap-3 mb-1.5"><div class="flex items-center gap-2"><span class="font-black text-slate-900 text-base">${escapeHtml(subject)}</span><span class="text-[10px] font-bold text-slate-400">${group.items.length}개 수업</span></div><span class="font-mono text-base font-black text-slate-900">${group.total.toLocaleString()}원</span></div><div class="px-2.5 py-1 rounded-lg bg-slate-50">${itemRows}</div></td></tr>`;
+            });
+
+            if (adjustmentRows.length) {
+                const rowsHtml = adjustmentRows.map(item => {
+                    const positive = item.amount > 0;
+                    return `<div class="flex justify-between gap-3 py-1 text-[11px] font-black ${positive ? 'text-[#004094]' : 'text-red-500'}"><span>${escapeHtml(item.name)}</span><span class="font-mono">${positive ? '+' : ''}${item.amount.toLocaleString()}원</span></div>`;
+                }).join('');
+                tbody.innerHTML += `<tr class="border-b border-slate-200"><td colspan="2" class="py-3 px-1"><div class="rounded-lg border border-blue-100 bg-blue-50/60 px-3 py-2"><div class="text-[10px] font-black text-slate-500 mb-1">이월/초과금 조정</div>${rowsHtml}</div></td></tr>`;
+            }
+            if (paymentRows.length) {
+                const rowsHtml = paymentRows.map(item => `<div class="flex justify-between gap-3 py-1 text-[11px] font-black text-purple-700"><span class="truncate">${escapeHtml(item.name || '기납부')}</span><span class="font-mono shrink-0">-${item.amount.toLocaleString()}원</span></div>`).join('');
+                tbody.innerHTML += `<tr><td colspan="2" class="py-3 px-1"><div class="rounded-lg border border-purple-100 bg-purple-50/70 px-3 py-2"><div class="text-[10px] font-black text-purple-500 mb-1">기납부 내역</div>${rowsHtml}</div></td></tr>`;
+            }
             const netTuitionBeforePercent = Math.max(0, totalTuition - totalDiscount);
             const percentDiscountInfo = getPercentDiscountInfo(netTuitionBeforePercent);
-            const balance = percentDiscountInfo.discountedBase - totalPaid;
+            const balance = percentDiscountInfo.discountedBase + totalAdjustment - totalPaid;
             const discountRow = totalDiscount > 0 ? `<div class="flex justify-between text-red-500 font-bold text-lg"><span>총 할인액</span><span>-${totalDiscount.toLocaleString()}원</span></div>` : '';
             const percentDiscountRow = percentDiscountInfo.amount > 0 ? `<div class="flex justify-between text-rose-500 font-bold text-lg"><span>퍼센트 할인 (${formatDiscountRate(percentDiscountInfo.rate)}%)</span><span>-${percentDiscountInfo.amount.toLocaleString()}원</span></div>` : '';
-            const summaryHtml = `<div class="border-t-2 border-gray-200 pt-3 space-y-2 mb-6"><div class="flex justify-between text-gray-600 font-bold text-lg"><span>수강료/초과금 총액</span><span>${totalTuition.toLocaleString()}원</span></div>${discountRow}${percentDiscountRow}<div class="flex justify-between text-purple-600 font-bold text-lg"><span>기납부 총액</span><span>-${totalPaid.toLocaleString()}원</span></div></div><div class="flex justify-between items-center bg-gray-50 p-5 rounded-xl border border-gray-100"><span class="text-xl font-black text-gray-800">미납/차액 합계</span><span class="text-4xl font-black ${balance > 0 ? 'text-red-600' : 'text-blue-600'}">${balance.toLocaleString()}원</span></div>`;
+            const adjustmentSummary = totalAdjustment !== 0 ? `<div class="flex justify-between ${totalAdjustment > 0 ? 'text-[#004094]' : 'text-red-500'} font-bold text-lg"><span>${totalAdjustment > 0 ? '초과금 조정' : '이월금 조정'}</span><span>${totalAdjustment > 0 ? '+' : ''}${totalAdjustment.toLocaleString()}원</span></div>` : '';
+            const summaryHtml = `<div class="border-t-2 border-gray-200 pt-3 space-y-2 mb-6"><div class="flex justify-between text-gray-700 font-bold text-lg"><span>수강료 소계</span><span>${totalTuition.toLocaleString()}원</span></div>${discountRow}${percentDiscountRow}${adjustmentSummary}<div class="flex justify-between text-purple-600 font-bold text-lg"><span>기납부 총액</span><span>-${totalPaid.toLocaleString()}원</span></div></div><div class="flex justify-between items-center bg-gray-50 p-5 rounded-xl border border-gray-100"><span class="text-xl font-black text-gray-800">미납/차액 합계</span><span class="text-4xl font-black ${balance > 0 ? 'text-red-600' : 'text-blue-600'}">${balance.toLocaleString()}원</span></div>`;
             document.getElementById('priceSummaryArea').innerHTML = summaryHtml;
             document.getElementById('priceSummaryArea').classList.remove('hidden');
         }
@@ -2951,7 +2999,8 @@
             const tbody = document.getElementById('paymentGridBody');
             if (!tbody) return;
             const tr = document.createElement('tr');
-            tr.innerHTML = `<td><select class="grid-select" onchange="renderPaymentReceipt()"><option value="class" ${(item.type||'class')==='class'?'selected':''}>수업</option><option value="payment" ${(item.type||'class')==='payment'?'selected':''}>납부</option></select></td><td><input type="text" class="grid-input" value="${escapeHtml(item.name || '')}" oninput="renderPaymentReceipt()" data-hours="${item.hours || 0}"></td><td><input type="number" class="grid-input text-right" value="${item.amount || 0}" oninput="renderPaymentReceipt()"></td><td><input type="number" class="grid-input text-right" value="${item.discount || 0}" oninput="renderPaymentReceipt()"></td><td class="grid-btn-del" onclick="this.closest('tr').remove(); renderPaymentReceipt()">X</td>`;
+            const inferredType = (item.type || 'class') === 'class' && /초과금|이월금/.test(item.name || '') ? 'adjustment' : (item.type || 'class');
+            tr.innerHTML = `<td><select class="grid-select" onchange="renderPaymentReceipt()"><option value="class" ${inferredType==='class'?'selected':''}>수업</option><option value="adjustment" ${inferredType==='adjustment'?'selected':''}>조정</option><option value="payment" ${inferredType==='payment'?'selected':''}>납부</option></select></td><td><input type="text" class="grid-input" value="${escapeHtml(item.name || '')}" oninput="renderPaymentReceipt()" data-hours="${item.hours || 0}"></td><td><input type="number" class="grid-input text-right" value="${item.amount || 0}" oninput="renderPaymentReceipt()"></td><td><input type="number" class="grid-input text-right" value="${item.discount || 0}" oninput="renderPaymentReceipt()"></td><td class="grid-btn-del" onclick="this.closest('tr').remove(); renderPaymentReceipt()">X</td>`;
             tbody.appendChild(tr);
         }
         function collectCalculatorState() {
