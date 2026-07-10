@@ -2016,7 +2016,7 @@
                 }
             });
 
-            subjectGroups.forEach((group, subject) => {
+            const subjectCards = Array.from(subjectGroups.entries()).map(([subject, group]) => {
                 const itemRows = group.items.map(item => {
                     const typeText = item.info.type || '수업';
                     const teacherText = item.info.teacher ? ` · ${item.info.teacher}` : '';
@@ -2024,8 +2024,9 @@
                     const discountText = item.discount > 0 ? `<span class="text-rose-500">할인 -${item.discount.toLocaleString()}원</span>` : '';
                     return `<div class="grid grid-cols-[1fr_auto] gap-3 py-1.5 border-t border-slate-100 first:border-t-0 text-[11px]"><div class="min-w-0 flex items-center gap-1.5"><span class="shrink-0 rounded px-1.5 py-0.5 ${typeText.includes('1:1') ? 'bg-rose-700 text-white' : 'bg-slate-100 text-slate-600'} font-black">${escapeHtml(typeText)}</span><span class="truncate font-bold text-slate-600">${escapeHtml(`${teacherText.replace(' · ', '')}${hourText ? ` · ${hourText}` : ''}`.replace(/^ · /, '')) || escapeHtml(item.name)}</span>${discountText}</div><span class="font-mono font-black text-slate-800">${item.amount.toLocaleString()}원</span></div>`;
                 }).join('');
-                tbody.innerHTML += `<tr class="border-b-2 border-slate-200"><td colspan="2" class="py-3 px-1"><div class="flex items-baseline justify-between gap-3 mb-1.5"><div class="flex items-center gap-2"><span class="font-black text-slate-900 text-base">${escapeHtml(subject)}</span><span class="text-[10px] font-bold text-slate-400">${group.items.length}개 수업</span></div><span class="font-mono text-base font-black text-slate-900">${group.total.toLocaleString()}원</span></div><div class="px-2.5 py-1 rounded-lg bg-slate-50">${itemRows}</div></td></tr>`;
+                return `<section class="border border-slate-200 rounded-lg px-3 py-2.5 bg-white"><div class="flex items-baseline justify-between gap-3 mb-1.5"><div class="flex items-center gap-2 min-w-0"><span class="font-black text-slate-900 text-base">${escapeHtml(subject)}</span><span class="text-[10px] font-bold text-slate-400 whitespace-nowrap">${group.items.length}개 수업</span></div><span class="font-mono text-base font-black text-slate-900 whitespace-nowrap">${group.total.toLocaleString()}원</span></div><div class="px-2.5 py-1 rounded-lg bg-slate-50">${itemRows}</div></section>`;
             });
+            if (subjectCards.length) tbody.innerHTML += `<tr><td colspan="2" class="py-3 px-1"><div class="grid grid-cols-2 gap-3">${subjectCards.join('')}</div></td></tr>`;
 
             if (adjustmentRows.length) {
                 const rowsHtml = adjustmentRows.map(item => {
