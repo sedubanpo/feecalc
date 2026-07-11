@@ -176,6 +176,7 @@
         .history-row-note { color: #94a3b8; font-size: 0.76rem; font-weight: 700; margin-top: 0.2rem; }
         .history-status-cancel { background-color: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
         .history-status-makeup { background-color: #fff7ed; color: #ea580c; border: 1px solid #fed7aa; }
+        .history-status-supplement { background-color: color-mix(in srgb, #0891B2 10%, white); color: #0891B2; border: 1px solid color-mix(in srgb, #0891B2 24%, white); }
         .rate-preset-chip { display: inline-flex; align-items: center; justify-content: center; height: 24px; padding: 0 8px; border-radius: 9999px; border: 1px solid #dbeafe; background: #eff6ff; color: #004094; font-size: 10px; font-weight: 900; line-height: 1; white-space: nowrap; cursor: pointer; }
         .rate-preset-chip:hover { background: #dbeafe; border-color: #93c5fd; }
         .auto-date-pill { display: inline-flex; align-items: center; justify-content: center; min-width: 28px; height: 26px; padding: 0 8px; border-radius: 9999px; border: 1px solid #bfdbfe; background: #eff6ff; color: #004094; font-size: 11px; font-weight: 900; line-height: 1; cursor: pointer; }
@@ -435,7 +436,7 @@
                     </div>
 
                     <div id="tab-history" class="hidden">
-                        <div class="bg-white p-3 rounded border border-green-200 mb-3"><h4 class="text-xs font-bold text-green-700 mb-2">📋 Access 이력 데이터</h4><textarea id="historyPasteInput" class="w-full h-32 text-[10px] p-2 border border-gray-200 rounded focus:outline-none focus:border-green-500 font-mono resize-none bg-gray-50 whitespace-pre" placeholder="Access에서 복사한 데이터를 붙여넣으세요."></textarea><button onclick="processHistoryPaste()" class="w-full mt-2 py-2 bg-green-600 text-white text-xs font-bold rounded hover:bg-green-700">이력 분석</button></div>
+                        <div class="bg-white p-3 rounded border border-green-200 mb-3"><h4 class="text-xs font-bold text-green-700 mb-1">📋 Access 이력 데이터</h4><p class="text-[10px] leading-4 text-slate-500 mb-2">당일취소·결석보강은 과금, 보충은 0원으로 반영합니다. 결석예고는 수업·금액·달력에서 제외합니다.</p><textarea id="historyPasteInput" class="w-full h-32 text-[10px] p-2 border border-gray-200 rounded focus:outline-none focus:border-green-500 font-mono resize-none bg-gray-50 whitespace-pre" placeholder="Access에서 복사한 데이터를 붙여넣으세요."></textarea><button onclick="processHistoryPaste()" class="w-full mt-2 py-2 bg-green-600 text-white text-xs font-bold rounded hover:bg-green-700">이력 분석</button></div>
                     </div>
                     
                     <div id="tab-ai" class="hidden">
@@ -1260,17 +1261,59 @@
             if (!from || !to) return '';
             return `${from}-${to}시`;
         }
+        function classifyHistoryAttendance(attend, subject) {
+            const statusText = `${attend || ''} ${subject || ''}`.replace(/\s/g, '');
+            if (statusText.includes('결석예고')) return 'absence_notice';
+            if (statusText.includes('당일취소')) return 'same_day_cancel';
+            if (statusText.includes('보충')) return 'supplementary';
+            if (statusText.includes('결석보강') || statusText.includes('보강') || statusText.includes('변경')) return 'absence_makeup';
+            return 'regular';
+        }
+        function getAccessScheduledHours(start, end) {
+            const toMinutes = value => {
+                const [hour, minute = '0'] = String(value || '').split(':').map(Number);
+                return Number.isFinite(hour) && Number.isFinite(minute) ? hour * 60 + minute : null;
+            };
+            const from = toMinutes(start);
+            let to = toMinutes(end);
+            if (from === null || to === null) return 0;
+            if (to <= from) to += 24 * 60;
+            return (to - from) / 60;
+        }
+        function getHistoryCharge(status, amount, hourlyRate, hours, start, end) {
+            if (status === 'absence_notice' || status === 'supplementary') return 0;
+            if (amount > 0) return amount;
+            const billedHours = hours > 0 ? hours : getAccessScheduledHours(start, end);
+            return hourlyRate > 0 && billedHours > 0 ? Math.round(hourlyRate * billedHours) : 0;
+        }
+        function normalizeHistoryRecord(item) {
+            const attendanceType = item.attendanceType || classifyHistoryAttendance(item.attend, item.subject);
+            const originalAmount = Number.isFinite(item.originalAmount) ? item.originalAmount : (parseInt(item.amount, 10) || 0);
+            const hourlyRate = parseInt(item.hourlyRate, 10) || 0;
+            return {
+                ...item,
+                originalAmount,
+                hourlyRate,
+                attendanceType,
+                amount: getHistoryCharge(attendanceType, originalAmount, hourlyRate, parseFloat(item.hours) || 0, item.startTime, item.endTime),
+                excludeFromHistory: attendanceType === 'absence_notice',
+                isCancelled: attendanceType === 'same_day_cancel',
+                isMakeup: attendanceType === 'absence_makeup' || attendanceType === 'supplementary'
+            };
+        }
         function getHistoryStatusMeta(item) {
-            if (item.isCancelled) return { label: '당일취소', className: 'history-status-pill history-status-cancel' };
-            if (item.isMakeup) return { label: '보강', className: 'history-status-pill history-status-makeup' };
+            if (item.attendanceType === 'same_day_cancel') return { label: '당일취소 · 과금', className: 'history-status-pill history-status-cancel' };
+            if (item.attendanceType === 'absence_makeup') return { label: '결석보강 · 과금', className: 'history-status-pill history-status-makeup' };
+            if (item.attendanceType === 'supplementary') return { label: '보충 · 0원', className: 'history-status-pill history-status-supplement' };
             return null;
         }
         function buildHistoryRowKey(item) {
-            return [item.subject, item.teacher, item.isMakeup ? 'makeup' : 'regular', item.isCancelled ? 'cancel' : 'active'].join('||');
+            return [item.subject, item.teacher, item.attendanceType || 'regular'].join('||');
         }
         function buildHistoryEventLabel(item) {
             const info = parseSubjectInfo(item.subject);
-            const prefix = item.isCancelled ? '[취소]' : (item.isMakeup ? '[보강]' : '');
+            const prefixMap = { same_day_cancel: '[취소]', absence_makeup: '[결석보강]', supplementary: '[보충]' };
+            const prefix = prefixMap[item.attendanceType] || '';
             const timeText = item.compactTimeRange || formatCompactTimeRange(item.startTime, item.endTime);
             return `${prefix}${info.mainName}${timeText ? ` ${timeText}` : ''}`.trim();
         }
@@ -2090,9 +2133,12 @@
                 const start = parseAccessTime(cols[6]);
                 const end = parseAccessTime(cols[7]);
                 const hours = parseFloat(cols[8]) || 0;
-                const amount = parseInt(String(cols[10] || '0').replace(/,/g, ''), 10) || 0;
-                const isCancelled = /당일\s*취소|당일취소/.test(attend);
-                const isMakeup = !isCancelled && (subjRaw.includes('보강') || attend.includes('보강') || attend.includes('변경'));
+                const originalAmount = parseInt(String(cols[10] || '0').replace(/,/g, ''), 10) || 0;
+                const hourlyRate = parseInt(String(cols[9] || '0').replace(/,/g, ''), 10) || 0;
+                const attendanceType = classifyHistoryAttendance(attend, subjRaw);
+                const isCancelled = attendanceType === 'same_day_cancel';
+                const isMakeup = attendanceType === 'absence_makeup' || attendanceType === 'supplementary';
+                const amount = getHistoryCharge(attendanceType, originalAmount, hourlyRate, hours, start, end);
                 historyData.push({
                     year,
                     month,
@@ -2106,13 +2152,19 @@
                     timeRange: `${start}~${end}`,
                     hours,
                     amount,
+                    originalAmount,
+                    hourlyRate,
+                    attendanceType,
+                    excludeFromHistory: attendanceType === 'absence_notice',
                     isMakeup,
                     isCancelled
                 });
             });
             if (historyData.length > 0) {
                 document.getElementById('targetMonth').value = historyData[0].month;
-                alert(`${historyData.length}건의 이력이 확인되었습니다.`);
+                const absenceNoticeCount = historyData.filter(item => item.excludeFromHistory).length;
+                const includedCount = historyData.length - absenceNoticeCount;
+                alert(`${includedCount}건을 수강 이력에 반영했습니다.${absenceNoticeCount ? ` 결석예고 ${absenceNoticeCount}건은 수업·금액·달력에서 제외했습니다.` : ''}`);
             }
             updateHistoryView();
         }
@@ -2130,7 +2182,7 @@
             const firstDay = new Date(year, month - 1, 1).getDay();
             const lastDate = new Date(year, month, 0).getDate();
             const dayCounts = {};
-            historyData.forEach(d => { if(d.year === year && d.month === month) dayCounts[d.day] = true; });
+            historyData.forEach(d => { if(d.year === year && d.month === month && !d.excludeFromHistory) dayCounts[d.day] = true; });
             for(let i=0; i<firstDay; i++) calDiv.innerHTML += `<div></div>`;
             for(let i=1; i<=lastDate; i++) {
                 let div = document.createElement('div');
@@ -2150,7 +2202,9 @@
             const summaryArea = document.getElementById('priceSummaryArea');
             tbody.innerHTML = '';
 
-            const monthHistory = historyData.filter(d => d.year === year && d.month === month);
+            const allMonthHistory = historyData.filter(d => d.year === year && d.month === month);
+            const monthHistory = allMonthHistory.filter(d => !d.excludeFromHistory);
+            const absenceNoticeCount = allMonthHistory.length - monthHistory.length;
             const subjectMap = {};
             const summary = { totalAmount: 0, totalHours: 0, totalCount: 0, adjustment };
 
@@ -2164,7 +2218,7 @@
                         totalTime: 0,
                         totalAmount: 0,
                         isMakeup: item.isMakeup,
-                        isCancelled: item.isCancelled,
+                        attendanceType: item.attendanceType,
                         compactTimes: []
                     };
                 }
@@ -2205,6 +2259,7 @@
                 <div class="flex justify-between text-gray-600 font-bold text-sm"><span>현재까지 입력 수업</span><span>${summary.totalCount}회 / ${summary.totalHours.toLocaleString()}시간</span></div>
                 <div class="flex justify-between text-gray-700 font-bold text-sm"><span>수업 누계</span><span>${summary.totalAmount.toLocaleString()}원</span></div>
                 ${discountRow}
+                ${absenceNoticeCount ? `<div class="flex justify-between gap-3 text-slate-400 font-bold text-[11px]"><span>결석예고 제외</span><span>${absenceNoticeCount}건 (수업·금액 미반영)</span></div>` : ''}
                 <div class="flex justify-between ${adjustment === 0 ? 'text-gray-400' : 'text-red-500'} font-bold text-sm"><span>이월/초과금 조정</span><span>${adjustment > 0 ? '+' : ''}${adjustment.toLocaleString()}원</span></div>
             </div>
             <div class="flex justify-between items-center bg-gray-50 p-4 rounded-xl border border-gray-100">
@@ -3206,7 +3261,7 @@
                 price: parseInt(item.price, 10) || 0,
                 manualDates: Array.from(item.manualDates || []).map(n => parseInt(n, 10)).filter(n => !isNaN(n))
             }));
-            historyData = Array.isArray(data.historyData) ? data.historyData : [];
+            historyData = Array.isArray(data.historyData) ? data.historyData.map(normalizeHistoryRecord) : [];
             aiData = Array.isArray(data.aiData) ? data.aiData : [];
             (data.paymentRows || []).forEach(appendPaymentGridRow);
             document.getElementById('paymentGridArea').classList.toggle('hidden', !(data.paymentRows || []).length);
