@@ -758,11 +758,25 @@
                 renderPricePresetPanel();
                 changed = true;
             }
+            if (Array.isArray(payload.adNotices)) {
+                adNotices = normalizeNoticeTexts(payload.adNotices);
+                persistAdText();
+                renderAdText();
+                changed = true;
+            }
+            if (Array.isArray(payload.guideMessages)) {
+                guideMessages = normalizeGuideMessages(payload.guideMessages);
+                persistGuideMessages();
+                renderGuideMessages();
+                changed = true;
+            }
             return changed;
         }
         function collectSharedAppSettings() {
             return {
                 pricePresets: [...pricePresets],
+                adNotices: [...adNotices],
+                guideMessages: normalizeGuideMessages(guideMessages),
                 updatedAt: new Date().toISOString()
             };
         }
@@ -911,6 +925,7 @@
             guideMessages = cloneDefaultGuideMessages();
             persistGuideMessages();
             renderGuideMessages();
+            saveSharedAppSettingsToServer();
         }
         function switchSettingsTab(tab) {
             activeSettingsTab = tab === 'guides' ? 'guides' : 'notices';
@@ -1006,7 +1021,7 @@
             const modal = document.getElementById('appSettingsModal');
             if (modal) modal.classList.add('hidden');
         }
-        function saveAppSettings() {
+        async function saveAppSettings() {
             adNotices = readNoticeInputs();
             guideMessages = readGuideInputs();
             persistAdText();
@@ -1015,11 +1030,14 @@
             renderGuideMessages();
             if (currentTab === 'guide') renderGuideEstimate();
             closeAppSettings();
+            const savedToServer = await saveSharedAppSettingsToServer();
+            setServerRecordStatus(savedToServer ? '설정창의 공지와 안내 문구를 서버 공통 설정에 저장했습니다.' : '설정은 현재 브라우저에 저장되었습니다.', savedToServer ? 'success' : 'info');
         }
         function clearAdText() {
             adNotices = [];
             persistAdText();
             renderAdText();
+            saveSharedAppSettingsToServer();
         }
         function togglePasteArea() { const el = document.getElementById('pasteAreaContainer'); if(el) el.classList.toggle('hidden'); }
 
@@ -1979,6 +1997,10 @@
         function renderPaymentReceipt() {
             const gridRows = document.querySelectorAll('#paymentGridBody tr');
             const tbody = document.getElementById('receiptBody');
+            const year = document.getElementById('targetYear').value;
+            const month = document.getElementById('targetMonth').value;
+            document.getElementById('dispName').innerText = document.getElementById('studentName').value || '학생명';
+            document.getElementById('dispDate').innerText = `${year}년 ${month}월분`;
             tbody.innerHTML = '';
             let totalTuition = 0, totalPaid = 0, totalDiscount = 0, totalAdjustment = 0;
             const subjectGroups = new Map();
@@ -2824,6 +2846,11 @@
         }
         function handleStudentNameInput() {
             if (currentTab === 'first') renderFirstRegistrationView();
+            else if (currentTab === 'guide') renderGuideEstimate();
+            else if (currentTab === 'timetable') updateTimetableView();
+            else if (currentTab === 'ai') renderAiResult();
+            else if (currentTab === 'history') updateHistoryView();
+            else if (currentTab === 'payment') renderPaymentReceipt();
             else updateAll();
             scheduleStudentMemoWidgetRefresh();
         }
