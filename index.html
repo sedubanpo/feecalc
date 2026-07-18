@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="에스에듀 반포관의 월별 수업 일정과 회당·시간당 수강료를 계산하고 안내서를 만드는 실무용 계산기입니다.">
     <link rel="icon" href="https://raw.githubusercontent.com/whdtjd5294/whdtjd5294.github.io/main/sedu_logo.png" type="image/png">
     <title>에스에듀 반포관 수강료 계산기 V54</title>
     <script src="https://cdn.tailwindcss.com"></script>
@@ -223,7 +224,7 @@
         .auto-date-pill:hover { background: #dbeafe; border-color: #004094; }
         .auto-date-pill-off { background: #fff1f2; border-color: #fecdd3; color: #e11d48; text-decoration: line-through; }
         .auto-date-pill-global { background: #f1f5f9; border-color: #cbd5e1; color: #94a3b8; text-decoration: line-through; cursor: default; }
-        .auto-date-pill-empty { color: #94a3b8; font-size: 10px; font-weight: 800; }
+        .auto-date-pill-empty { color: #64748b; font-size: 10px; font-weight: 800; }
         .voucher-guide-box {
             margin-top: 0.9rem;
             margin-right: auto;
@@ -250,7 +251,7 @@
         }
         .voucher-guide-title { color: #334155; font-size: 0.75rem; font-weight: 600; line-height: 1.8; margin-bottom: 0; }
         .voucher-guide-desc { color: #64748b; font-size: 0.75rem; font-weight: 600; line-height: 1.8; margin-top: var(--space-optical-6); }
-        .voucher-guide-red { color: #ef4444; font-weight: 900; }
+        .voucher-guide-red { color: #dc2626; font-weight: 900; }
         .voucher-guide-blue { color: #004094; font-weight: 900; }
         .receipt-notice-list { margin-top: 12px; padding-top: var(--space-optical-10); border-top: 1px dashed #cbd5e1; display: flex; flex-direction: column; gap: 8px; }
         .receipt-notice-list.hidden { display: none; }
@@ -268,11 +269,22 @@
         .settings-tab-btn.active { color: #004094; background: #fff; box-shadow: 0 1px 6px rgba(15, 23, 42, 0.08); }
         .guide-setting-row { border: 1px solid #e2e8f0; border-radius: 14px; padding: var(--space-optical-10); background: #f8fafc; }
         .guide-setting-row textarea { min-height: 62px; }
+        .record-item .text-slate-500 { color: #475569; }
+        .record-delete-btn { color: #9f1239 !important; }
+        #serverRecordArea .text-slate-400 { color: #64748b; }
+        #calendarDisplayOptionArea .text-slate-400,
+        #siblingConfigArea .text-slate-400,
+        #autoList .text-slate-400 { color: #64748b !important; }
+        #calBadge { color: #4b5563 !important; }
+        #calendarGrid { color: #475569 !important; }
+        #discountRate + p { color: #64748b !important; }
+        #tab-auto > button:last-child { color: #64748b !important; }
+        .voucher-guide-kicker { color: #475569; }
     </style>
 </head>
 <body class="bg-gray-100 p-6 min-h-screen font-[400]">
 
-    <div class="max-w-[1920px] mx-auto space-y-6">
+    <main class="max-w-[1920px] mx-auto space-y-6">
         <div id="workspaceTopBar" class="hidden">
             <div class="px-2 pb-2 flex items-start gap-3">
                 <div id="topTabBarSlot" class="overflow-x-auto flex-1"></div>
@@ -294,20 +306,20 @@
                 </div>
                 <div class="space-y-3">
                     <div>
-                        <label class="block text-xs font-bold text-gray-500 mb-1">학생 이름</label>
+                        <label for="studentName" class="block text-xs font-bold text-gray-500 mb-1">학생 이름</label>
                         <input type="text" id="studentName" placeholder="이름" class="w-full p-2.5 border border-gray-300 rounded-lg text-sm focus:border-[#004094] focus:outline-none" oninput="handleStudentNameInput()">
                     </div>
                     <div class="flex gap-3">
-                        <div class="flex-1"><label class="block text-xs font-bold text-gray-500 mb-1">연도</label><input type="number" id="targetYear" class="w-full p-2.5 border border-gray-300 rounded-lg text-center text-sm font-bold" onchange="resetAndUpdate()"></div>
-                        <div class="flex-1"><label class="block text-xs font-bold text-gray-500 mb-1">월</label><input type="number" id="targetMonth" min="1" max="12" class="w-full p-2.5 border border-gray-300 rounded-lg text-center text-sm font-bold" onchange="resetAndUpdate()"></div>
+                        <div class="flex-1"><label for="targetYear" class="block text-xs font-bold text-gray-500 mb-1">연도</label><input type="number" id="targetYear" class="w-full p-2.5 border border-gray-300 rounded-lg text-center text-sm font-bold" onchange="resetAndUpdate()"></div>
+                        <div class="flex-1"><label for="targetMonth" class="block text-xs font-bold text-gray-500 mb-1">월</label><input type="number" id="targetMonth" min="1" max="12" class="w-full p-2.5 border border-gray-300 rounded-lg text-center text-sm font-bold" onchange="resetAndUpdate()"></div>
                     </div>
                     <div>
-                        <label class="block text-xs font-bold text-gray-500 mb-1">퍼센트 할인 (%)</label>
+                        <label for="discountRate" class="block text-xs font-bold text-gray-500 mb-1">퍼센트 할인 (%)</label>
                         <div class="flex items-center gap-2">
                             <input type="number" id="discountRate" min="0" max="100" step="0.1" value="0" class="flex-1 p-2.5 border border-rose-200 rounded-lg text-right text-sm font-bold focus:border-rose-500 focus:outline-none" placeholder="0" oninput="handleDiscountRateInput()">
                             <span class="text-sm font-black text-rose-500">%</span>
                         </div>
-                        <p class="mt-1 text-[10px] leading-4 text-slate-400">입력한 비율만큼 수강료 소계에서 차감됩니다.</p>
+                        <p class="mt-1 text-[10px] leading-4 text-slate-600">입력한 비율만큼 수강료 소계에서 차감됩니다.</p>
                     </div>
                     <div id="calendarDisplayOptionArea" class="rounded-xl border border-slate-100 bg-slate-50/70 p-3">
                         <label class="flex items-center justify-between gap-3 cursor-pointer">
@@ -345,7 +357,7 @@
                     <div class="grid grid-cols-7 text-center text-[10px] border-b pb-2 mb-2 font-bold text-gray-400">
                         <div class="sun">일</div><div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div class="sat">토</div>
                     </div>
-                    <div id="calendarGrid" class="grid grid-cols-7 text-center text-xs font-medium calendar-grid text-gray-400"></div>
+                    <div id="calendarGrid" class="grid grid-cols-7 text-center text-xs font-medium calendar-grid text-slate-600"></div>
                 </div>
             </div>
 
@@ -361,7 +373,7 @@
             <div id="coreDataArea" class="hidden bg-emerald-50 p-3 rounded-xl border border-emerald-100 shadow-inner">
                 <h3 class="text-xs font-bold text-emerald-700 mb-2">💾 기본 계산 데이터 저장/불러오기</h3>
                 <div class="flex gap-2">
-                    <button onclick="saveCoreData()" class="flex-1 py-2 bg-emerald-600 text-white text-xs font-bold rounded hover:bg-emerald-700">저장</button>
+                    <button onclick="saveCoreData()" class="flex-1 py-2 bg-emerald-700 text-white text-xs font-bold rounded hover:bg-emerald-800">저장</button>
                     <button onclick="triggerLoadCoreData()" class="flex-1 py-2 bg-slate-600 text-white text-xs font-bold rounded hover:bg-slate-700">불러오기</button>
                 </div>
                 <input id="coreDataInput" type="file" accept=".json,application/json" class="hidden" onchange="loadCoreData(event)">
@@ -385,7 +397,7 @@
                     <div class="record-panel-header">
                         <h3 class="record-panel-title text-sm font-bold text-gray-800">☁️ 저장된 수강료 기록</h3>
                         <div class="record-panel-actions">
-                            <button onclick="saveServerRecord('insert')" aria-label="새 기록 저장" class="py-2 bg-sky-600 text-white text-[10px] font-bold rounded hover:bg-sky-700">새 기록</button>
+                            <button onclick="saveServerRecord('insert')" aria-label="새 기록 저장" class="py-2 bg-sky-700 text-white text-[10px] font-bold rounded hover:bg-sky-800">새 기록</button>
                             <button id="serverUpdateButton" onclick="saveServerRecord('update')" class="px-3 py-2 bg-emerald-600 text-white text-[11px] font-bold rounded hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed" disabled>덮어쓰기</button>
                             <button onclick="refreshServerRecordList()" class="py-2 bg-gray-600 text-white text-[10px] font-bold rounded hover:bg-gray-700">새로고침</button>
                         </div>
@@ -497,7 +509,7 @@
                     </div>
                 </div>
                 <div id="adjustmentArea" class="p-4 border-t bg-white flex items-center justify-between shadow-[0_-5px_15px_rgba(0,0,0,0.05)] relative z-10">
-                    <label class="text-xs font-bold text-gray-600">이월/초과금 (+/-)</label>
+                    <label for="adjustment" class="text-xs font-bold text-gray-600">이월/초과금 (+/-)</label>
                     <input type="number" id="adjustment" value="0" class="w-32 p-2 border border-gray-300 rounded text-right text-sm font-bold" oninput="handleAdjustmentInput()">
                 </div>
             </div>
@@ -515,9 +527,9 @@
                 <div id="studentMemoWidgetBody" class="p-3 space-y-2"></div>
             </div>
             <div id="captureArea" class="w-full receipt-shadow border-t-[10px] border-[#004094] rounded-b-2xl mb-6 bg-white transition-colors duration-300">
-                <img src="https://raw.githubusercontent.com/whdtjd5294/whdtjd5294.github.io/main/sedu_logo.png" class="watermark-img" crossorigin="anonymous">
+                <img src="https://raw.githubusercontent.com/whdtjd5294/whdtjd5294.github.io/main/sedu_logo.png" class="watermark-img" crossorigin="anonymous" alt="" aria-hidden="true" width="240" height="240">
                 <div class="text-center mb-6 relative z-20">
-                    <img src="https://raw.githubusercontent.com/whdtjd5294/whdtjd5294.github.io/main/sedu_logo.png" crossorigin="anonymous" class="h-12 mx-auto mb-1 object-contain">
+                    <img src="https://raw.githubusercontent.com/whdtjd5294/whdtjd5294.github.io/main/sedu_logo.png" crossorigin="anonymous" class="h-12 mx-auto mb-1 object-contain" alt="에스에듀 반포관 로고" width="48" height="48">
                     <h1 class="text-xl font-black text-[#004094] mb-0.5 tracking-tight">에스에듀 반포관</h1>
                     <p id="receiptSubTitle" class="text-[10px] text-gray-500 font-bold tracking-widest">수강료 안내서</p>
                 </div>
@@ -525,7 +537,7 @@
                 <div class="receipt-content layout-default" id="receiptContent">
                     <div class="receipt-left relative z-10">
                         <div class="flex justify-between items-end border-b-4 border-gray-800 pb-2 mb-4">
-                            <div><span class="text-[10px] text-gray-500 font-bold block mb-0.5">학생명</span><h3 class="text-2xl font-black text-gray-900 leading-none" id="dispName">학생명</h3></div>
+                            <div><span class="text-[10px] text-gray-500 font-bold block mb-0.5">학생명</span><h2 class="text-2xl font-black text-gray-900 leading-none" id="dispName">학생명</h2></div>
                             <div><div id="dateBadge" class="bg-[#004094] text-white px-4 h-7 rounded-full font-bold shadow-md flex items-center justify-center text-xs"><span id="dispDate">2026년 2월분</span></div></div>
                         </div>
                         <table class="w-full text-sm mb-4">
@@ -536,7 +548,7 @@
                             <div class="border-t-2 border-gray-200 pt-2 space-y-1 mb-4">
                                 <div class="flex justify-between text-gray-600 font-bold text-sm"><span>수강료 소계</span><span id="dispSubtotal" class="text-gray-800">0</span></div>
                                 <div class="flex justify-between text-rose-500 font-bold text-sm hidden" id="dispDiscountRow"><span>퍼센트 할인</span><span id="dispDiscount">0</span></div>
-                                <div class="flex justify-between text-red-500 font-bold text-sm" id="dispAdjRow"><span>이월/초과금 조정</span><span id="dispAdj">0</span></div>
+                                <div class="flex justify-between text-red-600 font-bold text-sm" id="dispAdjRow"><span>이월/초과금 조정</span><span id="dispAdj" class="text-gray-600">0</span></div>
                                 <div id="siblingSummaryArea" class="hidden mt-3 pt-3 border-t border-dashed border-slate-200 space-y-1"></div>
                             </div>
                             <div class="flex justify-between items-center bg-gray-50 p-4 rounded-xl border border-gray-100">
@@ -562,7 +574,7 @@
                             <div id="receiptMiniCalGrid" class="receipt-cal-grid rounded-lg overflow-hidden"></div>
                         </div>
                         <div id="infoBox" class="bg-gray-50 p-3 rounded-xl text-xs text-gray-600 border border-gray-100 shadow-inner">
-                            <h4 class="font-bold text-[#004094] mb-1 flex items-center gap-1 text-sm"><span class="text-optical-center">ℹ️ 안내</span></h4>
+                            <div class="font-bold text-[#004094] mb-1 flex items-center gap-1 text-sm"><span class="text-optical-center">ℹ️ 안내</span></div>
                             <ul id="receiptGuideList" class="info-list font-medium"></ul>
                         </div>
                     </div>
@@ -572,13 +584,13 @@
             <div class="w-full mb-6">
                 <button onclick="downloadImage()" class="w-full py-3 bg-[#004094] text-white font-bold rounded-xl shadow-xl hover:bg-blue-900 transition flex justify-center items-center gap-2 mb-4 transform hover:-translate-y-1 text-base"><span class="text-optical-center">📸 이미지 저장</span></button>
                 <div class="bg-gray-100 border border-gray-300 rounded-xl p-4">
-                    <div class="flex justify-between items-center mb-2"><h4 class="text-xs font-bold text-gray-700">💬 안내 문자 (자동생성)</h4><button onclick="copyGeneratedText()" class="text-[10px] bg-gray-600 text-white px-2 py-1 rounded hover:bg-gray-800">복사하기</button></div>
+                    <div class="flex justify-between items-center mb-2"><div class="text-xs font-bold text-gray-700">💬 안내 문자 (자동생성)</div><button onclick="copyGeneratedText()" class="text-[10px] bg-gray-600 text-white px-2 py-1 rounded hover:bg-gray-800">복사하기</button></div>
                     <div id="messageControlArea" class="grid grid-cols-2 gap-2 mb-2">
-                        <select id="messageTemplateType" class="w-full text-[11px] p-2 border border-gray-300 rounded bg-white font-bold text-gray-700 focus:outline-none" onchange="handleMessageTemplateChange()">
+                        <select id="messageTemplateType" aria-label="안내 문자 유형" class="w-full text-[11px] p-2 border border-gray-300 rounded bg-white font-bold text-gray-700 focus:outline-none" onchange="handleMessageTemplateChange()">
                             <option value="general">일반 안내</option>
                             <option value="first">첫 등록 안내</option>
                         </select>
-                        <select id="messagePaymentType" class="w-full text-[11px] p-2 border border-gray-300 rounded bg-white font-bold text-gray-700 focus:outline-none" onchange="handleMessageTemplateChange()">
+                        <select id="messagePaymentType" aria-label="결제 방법" class="w-full text-[11px] p-2 border border-gray-300 rounded bg-white font-bold text-gray-700 focus:outline-none" onchange="handleMessageTemplateChange()">
                             <option value="link">결제링크</option>
                             <option value="visit">현장결제</option>
                             <option value="transferSchool">계좌이체(기본 계좌)</option>
@@ -586,11 +598,11 @@
                         </select>
                     </div>
                     <input id="customTransferAccount" type="text" class="hidden w-full mb-2 text-[11px] p-2 border border-amber-300 rounded bg-amber-50 text-gray-700 focus:outline-none" placeholder="예: 국민 / 123456-78-901234 / 홍길동" oninput="handleMessageTemplateChange()">
-                    <textarea id="generatedTextArea" class="w-full h-32 text-xs p-2 border border-gray-300 rounded bg-white font-mono leading-relaxed resize-none focus:outline-none" readonly></textarea>
+                    <textarea id="generatedTextArea" aria-label="자동 생성 안내 문자" class="w-full h-32 text-xs p-2 border border-gray-300 rounded bg-white font-mono leading-relaxed resize-none focus:outline-none" readonly></textarea>
                 </div>
             </div>
         </div>
-    </div>
+    </main>
     <div id="appSettingsModal" class="settings-modal-backdrop hidden">
         <div class="settings-modal">
             <div class="flex items-start justify-between gap-4 px-5 py-4 border-b border-slate-100">
@@ -722,7 +734,7 @@
             <div class="border-t-2 border-gray-200 pt-2 space-y-1 mb-4">
                 <div class="flex justify-between text-gray-600 font-bold text-sm"><span>수강료 소계</span><span id="dispSubtotal" class="text-gray-800">0원</span></div>
                 <div class="flex justify-between text-rose-500 font-bold text-sm hidden" id="dispDiscountRow"><span>퍼센트 할인</span><span id="dispDiscount">0원</span></div>
-                <div class="flex justify-between text-red-500 font-bold text-sm" id="dispAdjRow"><span>이월/초과금 조정</span><span id="dispAdj">0원</span></div>
+                <div class="flex justify-between text-red-600 font-bold text-sm" id="dispAdjRow"><span>이월/초과금 조정</span><span id="dispAdj" class="text-gray-600">0원</span></div>
                 <div id="siblingSummaryArea" class="hidden mt-3 pt-3 border-t border-dashed border-slate-200 space-y-1"></div>
             </div>
             <div class="flex justify-between items-center bg-gray-50 p-4 rounded-xl border border-gray-100">
@@ -1897,7 +1909,7 @@
             const adjEl = document.getElementById('dispAdj');
             if(adjEl) {
                 adjEl.innerText = (adj > 0 ? '+' : '') + adj.toLocaleString() + '원';
-                adjEl.className = adj === 0 ? "text-gray-300 font-bold" : (adj > 0 ? "text-red-500 font-bold" : "text-[#004094] font-bold");
+                adjEl.className = adj === 0 ? "text-gray-600 font-bold" : (adj > 0 ? "text-red-600 font-bold" : "text-[#004094] font-bold");
             }
             if (currentTab === 'auto' && !options.skipAutoSort && !isEditingAutoRowInput()) sortAutoRowsBySubjectTime();
             const tbody = document.getElementById('receiptBody');
@@ -1982,7 +1994,7 @@
             const id = generateSafeId();
             autoRowExcludedDates[id] = new Set();
             const parsedHours = parseDurationHours(parseSubjectInfo(nameVal).timeText) || '';
-            const html = `<div class="bg-white p-4 border border-gray-200 rounded-lg shadow-sm relative group auto-row" id="arow-${id}"><button onclick="removeEl('arow-${id}')" aria-label="과목 삭제" class="absolute top-2 right-2 w-10 h-10 text-gray-300 hover:text-red-500">✖</button><div class="mb-3 pr-8"><input type="text" class="sub-name w-full text-base font-bold border-b p-1 focus:outline-none focus:border-[#004094]" placeholder="예: 국어-개별정규-남종언T-3h" value="${escapeHtml(nameVal)}" oninput="updateAll()" onblur="handleAutoRowEditComplete()"></div><div class="flex justify-between mb-3 px-1">${['일','월','화','수','목','금','토'].map((d, i) => `<div><input type="checkbox" id="d-${id}-${i}" value="${i}" class="day-chk hidden" onchange="updateDateContext()"><label for="d-${id}-${i}" class="flex w-10 h-10 rounded-full border border-gray-300 items-center justify-center text-xs cursor-pointer select-none text-gray-400 hover:bg-white hover:border-[#004094] font-bold">${d}</label></div>`).join('')}</div><div class="bg-gray-50 p-2 rounded"><div class="rate-input-grid"><div><label class="rate-field-label">월 횟수</label><input type="text" id="cnt-${id}" class="sub-count rate-hours-input text-[#004094]" readonly value="0"></div><div><label class="rate-field-label">수업 시간</label><input type="number" min="0" step="0.5" class="sub-hours rate-hours-input" placeholder="반명 자동" value="${parsedHours}" oninput="updateAll()"></div><div><label class="rate-field-label">단가 기준</label>${buildRateModeSelect('perClass', 'updateAll()')}</div></div><div class="mt-2"><label class="rate-field-label">수강료 단가</label><input type="number" min="0" class="sub-rate rate-value-input" placeholder="단가" oninput="updateAll()" onblur="handleAutoRowEditComplete()"><div class="rate-preset-row mt-2 flex flex-wrap gap-1.5">${buildRatePresetButtons()}</div></div><div class="mt-2 min-w-0"><div class="text-[10px] font-black text-slate-400 mb-1">수업일 선택해제</div><div class="auto-date-pills flex flex-wrap gap-1.5"></div></div></div></div>`;
+            const html = `<div class="bg-white p-4 border border-gray-200 rounded-lg shadow-sm relative group auto-row" id="arow-${id}"><button onclick="removeEl('arow-${id}')" aria-label="과목 삭제" class="absolute top-2 right-2 w-10 h-10 text-gray-300 hover:text-red-500">✖</button><div class="mb-3 pr-8"><input type="text" class="sub-name w-full text-base font-bold border-b p-1 focus:outline-none focus:border-[#004094]" placeholder="예: 국어-개별정규-남종언T-3h" value="${escapeHtml(nameVal)}" oninput="updateAll()" onblur="handleAutoRowEditComplete()"></div><div class="flex justify-between mb-3 px-1">${['일','월','화','수','목','금','토'].map((d, i) => `<div><input type="checkbox" id="d-${id}-${i}" value="${i}" class="day-chk hidden" onchange="updateDateContext()"><label for="d-${id}-${i}" class="flex w-10 h-10 rounded-full border border-gray-300 items-center justify-center text-xs cursor-pointer select-none text-gray-400 hover:bg-white hover:border-[#004094] font-bold">${d}</label></div>`).join('')}</div><div class="bg-gray-50 p-2 rounded"><div class="rate-input-grid"><div><label class="rate-field-label">월 횟수</label><input type="text" id="cnt-${id}" aria-label="월 수업 횟수" class="sub-count rate-hours-input text-[#004094]" readonly value="0"></div><div><label class="rate-field-label">수업 시간</label><input type="number" min="0" step="0.5" class="sub-hours rate-hours-input" placeholder="반명 자동" value="${parsedHours}" oninput="updateAll()"></div><div><label class="rate-field-label">단가 기준</label>${buildRateModeSelect('perClass', 'updateAll()')}</div></div><div class="mt-2"><label class="rate-field-label">수강료 단가</label><input type="number" min="0" class="sub-rate rate-value-input" placeholder="단가" oninput="updateAll()" onblur="handleAutoRowEditComplete()"><div class="rate-preset-row mt-2 flex flex-wrap gap-1.5">${buildRatePresetButtons()}</div></div><div class="mt-2 min-w-0"><div class="text-[10px] font-black text-slate-400 mb-1">수업일 선택해제</div><div class="auto-date-pills flex flex-wrap gap-1.5"></div></div></div></div>`;
             document.getElementById('autoList').insertAdjacentHTML('beforeend', html);
             updateAll();
             renderAutoRowDatePills(id);
@@ -2765,7 +2777,7 @@
             const adjEl = document.getElementById('dispAdj');
             if (adjEl) {
                 adjEl.innerText = (adj > 0 ? '+' : '') + adj.toLocaleString() + '원';
-                adjEl.className = adj === 0 ? "text-gray-300 font-bold" : (adj > 0 ? "text-red-500 font-bold" : "text-[#004094] font-bold");
+                adjEl.className = adj === 0 ? "text-gray-600 font-bold" : (adj > 0 ? "text-red-600 font-bold" : "text-[#004094] font-bold");
             }
             const discountInfo = getPercentDiscountInfo(subtotal);
             updateDiscountSummaryRow(discountInfo);
@@ -3177,8 +3189,8 @@
                             <div class="mt-1 text-[11px] text-slate-500">${record.targetYear || '-'}년 ${record.targetMonth || '-'}월</div>
                         </div>
                         <div class="flex flex-col items-end gap-2 shrink-0">
-                            <span class="text-[10px] px-2.5 py-1 rounded-full bg-slate-100 text-slate-500 font-black">${escapeHtml(TAB_LABELS[record.currentTab] || (record.currentTab || '기록'))}</span>
-                            <button type="button" class="record-delete-btn px-2.5 py-1 rounded-lg bg-rose-50 text-rose-600 text-[10px] font-black hover:bg-rose-100">삭제</button>
+                            <span class="text-[10px] px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 font-black">${escapeHtml(TAB_LABELS[record.currentTab] || (record.currentTab || '기록'))}</span>
+                            <button type="button" class="record-delete-btn px-2.5 py-1 rounded-lg bg-rose-50 text-rose-700 text-[10px] font-black hover:bg-rose-100">삭제</button>
                         </div>
                     </div>
                     <button type="button" class="record-open-btn mt-3 w-full text-left rounded-2xl border border-slate-200 bg-white px-3 py-2.5 hover:border-sky-300 hover:bg-sky-50/40">
