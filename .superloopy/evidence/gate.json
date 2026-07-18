@@ -1,0 +1,27 @@
+{
+  "status": "passed",
+  "createdAt": "2026-07-18T05:20:42.826Z",
+  "artifacts": [
+    ".superloopy/evidence/frontend/20260718-fee-input-ux/VISUAL_QA.md",
+    ".superloopy/evidence/frontend/20260718-fee-input-ux/PERF.md"
+  ],
+  "summary": {
+    "goals": {
+      "total": 1,
+      "pending": 0,
+      "in_progress": 1,
+      "complete": 0,
+      "failed": 0,
+      "blocked": 0
+    },
+    "criteria": {
+      "total": 3,
+      "pass": 3,
+      "pending": 0,
+      "fail": 0,
+      "blocked": 0
+    },
+    "aggregateComplete": false
+  },
+  "notes": "실제 Chrome 기능·반응형 QA, GitHub Pages 배포 스모크, JavaScript parse, 디자인 시스템 검사, Lighthouse 3회 중앙값 증빙 완료"
+}

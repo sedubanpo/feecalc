@@ -1,0 +1,56 @@
+{
+  "version": 1,
+  "sessionId": null,
+  "auditsAccepted": 0,
+  "updatedAt": "2026-07-18T05:20:42.837Z",
+  "criteria": [
+    {
+      "criterion": "G001/C001",
+      "scenario": "Happy path works from the real user-facing surface.",
+      "inputHash": "56a85c916f58c86f54e5e7905621293db64868e306f46d3d1f6a169a5d64ac18",
+      "sourceHash": "77af08315759199a15359370bd7eee2c0a754d0dd5f8e53752498fd65f9e491b",
+      "verdict": null,
+      "failCount": 0,
+      "auditedAt": "2026-07-18T05:20:42.835Z",
+      "command": null,
+      "rerunStatus": "manual-recheck",
+      "rerunArtifact": ".superloopy/evidence/frontend/20260718-fee-input-ux/VISUAL_QA.md",
+      "rerunArtifactHash": "77af08315759199a15359370bd7eee2c0a754d0dd5f8e53752498fd65f9e491b",
+      "floor": "pass",
+      "verdictArtifact": null,
+      "verdictHash": null
+    },
+    {
+      "criterion": "G001/C002",
+      "scenario": "Riskiest edge or failure path is handled.",
+      "inputHash": "418e6ac414cee3dad542a8b6894baf5c44016ea39c33975a4fb02126902ec4e7",
+      "sourceHash": "77af08315759199a15359370bd7eee2c0a754d0dd5f8e53752498fd65f9e491b",
+      "verdict": null,
+      "failCount": 0,
+      "auditedAt": "2026-07-18T05:20:42.836Z",
+      "command": null,
+      "rerunStatus": "manual-recheck",
+      "rerunArtifact": ".superloopy/evidence/frontend/20260718-fee-input-ux/VISUAL_QA.md",
+      "rerunArtifactHash": "77af08315759199a15359370bd7eee2c0a754d0dd5f8e53752498fd65f9e491b",
+      "floor": "pass",
+      "verdictArtifact": null,
+      "verdictHash": null
+    },
+    {
+      "criterion": "G001/C003",
+      "scenario": "Adjacent existing behavior still works.",
+      "inputHash": "1f5e7a32e0e87f6fcdd65ee977aa3c35ed0cc7d05b93f7f1ebeea705b01f2879",
+      "sourceHash": "c19d0d6a89a52a5611d71b27db0e58a0f5f11a9ed86a61b9ff21e429253b3d90",
+      "verdict": null,
+      "failCount": 0,
+      "auditedAt": "2026-07-18T05:20:42.837Z",
+      "command": null,
+      "rerunStatus": "manual-recheck",
+      "rerunArtifact": ".superloopy/evidence/frontend/20260718-fee-input-ux/PERF.md",
+      "rerunArtifactHash": "c19d0d6a89a52a5611d71b27db0e58a0f5f11a9ed86a61b9ff21e429253b3d90",
+      "floor": "pass",
+      "verdictArtifact": null,
+      "verdictHash": null
+    }
+  ]
+}

@@ -2,7 +2,7 @@
   "version": 1,
   "mode": "strict",
   "createdAt": "2026-07-18T05:00:05.917Z",
-  "updatedAt": "2026-07-18T05:01:32.419Z",
+  "updatedAt": "2026-07-18T05:20:42.837Z",
   "briefPath": ".superloopy/brief.md",
   "evidencePath": ".superloopy/evidence",
   "goalsPath": ".superloopy/goals.json",
@@ -12,10 +12,10 @@
       "id": "G001",
       "title": "수강료 계산기 기록 패널, 캘린더 숨김, 시간표 학생명, 회당·시간당 단가 UX 개선 및 배포",
       "objective": "수강료 계산기 기록 패널, 캘린더 숨김, 시간표 학생명, 회당·시간당 단가 UX 개선 및 배포",
-      "status": "in_progress",
+      "status": "complete",
       "attempt": 1,
       "createdAt": "2026-07-18T05:00:05.917Z",
-      "updatedAt": "2026-07-18T05:01:32.419Z",
+      "updatedAt": "2026-07-18T05:20:42.837Z",
       "criteria": [
         {
           "id": "C001",
@@ -48,8 +48,29 @@
           "notes": "JS parse, 디자인 계약, diff 정적 회귀 검사 통과"
         }
       ],
-      "startedAt": "2026-07-18T05:00:05.924Z"
+      "startedAt": "2026-07-18T05:00:05.924Z",
+      "completedAt": "2026-07-18T05:20:42.837Z",
+      "evidence": ".superloopy/evidence/frontend/20260718-fee-input-ux"
     }
   ],
-  "aggregateCompletion": null
+  "aggregateCompletion": {
+    "status": "complete",
+    "completedAt": "2026-07-18T05:20:42.837Z",
+    "evidence": ".superloopy/evidence/frontend/20260718-fee-input-ux",
+    "qualityGate": {
+      "status": "passed",
+      "artifacts": [
+        {
+          "absolutePath": "/Users/anjongseong/Documents/New project/feecalc_repo/.superloopy/evidence/frontend/20260718-fee-input-ux/VISUAL_QA.md",
+          "relativePath": ".superloopy/evidence/frontend/20260718-fee-input-ux/VISUAL_QA.md",
+          "size": 2267
+        },
+        {
+          "absolutePath": "/Users/anjongseong/Documents/New project/feecalc_repo/.superloopy/evidence/frontend/20260718-fee-input-ux/PERF.md",
+          "relativePath": ".superloopy/evidence/frontend/20260718-fee-input-ux/PERF.md",
+          "size": 1709
+        }
+      ]
+    }
+  }
 }
