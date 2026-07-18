@@ -1,0 +1,55 @@
+{
+  "version": 1,
+  "mode": "strict",
+  "createdAt": "2026-07-18T05:00:05.917Z",
+  "updatedAt": "2026-07-18T05:01:32.419Z",
+  "briefPath": ".superloopy/brief.md",
+  "evidencePath": ".superloopy/evidence",
+  "goalsPath": ".superloopy/goals.json",
+  "ledgerPath": ".superloopy/ledger.jsonl",
+  "goals": [
+    {
+      "id": "G001",
+      "title": "수강료 계산기 기록 패널, 캘린더 숨김, 시간표 학생명, 회당·시간당 단가 UX 개선 및 배포",
+      "objective": "수강료 계산기 기록 패널, 캘린더 숨김, 시간표 학생명, 회당·시간당 단가 UX 개선 및 배포",
+      "status": "in_progress",
+      "attempt": 1,
+      "createdAt": "2026-07-18T05:00:05.917Z",
+      "updatedAt": "2026-07-18T05:01:32.419Z",
+      "criteria": [
+        {
+          "id": "C001",
+          "kind": "happy",
+          "scenario": "Happy path works from the real user-facing surface.",
+          "essential": true,
+          "status": "pass",
+          "artifact": ".superloopy/evidence/frontend/20260718-fee-input-ux/VISUAL_QA.md",
+          "capturedAt": "2026-07-18T05:01:32.155Z",
+          "notes": "실제 Chrome에서 회당·시간당 계산, 학생명, 캘린더 숨김 검증"
+        },
+        {
+          "id": "C002",
+          "kind": "risk",
+          "scenario": "Riskiest edge or failure path is handled.",
+          "essential": true,
+          "status": "pass",
+          "artifact": ".superloopy/evidence/frontend/20260718-fee-input-ux/VISUAL_QA.md",
+          "capturedAt": "2026-07-18T05:01:32.296Z",
+          "notes": "390px 좁은 화면과 탭별 캘린더 숨김 실패 경로 검증"
+        },
+        {
+          "id": "C003",
+          "kind": "regression",
+          "scenario": "Adjacent existing behavior still works.",
+          "essential": true,
+          "status": "pass",
+          "artifact": ".superloopy/evidence/frontend/20260718-fee-input-ux/PERF.md",
+          "capturedAt": "2026-07-18T05:01:32.419Z",
+          "notes": "JS parse, 디자인 계약, diff 정적 회귀 검사 통과"
+        }
+      ],
+      "startedAt": "2026-07-18T05:00:05.924Z"
+    }
+  ],
+  "aggregateCompletion": null
+}

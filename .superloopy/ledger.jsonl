@@ -1,0 +1,5 @@
+{"at":"2026-07-18T05:00:05.917Z","kind":"plan_created","mode":"strict","goals":1}
+{"at":"2026-07-18T05:00:05.924Z","kind":"goal_started","goalId":"G001","attempt":1}
+{"at":"2026-07-18T05:01:32.155Z","kind":"evidence_passed","goalId":"G001","criterionId":"C001","status":"pass","artifact":".superloopy/evidence/frontend/20260718-fee-input-ux/VISUAL_QA.md","before":"pending","notes":"실제 Chrome에서 회당·시간당 계산, 학생명, 캘린더 숨김 검증"}
+{"at":"2026-07-18T05:01:32.296Z","kind":"evidence_passed","goalId":"G001","criterionId":"C002","status":"pass","artifact":".superloopy/evidence/frontend/20260718-fee-input-ux/VISUAL_QA.md","before":"pending","notes":"390px 좁은 화면과 탭별 캘린더 숨김 실패 경로 검증"}
+{"at":"2026-07-18T05:01:32.419Z","kind":"evidence_passed","goalId":"G001","criterionId":"C003","status":"pass","artifact":".superloopy/evidence/frontend/20260718-fee-input-ux/PERF.md","before":"pending","notes":"JS parse, 디자인 계약, diff 정적 회귀 검사 통과"}

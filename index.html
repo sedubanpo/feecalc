@@ -10,7 +10,47 @@
     <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap');
-        body { font-family: 'Noto Sans KR', sans-serif; }
+        :root {
+            --color-bg: #F8FAFC;
+            --color-surface: #FFFFFF;
+            --color-fg: #1F2937;
+            --color-muted: #6B7280;
+            --color-primary: #004094;
+            --color-history: #16A34A;
+            --color-caution: #E11D48;
+            --color-free: #0891B2;
+            --color-border: #E5E7EB;
+            --color-ring: #16A34A;
+            --space-1: 4px;
+            --space-2: 8px;
+            --space-3: 12px;
+            --space-4: 16px;
+            --space-optical-2: 2px;
+            --space-optical-3: 3px;
+            --space-optical-5: 5px;
+            --space-optical-6: 6px;
+            --space-optical-9: 9px;
+            --space-optical-10: 10px;
+            --space-optical-14: 14px;
+            --space-tab-guide: 58px;
+            --radius-control: 8px;
+            --motion-duration: 160ms;
+            --motion-easing: cubic-bezier(0.2, 0, 0, 1);
+        }
+        body { font-family: 'Noto Sans KR', sans-serif; -webkit-font-smoothing: antialiased; }
+        button { transition-property: background-color, border-color, color, box-shadow, transform; transition-duration: var(--motion-duration); transition-timing-function: var(--motion-easing); }
+        button:active { transform: scale(0.96); }
+        button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+        input[type="number"], .amount-value, #dispSubtotal, #dispDiscount, #dispAdj, #dispTotal { font-variant-numeric: tabular-nums; }
+        .record-panel-header { display: grid; gap: var(--space-2); }
+        .record-panel-title { min-width: 0; white-space: nowrap; }
+        .record-panel-actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-1); }
+        .record-panel-actions button { min-width: 0; min-height: 40px; padding-inline: var(--space-1); white-space: nowrap; }
+        .rate-input-grid { display: grid; grid-template-columns: minmax(64px, 0.8fr) minmax(72px, 1fr) minmax(88px, 1.2fr); gap: var(--space-2); align-items: start; }
+        .rate-mode-select, .rate-hours-input, .rate-value-input { width: 100%; min-height: 40px; border: 1px solid var(--color-border); border-radius: var(--radius-control); background: var(--color-surface); color: var(--color-fg); font-size: 11px; font-weight: 700; padding: var(--space-2); }
+        .rate-hours-input, .rate-value-input { text-align: right; font-variant-numeric: tabular-nums; }
+        .rate-field-label { display: block; margin-bottom: var(--space-1); color: var(--color-muted); font-size: 10px; font-weight: 800; line-height: 1.4; }
+        @media (prefers-reduced-motion: reduce) { button { transition-duration: 0ms; } }
         
         /* 쉐도우 및 기본 스타일 */
         .receipt-shadow { box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.15); }
@@ -21,7 +61,7 @@
         #infoBox { width: 100%; line-height: 1.5; }
         #infoBox .info-list li { font-size: 0.78rem; line-height: 1.55; margin-bottom: 0.24rem; }
 
-        .calendar-grid div { width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; margin: 1px auto; border-radius: 50%; transition: all 0.2s; cursor: pointer; }
+        .calendar-grid div { width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; margin: 1px auto; border-radius: 50%; transition-property: background-color, border-color, color, opacity, transform; transition-duration: var(--motion-duration); transition-timing-function: var(--motion-easing); cursor: pointer; }
         .sun { color: #ef4444; } .sat { color: #3b82f6; }
         
         .mode-auto .highlight-day { background-color: #dbeafe; color: #004094; font-weight: bold; border: 1px solid #004094; }
@@ -32,12 +72,12 @@
         .mode-timetable .tt-day { background-color: #fff7ed !important; color: #ea580c !important; font-weight: bold; border: 1px solid #fed7aa; }
 
         .receipt-cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; background-color: #e5e7eb; border: 1px solid #e5e7eb; }
-        .receipt-cal-cell { background-color: white; min-height: 65px; height: auto; padding: 2px; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; }
-        .rc-date { font-size: 0.75rem; font-weight: bold; color: #9ca3af; margin-bottom: 2px; line-height: 1; width: 100%; text-align: center; }
-        .rc-subject { width: 100%; text-align: center; padding: 3px 4px; border-radius: 6px; margin-bottom: 2px; font-weight: 800; line-height: 1.1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; overflow: hidden; min-height: 26px; }
+        .receipt-cal-cell { background-color: white; min-height: 65px; height: auto; padding: var(--space-optical-2); display: flex; flex-direction: column; align-items: center; justify-content: flex-start; }
+        .rc-date { font-size: 0.75rem; font-weight: bold; color: #9ca3af; margin-bottom: var(--space-optical-2); line-height: 1; width: 100%; text-align: center; }
+        .rc-subject { width: 100%; text-align: center; padding: var(--space-optical-3) var(--space-1); border-radius: 6px; margin-bottom: var(--space-optical-2); font-weight: 800; line-height: 1.1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; overflow: hidden; min-height: 26px; }
         .rc-subject-label { display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.68rem; font-weight: 900; }
         .rc-subject-time { display: block; margin-left: 0; font-size: 0.58rem; font-weight: 900; letter-spacing: -0.01em; opacity: 0.95; white-space: nowrap; }
-        .rc-type-badge { display: inline-flex; align-items: center; justify-content: center; height: 13px; min-width: 20px; padding: 0 3px; border-radius: 999px; font-size: 0.5rem; font-weight: 1000; line-height: 1; background-color: #be123c; color: white; box-shadow: 0 1px 2px rgba(15, 23, 42, 0.12); }
+        .rc-type-badge { display: inline-flex; align-items: center; justify-content: center; height: 13px; min-width: 20px; padding: 0 var(--space-optical-3); border-radius: 999px; font-size: 0.5rem; font-weight: 1000; line-height: 1; background-color: #be123c; color: white; box-shadow: 0 1px 2px rgba(15, 23, 42, 0.12); }
         
         .subj-default { background-color: #eaf2ff; color: #486581; }
         .subj-math { background-color: #d9e8ff; color: #355c9a; }
@@ -53,7 +93,7 @@
         .rc-active-date { color: #1f2937; }
         .text-optical-center { display: inline-block; line-height: 1; padding-top: 0; }
 
-        .badge-base { display: inline-flex; align-items: center; justify-content: center; height: 24px; min-height: 24px; padding: 0 8px; font-size: 0.75rem; border-radius: 4px; font-weight: 700; margin-left: 3px; vertical-align: middle; line-height: 1; white-space: nowrap; }
+        .badge-base { display: inline-flex; align-items: center; justify-content: center; height: 24px; min-height: 24px; padding: 0 8px; font-size: 0.75rem; border-radius: 4px; font-weight: 700; margin-left: var(--space-optical-3); vertical-align: middle; line-height: 1; white-space: nowrap; }
         #dateBadge > span { line-height: 1; display: inline-block; padding-top: 0; }
         .type-badge { background-color: #004094; color: white; }
         .badge-1on1 { background-color: #be123c; color: white; }
@@ -61,7 +101,7 @@
         .teacher-badge { background-color: #f3f4f6; color: #4b5563; border: 1px solid #d1d5db; }
         .time-badge { background-color: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; }
         .makeup-badge { background-color: #fff7ed; color: #ea580c; border: 1px solid #fed7aa; }
-        .rc-subject { line-height: 1.25; padding: 2px 3px; }
+        .rc-subject { line-height: 1.25; padding: var(--space-optical-2) var(--space-optical-3); }
         .rc-duration-strong { filter: saturate(1.04) brightness(0.98); }
         .rc-duration-strong.subj-kor { background-color: #bfe9cf; color: #2c6a4b; }
         .rc-duration-strong.subj-math { background-color: #bfd7fb; color: #35548f; }
@@ -117,18 +157,18 @@
         .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
         .custom-scroll::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
         .active-row { border: 2px solid #004094 !important; background-color: #f0f7ff !important; }
-        #pasteAreaContainer { transition: all 0.3s ease; }
+        #pasteAreaContainer { transition-property: opacity, transform; transition-duration: var(--motion-duration); transition-timing-function: var(--motion-easing); }
         
-        .grid-editor { width: 100%; border-collapse: collapse; margin-top: 5px; font-size: 11px; background: white; }
-        .grid-editor th { background-color: #f3f4f6; border: 1px solid #e5e7eb; padding: 6px; text-align: left; color: #4b5563; font-weight: bold; }
-        .grid-editor td { border: 1px solid #e5e7eb; padding: 2px; }
-        .grid-input { width: 100%; border: none; padding: 6px; outline: none; background: transparent; font-size: 11px; font-family: monospace; }
+        .grid-editor { width: 100%; border-collapse: collapse; margin-top: var(--space-optical-5); font-size: 11px; background: white; }
+        .grid-editor th { background-color: #f3f4f6; border: 1px solid #e5e7eb; padding: var(--space-optical-6); text-align: left; color: #4b5563; font-weight: bold; }
+        .grid-editor td { border: 1px solid #e5e7eb; padding: var(--space-optical-2); }
+        .grid-input { width: 100%; border: none; padding: var(--space-optical-6); outline: none; background: transparent; font-size: 11px; font-family: monospace; }
         .grid-input:focus { background-color: #eff6ff; }
-        .grid-select { width: 100%; border: none; padding: 6px; outline: none; background: transparent; cursor: pointer; font-size: 11px; }
+        .grid-select { width: 100%; border: none; padding: var(--space-optical-6); outline: none; background: transparent; cursor: pointer; font-size: 11px; }
         .grid-btn-del { color: #ef4444; font-weight: bold; cursor: pointer; text-align: center; font-size: 12px; }
         .grid-btn-del:hover { background-color: #fee2e2; }
         #workspaceTopBar { position: relative; z-index: 10; }
-        #topTabBarSlot { position: relative; padding-top: 58px; overflow: visible; }
+        #topTabBarSlot { position: relative; padding-top: var(--space-tab-guide); overflow: visible; }
         #tabNavRow { display: flex; flex-wrap: wrap; gap: 0.6rem; align-items: center; }
         .top-tab-button { min-width: 92px; white-space: nowrap; }
         #tabHelpBubble {
@@ -156,7 +196,7 @@
             content: '';
             position: absolute;
             left: 50%;
-            bottom: -6px;
+            bottom: calc(var(--space-optical-6) * -1);
             width: 10px;
             height: 10px;
             background: #fff8dc;
@@ -169,15 +209,15 @@
         .record-search { background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%); }
         .editor-body { min-height: 560px; }
         #recordsDock, #controlColumn { min-width: 0; }
-        .history-subject-pill { display: inline-flex; align-items: center; padding: 4px 10px; border-radius: 9999px; font-size: 0.92rem; font-weight: 900; line-height: 1.1; }
-        .history-teacher-pill { display: inline-flex; align-items: center; padding: 4px 9px; border-radius: 9999px; font-size: 0.76rem; font-weight: 800; line-height: 1.1; border: 1px solid transparent; }
-        .history-status-pill { display: inline-flex; align-items: center; padding: 4px 9px; border-radius: 9999px; font-size: 0.72rem; font-weight: 800; line-height: 1.1; }
+        .history-subject-pill { display: inline-flex; align-items: center; padding: 4px var(--space-optical-10); border-radius: 9999px; font-size: 0.92rem; font-weight: 900; line-height: 1.1; }
+        .history-teacher-pill { display: inline-flex; align-items: center; padding: 4px var(--space-optical-9); border-radius: 9999px; font-size: 0.76rem; font-weight: 800; line-height: 1.1; border: 1px solid transparent; }
+        .history-status-pill { display: inline-flex; align-items: center; padding: 4px var(--space-optical-9); border-radius: 9999px; font-size: 0.72rem; font-weight: 800; line-height: 1.1; }
         .history-row-detail { color: #64748b; font-size: 0.92rem; font-weight: 700; }
         .history-row-note { color: #94a3b8; font-size: 0.76rem; font-weight: 700; margin-top: 0.2rem; }
         .history-status-cancel { background-color: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
         .history-status-makeup { background-color: #fff7ed; color: #ea580c; border: 1px solid #fed7aa; }
         .history-status-supplement { background-color: color-mix(in srgb, #0891B2 10%, white); color: #0891B2; border: 1px solid color-mix(in srgb, #0891B2 24%, white); }
-        .rate-preset-chip { display: inline-flex; align-items: center; justify-content: center; height: 24px; padding: 0 8px; border-radius: 9999px; border: 1px solid #dbeafe; background: #eff6ff; color: #004094; font-size: 10px; font-weight: 900; line-height: 1; white-space: nowrap; cursor: pointer; }
+        .rate-preset-chip { display: inline-flex; align-items: center; justify-content: center; height: 40px; min-height: 40px; padding: 0 8px; border-radius: 9999px; border: 1px solid #dbeafe; background: #eff6ff; color: #004094; font-size: 10px; font-weight: 900; line-height: 1; white-space: nowrap; cursor: pointer; }
         .rate-preset-chip:hover { background: #dbeafe; border-color: #93c5fd; }
         .auto-date-pill { display: inline-flex; align-items: center; justify-content: center; min-width: 28px; height: 26px; padding: 0 8px; border-radius: 9999px; border: 1px solid #bfdbfe; background: #eff6ff; color: #004094; font-size: 11px; font-weight: 900; line-height: 1; cursor: pointer; }
         .auto-date-pill:hover { background: #dbeafe; border-color: #004094; }
@@ -195,38 +235,38 @@
             box-shadow: inset 0 1px 0 rgba(255,255,255,0.7);
             overflow: hidden;
         }
-        .voucher-guide-inner { padding: 14px 16px; }
+        .voucher-guide-inner { padding: var(--space-optical-14) 16px; }
         .voucher-guide-kicker {
             display: inline-flex;
             align-items: center;
-            padding: 4px 10px;
+            padding: 4px var(--space-optical-10);
             border-radius: 9999px;
             background: #e2e8f0;
             color: #64748b;
             font-size: 0.75rem;
             font-weight: 700;
             letter-spacing: 0.02em;
-            margin-bottom: 10px;
+            margin-bottom: var(--space-optical-10);
         }
         .voucher-guide-title { color: #334155; font-size: 0.75rem; font-weight: 600; line-height: 1.8; margin-bottom: 0; }
-        .voucher-guide-desc { color: #64748b; font-size: 0.75rem; font-weight: 600; line-height: 1.8; margin-top: 6px; }
+        .voucher-guide-desc { color: #64748b; font-size: 0.75rem; font-weight: 600; line-height: 1.8; margin-top: var(--space-optical-6); }
         .voucher-guide-red { color: #ef4444; font-weight: 900; }
         .voucher-guide-blue { color: #004094; font-weight: 900; }
-        .receipt-notice-list { margin-top: 12px; padding-top: 10px; border-top: 1px dashed #cbd5e1; display: flex; flex-direction: column; gap: 8px; }
+        .receipt-notice-list { margin-top: 12px; padding-top: var(--space-optical-10); border-top: 1px dashed #cbd5e1; display: flex; flex-direction: column; gap: 8px; }
         .receipt-notice-list.hidden { display: none; }
-        .receipt-notice-box { display: grid; grid-template-columns: 26px 1fr; gap: 8px; align-items: start; padding: 9px 10px; border: 1px solid #dbeafe; border-radius: 12px; background: #f4f8ff; color: #334155; }
+        .receipt-notice-box { display: grid; grid-template-columns: 26px 1fr; gap: 8px; align-items: start; padding: var(--space-optical-9) var(--space-optical-10); border: 1px solid #dbeafe; border-radius: 12px; background: #f4f8ff; color: #334155; }
         .receipt-notice-icon { width: 26px; height: 26px; border-radius: 9999px; display: inline-flex; align-items: center; justify-content: center; background: #004094; color: #fff; box-shadow: 0 8px 14px -10px rgba(0, 64, 148, 0.9); }
         .receipt-notice-icon svg { width: 15px; height: 15px; stroke-width: 2.4; }
-        .receipt-notice-label { color: #004094; font-size: 0.68rem; font-weight: 900; line-height: 1.2; margin-bottom: 2px; }
+        .receipt-notice-label { color: #004094; font-size: 0.68rem; font-weight: 900; line-height: 1.2; margin-bottom: var(--space-optical-2); }
         .receipt-notice-text { color: #334155; font-size: 0.75rem; font-weight: 800; line-height: 1.55; white-space: pre-line; word-break: keep-all; overflow-wrap: anywhere; }
         .settings-modal-backdrop { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.35); z-index: 100; display: flex; align-items: center; justify-content: center; padding: 24px; }
         .settings-modal-backdrop.hidden { display: none; }
         .settings-modal { width: min(520px, 100%); border-radius: 20px; background: #fff; box-shadow: 0 24px 70px -30px rgba(15, 23, 42, 0.65); border: 1px solid #e5e7eb; }
-        .notice-setting-row { border: 1px solid #e2e8f0; border-radius: 14px; padding: 10px; background: #f8fafc; }
+        .notice-setting-row { border: 1px solid #e2e8f0; border-radius: 14px; padding: var(--space-optical-10); background: #f8fafc; }
         .notice-setting-row textarea { min-height: 74px; }
-        .settings-tab-btn { flex: 1; border: 0; border-radius: 10px; padding: 9px 10px; font-size: 0.72rem; font-weight: 900; color: #64748b; background: transparent; transition: 0.15s ease; }
+        .settings-tab-btn { flex: 1; border: 0; border-radius: 10px; padding: var(--space-optical-9) var(--space-optical-10); font-size: 0.72rem; font-weight: 900; color: #64748b; background: transparent; transition-property: background-color, color, box-shadow; transition-duration: var(--motion-duration); transition-timing-function: var(--motion-easing); }
         .settings-tab-btn.active { color: #004094; background: #fff; box-shadow: 0 1px 6px rgba(15, 23, 42, 0.08); }
-        .guide-setting-row { border: 1px solid #e2e8f0; border-radius: 14px; padding: 10px; background: #f8fafc; }
+        .guide-setting-row { border: 1px solid #e2e8f0; border-radius: 14px; padding: var(--space-optical-10); background: #f8fafc; }
         .guide-setting-row textarea { min-height: 62px; }
     </style>
 </head>
@@ -342,12 +382,12 @@
             </div>
             <div id="serverRecordArea" class="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
                 <div class="mb-3">
-                    <div class="flex items-start justify-between gap-3">
-                        <h3 class="text-sm font-bold text-gray-800">☁️ 저장된 수강료 기록</h3>
-                        <div class="flex gap-2 shrink-0">
-                            <button onclick="saveServerRecord('insert')" class="px-3 py-2 bg-sky-600 text-white text-[11px] font-bold rounded hover:bg-sky-700">새 기록 저장</button>
+                    <div class="record-panel-header">
+                        <h3 class="record-panel-title text-sm font-bold text-gray-800">☁️ 저장된 수강료 기록</h3>
+                        <div class="record-panel-actions">
+                            <button onclick="saveServerRecord('insert')" aria-label="새 기록 저장" class="py-2 bg-sky-600 text-white text-[10px] font-bold rounded hover:bg-sky-700">새 기록</button>
                             <button id="serverUpdateButton" onclick="saveServerRecord('update')" class="px-3 py-2 bg-emerald-600 text-white text-[11px] font-bold rounded hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed" disabled>덮어쓰기</button>
-                            <button onclick="refreshServerRecordList()" class="px-3 py-2 bg-gray-600 text-white text-[11px] font-bold rounded hover:bg-gray-700">새로고침</button>
+                            <button onclick="refreshServerRecordList()" class="py-2 bg-gray-600 text-white text-[10px] font-bold rounded hover:bg-gray-700">새로고침</button>
                         </div>
                     </div>
                     <p class="text-[11px] text-gray-500 leading-5 mt-2">새 기록 저장은 기록을 추가하고, 덮어쓰기는 현재 불러온 저장본을 갱신합니다.</p>
@@ -664,7 +704,7 @@
         const SUPABASE_TABLE = 'fee_calc_records';
         const FEECALC_ACCESS_CODE_KEY = 'feecalc_access_code';
         const FEECALC_DEFAULT_ACCESS_CODE = 'banpo-fee-2026-secure';
-        const FEECALC_STORAGE_VERSION = 2;
+        const FEECALC_STORAGE_VERSION = 3;
         const PRICE_PRESETS_STORAGE_KEY = 'feecalc_price_presets';
         const AD_TEXT_STORAGE_KEY = 'feecalc_ad_text';
         const GUIDE_MESSAGES_STORAGE_KEY = 'feecalc_guide_messages';
@@ -814,6 +854,36 @@
         function buildRatePresetButtons() {
             return pricePresets.map(amount => `<button type="button" class="rate-preset-chip" onclick="applyRatePreset(this, ${amount}, event)">${formatPresetAmount(amount)}</button>`).join('');
         }
+        function normalizeRateMode(value, fallback = 'perClass') {
+            return value === 'perHour' ? 'perHour' : (value === 'perClass' ? 'perClass' : fallback);
+        }
+        function buildRateModeSelect(selected = 'perClass', changeHandler = 'refreshGeneratedTextByCurrentMode()') {
+            const mode = normalizeRateMode(selected);
+            return `<select class="rate-mode rate-mode-select" aria-label="수강료 단위" onchange="${changeHandler}"><option value="perClass" ${mode === 'perClass' ? 'selected' : ''}>회당</option><option value="perHour" ${mode === 'perHour' ? 'selected' : ''}>시간당</option></select>`;
+        }
+        function getRowRateMode(row, fallback = 'perClass') {
+            return normalizeRateMode(row?.querySelector('.rate-mode')?.value, fallback);
+        }
+        function getBillableDuration(row, rawName = '', fallback = 0) {
+            const explicit = parseFloat(row?.querySelector('.sub-hours, .sub-time, .first-hours')?.value);
+            if (Number.isFinite(explicit) && explicit > 0) return explicit;
+            return parseDurationHours(parseSubjectInfo(rawName).timeText) || fallback;
+        }
+        function calculateRateTotal(count, hours, rate, mode) {
+            const safeCount = Number.isFinite(Number(count)) ? Number(count) : 0;
+            const safeHours = Number.isFinite(Number(hours)) ? Number(hours) : 0;
+            const safeRate = Number.isFinite(Number(rate)) ? Number(rate) : 0;
+            const multiplier = normalizeRateMode(mode) === 'perHour' ? safeCount * safeHours : safeCount;
+            return Math.round(multiplier * safeRate);
+        }
+        function buildRateDetail(count, hours, rate, mode, prefix = '') {
+            const unit = normalizeRateMode(mode);
+            const parts = [];
+            parts.push(`${prefix ? `${prefix} ` : ''}${count}회`);
+            if (unit === 'perHour') parts.push(`${hours || 0}시간`);
+            parts.push(`${Number(rate || 0).toLocaleString()}원(${unit === 'perHour' ? '시간당' : '회당'})`);
+            return parts.join(' × ');
+        }
         function refreshRatePresetRows() {
             document.querySelectorAll('.rate-preset-row').forEach(row => { row.innerHTML = buildRatePresetButtons(); });
         }
@@ -850,13 +920,17 @@
         }
         function applyRatePreset(button, amount, event) {
             if (event) event.stopPropagation();
-            const row = button.closest('.auto-row, .select-row, .manual-row, .guide-estimate-row, .first-reg-row');
-            const input = row?.querySelector('.sub-rate') || row?.querySelector('.guide-base-amount');
+            const row = button.closest('.auto-row, .select-row, .manual-row, .guide-estimate-row, .first-reg-row, .timetable-row');
+            const input = row?.querySelector('.sub-rate, .tt-price-input') || row?.querySelector('.guide-base-amount');
             if (!input) return;
             input.value = amount;
             if (row?.classList.contains('guide-estimate-row')) renderGuideEstimate();
             else if (row?.classList.contains('first-reg-row')) renderFirstRegistrationView();
-            else refreshGeneratedTextByCurrentMode();
+            else if (row?.classList.contains('timetable-row')) {
+                const index = parseInt(row.dataset.index, 10);
+                if (ttData[index]) ttData[index].price = amount;
+                updateTimetableView();
+            } else refreshGeneratedTextByCurrentMode();
         }
         function normalizeNoticeTexts(value) {
             const source = Array.isArray(value) ? value : (String(value || '').trim() ? [value] : []);
@@ -1360,7 +1434,7 @@
             area.classList.remove('hidden');
         }
         function shouldShowCalendarDisplayOption(tab = currentTab) {
-            return ['auto', 'select', 'manual', 'guide', 'ai'].includes(tab);
+            return ['auto', 'select', 'manual', 'guide', 'first', 'timetable', 'history', 'ai'].includes(tab);
         }
         function isReceiptCalendarDetailsHidden() {
             return !!document.getElementById('hideReceiptCalendarDetails')?.checked;
@@ -1368,12 +1442,17 @@
         function handleCalendarDisplayOptionChange() {
             if (currentTab === 'guide') { renderGuideEstimate(); return; }
             if (currentTab === 'manual' || currentTab === 'auto' || currentTab === 'select') { updateAll(); return; }
+            if (currentTab === 'first') { renderFirstRegistrationView(); return; }
+            if (currentTab === 'timetable') { updateTimetableView(); return; }
+            if (currentTab === 'history') { updateHistoryView(); return; }
+            if (currentTab === 'ai') { renderAiResult(); return; }
             refreshGeneratedTextByCurrentMode();
         }
         function updateReceiptCalendarVisibility() {
             const area = document.getElementById('receiptCalendarArea');
             if (!area) return;
-            area.classList.toggle('hidden', currentTab === 'guide' && !isReceiptCalendarDetailsHidden());
+            const shouldHideArea = currentTab === 'payment' || (currentTab === 'guide' && !isReceiptCalendarDetailsHidden());
+            area.classList.toggle('hidden', shouldHideArea);
         }
 
         function switchTab(tab) {
@@ -1781,8 +1860,30 @@
         }
         
         // [시간표 처리]
-        function processTimetable() { const raw = document.getElementById('ttPasteInput').value; const lines = raw.split('\n'); const dayMap = {}; const splitCols = (line) => line.includes('\t') ? line.split('\t') : line.trim().split(/\s{2,}/); lines.forEach(line => { if(!line.trim()) return; const cols = splitCols(line); const timeStr = (cols[0] || '').trim(); const m = timeStr.match(/^(\d{1,2})\s*[-~]\s*(\d{1,2})시$/); if (!m) return; const startHour = parseInt(m[1], 10); for(let i=1; i<=7 && i<cols.length; i++) { const subject = (cols[i] || '').trim(); if(subject) { const dayIdx = (i === 7) ? 0 : i; if(!dayMap[dayIdx]) dayMap[dayIdx] = []; dayMap[dayIdx].push({ subject, start: startHour }); } } }); ttData = []; for (const [dayIdx, classes] of Object.entries(dayMap)) { classes.sort((a,b) => a.start - b.start); let current = null; classes.forEach(cls => { if (current && current.subject === cls.subject && current.start + current.duration === cls.start) { current.duration++; } else { if(current) ttData.push(current); current = { day: parseInt(dayIdx), subject: cls.subject, start: cls.start, duration: 1 }; } }); if(current) ttData.push(current); } renderTimetableResult(); }
-        function renderTtCalendar(events) { const year = parseInt(document.getElementById('targetYear').value); const month = parseInt(document.getElementById('targetMonth').value); document.getElementById('calTitleReceipt').innerText = `${month}월 수업 일정`; const calDiv = document.getElementById('receiptMiniCalGrid'); calDiv.innerHTML = ''; const firstDay = new Date(year, month - 1, 1).getDay(); const lastDate = new Date(year, month, 0).getDate(); for(let i=0; i<firstDay; i++) calDiv.innerHTML += `<div class="receipt-cal-cell bg-gray-50/50"></div>`; for(let i=1; i<=lastDate; i++) { const dayEvents = events.filter(e => e.day === i); let html = `<div class="receipt-cal-cell"><div class="rc-date ${dayEvents.length > 0 ? 'rc-active-date' : ''}">${i}</div>`; dayEvents.forEach(e => { html += renderCalendarEventPill(e, e.isTt ? 'tt-day' : ''); }); html += `</div>`; calDiv.innerHTML += html; } }
+        function processTimetable() { const raw = document.getElementById('ttPasteInput').value; const lines = raw.split('\n'); const dayMap = {}; const splitCols = (line) => line.includes('\t') ? line.split('\t') : line.trim().split(/\s{2,}/); lines.forEach(line => { if(!line.trim()) return; const cols = splitCols(line); const timeStr = (cols[0] || '').trim(); const m = timeStr.match(/^(\d{1,2})\s*[-~]\s*(\d{1,2})시$/); if (!m) return; const startHour = parseInt(m[1], 10); for(let i=1; i<=7 && i<cols.length; i++) { const subject = (cols[i] || '').trim(); if(subject) { const dayIdx = (i === 7) ? 0 : i; if(!dayMap[dayIdx]) dayMap[dayIdx] = []; dayMap[dayIdx].push({ subject, start: startHour }); } } }); ttData = []; for (const [dayIdx, classes] of Object.entries(dayMap)) { classes.sort((a,b) => a.start - b.start); let current = null; classes.forEach(cls => { if (current && current.subject === cls.subject && current.start + current.duration === cls.start) { current.duration++; } else { if(current) ttData.push(current); current = { day: parseInt(dayIdx), subject: cls.subject, start: cls.start, duration: 1, rateMode: 'perClass' }; } }); if(current) ttData.push(current); } renderTimetableResult(); }
+        function renderTtCalendar(events) {
+            if (isReceiptCalendarDetailsHidden()) {
+                renderPlainReceiptCalendar();
+                updateReceiptCalendarVisibility();
+                return;
+            }
+            updateReceiptCalendarVisibility();
+            const year = parseInt(document.getElementById('targetYear').value);
+            const month = parseInt(document.getElementById('targetMonth').value);
+            document.getElementById('calTitleReceipt').innerText = `${month}월 수업 일정`;
+            const calDiv = document.getElementById('receiptMiniCalGrid');
+            calDiv.innerHTML = '';
+            const firstDay = new Date(year, month - 1, 1).getDay();
+            const lastDate = new Date(year, month, 0).getDate();
+            for(let i=0; i<firstDay; i++) calDiv.innerHTML += `<div class="receipt-cal-cell bg-gray-50/50"></div>`;
+            for(let i=1; i<=lastDate; i++) {
+                const dayEvents = events.filter(e => e.day === i);
+                let html = `<div class="receipt-cal-cell"><div class="rc-date ${dayEvents.length > 0 ? 'rc-active-date' : ''}">${i}</div>`;
+                dayEvents.forEach(e => { html += renderCalendarEventPill(e, e.isTt ? 'tt-day' : ''); });
+                html += `</div>`;
+                calDiv.innerHTML += html;
+            }
+        }
 
         function updateAll(options = {}) {
             if (currentTab === 'history' || currentTab === 'payment' || currentTab === 'ai' || currentTab === 'guide' || currentTab === 'first' || currentTab === 'timetable') return;
@@ -1813,16 +1914,16 @@
                     let rowTotal = 0;
                     let detailStr = '';
                     let manualTime = '';
-                    let durationHours = parseDurationHours(parseSubjectInfo(rawName).timeText);
+                    const rateMode = getRowRateMode(row, currentTab === 'manual' ? 'perHour' : 'perClass');
+                    let durationHours = getBillableDuration(row, rawName, 0);
                     if(currentTab === 'manual') {
-                        const time = parseFloat(row.querySelector('.sub-time').value) || 0;
-                        rowTotal = time * count * rate;
-                        detailStr = `${time}시간 × ${count}회(월) × ${rate.toLocaleString()}원`;
-                        manualTime = `${time}시간`;
-                        durationHours = time;
+                        durationHours = parseFloat(row.querySelector('.sub-time').value) || 0;
+                        rowTotal = calculateRateTotal(count, durationHours, rate, rateMode);
+                        detailStr = buildRateDetail(count, durationHours, rate, rateMode, '월');
+                        manualTime = durationHours ? `${durationHours}시간` : '';
                     } else {
-                        rowTotal = count * rate;
-                        detailStr = `${count}회(월) × ${rate.toLocaleString()}원`;
+                        rowTotal = calculateRateTotal(count, durationHours, rate, rateMode);
+                        detailStr = buildRateDetail(count, durationHours, rate, rateMode, '월');
                     }
                     if (rowTotal > 0 || count > 0) {
                         subtotal += rowTotal;
@@ -1873,14 +1974,15 @@
         }
         function addManualRow(nameVal = '', timeVal = '') {
             const id = generateSafeId();
-            const html = `<div class="bg-white p-4 border border-gray-200 rounded-lg shadow-sm relative group manual-row" id="mrow-${id}"><button onclick="removeEl('mrow-${id}')" class="absolute top-2 right-2 text-gray-300 hover:text-red-500">✖</button><div class="mb-3"><input type="text" class="sub-name w-full text-base font-bold border-b p-1 focus:outline-none focus:border-[#004094]" placeholder="과목명" value="${escapeHtml(nameVal)}" oninput="updateAll()"></div><div class="flex items-start gap-2 text-xs"><div class="flex-1"><label class="block text-gray-400 mb-0.5">시간</label><input type="number" class="sub-time w-full p-2 border rounded text-right" placeholder="0" value="${timeVal}" oninput="updateAll()"></div><span class="pt-7 text-gray-300">×</span><div class="flex-1"><label class="block text-gray-400 mb-0.5">횟수</label><input type="number" class="sub-count w-full p-2 border rounded text-right" placeholder="0" oninput="updateAll()"></div><span class="pt-7 text-gray-300">×</span><div class="flex-[1.7]"><label class="block text-gray-400 mb-0.5">금액</label><input type="number" class="sub-rate w-full p-2 border rounded text-right" placeholder="0" oninput="updateAll()"><div class="rate-preset-row mt-2 flex flex-wrap gap-1.5">${buildRatePresetButtons()}</div></div></div></div>`;
+            const html = `<div class="bg-white p-4 border border-gray-200 rounded-lg shadow-sm relative group manual-row" id="mrow-${id}"><button onclick="removeEl('mrow-${id}')" aria-label="과목 삭제" class="absolute top-2 right-2 w-10 h-10 text-gray-300 hover:text-red-500">✖</button><div class="mb-3 pr-8"><input type="text" class="sub-name w-full text-base font-bold border-b p-1 focus:outline-none focus:border-[#004094]" placeholder="과목명" value="${escapeHtml(nameVal)}" oninput="updateAll()"></div><div class="grid grid-cols-2 gap-2 text-xs mb-2"><div><label class="rate-field-label">수업 시간</label><input type="number" min="0" step="0.5" class="sub-time rate-hours-input" placeholder="0" value="${timeVal}" oninput="updateAll()"></div><div><label class="rate-field-label">월 횟수</label><input type="number" min="0" step="1" class="sub-count rate-hours-input" placeholder="0" oninput="updateAll()"></div></div><div class="rate-input-grid"><div><label class="rate-field-label">단가 기준</label>${buildRateModeSelect('perHour', 'updateAll()')}</div><div class="col-span-2"><label class="rate-field-label">수강료 단가</label><input type="number" min="0" class="sub-rate rate-value-input" placeholder="0" oninput="updateAll()"><div class="rate-preset-row mt-2 flex flex-wrap gap-1.5">${buildRatePresetButtons()}</div></div></div></div>`;
             document.getElementById('manualList').insertAdjacentHTML('beforeend', html);
             updateAll();
         }
         function addAutoRow(nameVal = '') {
             const id = generateSafeId();
             autoRowExcludedDates[id] = new Set();
-            const html = `<div class="bg-white p-4 border border-gray-200 rounded-lg shadow-sm relative group auto-row" id="arow-${id}"><button onclick="removeEl('arow-${id}')" class="absolute top-2 right-2 text-gray-300 hover:text-red-500">✖</button><div class="mb-3"><input type="text" class="sub-name w-full text-base font-bold border-b p-1 focus:outline-none focus:border-[#004094]" placeholder="예: 국어-개별정규-남종언T-3h" value="${escapeHtml(nameVal)}" oninput="updateAll()" onblur="handleAutoRowEditComplete()"></div><div class="flex justify-between mb-3 px-1">${['일','월','화','수','목','금','토'].map((d, i) => `<div><input type="checkbox" id="d-${id}-${i}" value="${i}" class="day-chk hidden" onchange="updateDateContext()"><label for="d-${id}-${i}" class="block w-8 h-8 rounded-full border border-gray-300 text-center leading-7 text-xs cursor-pointer select-none text-gray-400 hover:bg-white hover:border-[#004094] font-bold">${d}</label></div>`).join('')}</div><div class="bg-gray-50 p-2 rounded"><div class="flex gap-2 items-start"><input type="text" id="cnt-${id}" class="sub-count w-8 text-sm text-center bg-transparent font-bold text-[#004094] mt-1.5" readonly value="0"><span class="text-xs font-bold text-gray-400 mt-2">회 ×</span><div class="w-28 shrink-0"><input type="number" class="sub-rate w-full text-sm p-1 border rounded text-right" placeholder="단가" oninput="updateAll()" onblur="handleAutoRowEditComplete()"><div class="rate-preset-row mt-2 flex flex-wrap gap-1.5">${buildRatePresetButtons()}</div></div><div class="flex-1 min-w-0"><div class="text-[10px] font-black text-slate-400 mb-1">수업일 선택해제</div><div class="auto-date-pills flex flex-wrap gap-1.5"></div></div></div></div></div>`;
+            const parsedHours = parseDurationHours(parseSubjectInfo(nameVal).timeText) || '';
+            const html = `<div class="bg-white p-4 border border-gray-200 rounded-lg shadow-sm relative group auto-row" id="arow-${id}"><button onclick="removeEl('arow-${id}')" aria-label="과목 삭제" class="absolute top-2 right-2 w-10 h-10 text-gray-300 hover:text-red-500">✖</button><div class="mb-3 pr-8"><input type="text" class="sub-name w-full text-base font-bold border-b p-1 focus:outline-none focus:border-[#004094]" placeholder="예: 국어-개별정규-남종언T-3h" value="${escapeHtml(nameVal)}" oninput="updateAll()" onblur="handleAutoRowEditComplete()"></div><div class="flex justify-between mb-3 px-1">${['일','월','화','수','목','금','토'].map((d, i) => `<div><input type="checkbox" id="d-${id}-${i}" value="${i}" class="day-chk hidden" onchange="updateDateContext()"><label for="d-${id}-${i}" class="flex w-10 h-10 rounded-full border border-gray-300 items-center justify-center text-xs cursor-pointer select-none text-gray-400 hover:bg-white hover:border-[#004094] font-bold">${d}</label></div>`).join('')}</div><div class="bg-gray-50 p-2 rounded"><div class="rate-input-grid"><div><label class="rate-field-label">월 횟수</label><input type="text" id="cnt-${id}" class="sub-count rate-hours-input text-[#004094]" readonly value="0"></div><div><label class="rate-field-label">수업 시간</label><input type="number" min="0" step="0.5" class="sub-hours rate-hours-input" placeholder="반명 자동" value="${parsedHours}" oninput="updateAll()"></div><div><label class="rate-field-label">단가 기준</label>${buildRateModeSelect('perClass', 'updateAll()')}</div></div><div class="mt-2"><label class="rate-field-label">수강료 단가</label><input type="number" min="0" class="sub-rate rate-value-input" placeholder="단가" oninput="updateAll()" onblur="handleAutoRowEditComplete()"><div class="rate-preset-row mt-2 flex flex-wrap gap-1.5">${buildRatePresetButtons()}</div></div><div class="mt-2 min-w-0"><div class="text-[10px] font-black text-slate-400 mb-1">수업일 선택해제</div><div class="auto-date-pills flex flex-wrap gap-1.5"></div></div></div></div>`;
             document.getElementById('autoList').insertAdjacentHTML('beforeend', html);
             updateAll();
             renderAutoRowDatePills(id);
@@ -1889,8 +1991,9 @@
             return Array.from(document.querySelectorAll('#autoList .auto-row')).map((row, index) => {
                 const name = row.querySelector('.sub-name')?.value || '';
                 const rate = parseInt(row.querySelector('.sub-rate')?.value, 10) || 0;
-                const duration = parseDurationHours(parseSubjectInfo(name).timeText);
-                return { name, rate, duration, sortMeta: getSubjectSortMeta(name, duration, index) };
+                const duration = getBillableDuration(row, name, 0);
+                const rateMode = getRowRateMode(row, 'perClass');
+                return { name, rate, rateMode, duration, sortMeta: getSubjectSortMeta(name, duration, index) };
             }).filter(item => item.name.trim() || item.rate > 0);
         }
         function importAutoRowsToSelect() {
@@ -1911,13 +2014,19 @@
                 addSelectRow(item.name);
                 const row = document.querySelector('#selectList .select-row:last-child');
                 const rateInput = row?.querySelector('.sub-rate');
+                const hoursInput = row?.querySelector('.sub-hours');
+                const modeInput = row?.querySelector('.rate-mode');
                 if (!rateInput) return;
-                let importedRate = item.rate;
+                const missingDuration = !item.duration && (item.rateMode === 'perHour' || mode === 'perHour');
+                const perClassRate = item.rateMode === 'perHour' && item.duration ? Math.round(item.rate * item.duration) : item.rate;
+                let importedRate = perClassRate;
                 if (mode === 'perHour') {
-                    if (item.duration) importedRate = Math.round(item.rate * item.duration);
-                    else missingTimeCount++;
+                    if (item.duration) importedRate = Math.round(perClassRate / item.duration);
                 }
+                if (missingDuration) missingTimeCount++;
                 rateInput.value = importedRate || '';
+                if (hoursInput) hoursInput.value = item.duration || '';
+                if (modeInput) modeInput.value = mode;
             });
             document.querySelectorAll('.select-row').forEach(row => row.classList.remove('active-row'));
             if (activeSelectRowId) document.getElementById(`srow-${activeSelectRowId}`)?.classList.add('active-row');
@@ -2087,7 +2196,7 @@
                     const teacherText = item.info.teacher ? ` · ${item.info.teacher}` : '';
                     const hourText = item.hours > 0 ? `${item.hours}시간` : (item.info.timeText || '');
                     const discountText = item.discount > 0 ? `<span class="text-rose-500">할인 -${item.discount.toLocaleString()}원</span>` : '';
-                    return `<div class="grid grid-cols-[1fr_auto] gap-3 py-1.5 border-t border-slate-100 first:border-t-0 text-[11px]"><div class="min-w-0 flex items-center gap-1.5"><span class="shrink-0 rounded px-1.5 py-0.5 ${typeText.includes('1:1') ? 'bg-rose-700 text-white' : 'bg-slate-100 text-slate-600'} font-black">${escapeHtml(typeText)}</span><span class="truncate font-bold text-slate-600">${escapeHtml(`${teacherText.replace(' · ', '')}${hourText ? ` · ${hourText}` : ''}`.replace(/^ · /, '')) || escapeHtml(item.name)}</span>${discountText}</div><span class="font-mono font-black text-slate-800">${item.amount.toLocaleString()}원</span></div>`;
+                    return `<div class="grid grid-cols-[1fr_auto] gap-3 py-1.5 border-t border-slate-100 first:border-t-0 text-[0.6875rem]"><div class="min-w-0 flex items-center gap-1.5"><span class="shrink-0 rounded px-1.5 py-0.5 ${typeText.includes('1:1') ? 'bg-rose-700 text-white' : 'bg-slate-100 text-slate-600'} font-black">${escapeHtml(typeText)}</span><span class="truncate font-bold text-slate-600">${escapeHtml(`${teacherText.replace(' · ', '')}${hourText ? ` · ${hourText}` : ''}`.replace(/^ · /, '')) || escapeHtml(item.name)}</span>${discountText}</div><span class="font-mono font-black text-slate-800">${item.amount.toLocaleString()}원</span></div>`;
                 }).join('');
                 return `<section class="border border-slate-200 rounded-lg px-3 py-2.5 bg-white"><div class="flex items-baseline justify-between gap-3 mb-1.5"><div class="flex items-center gap-2 min-w-0"><span class="font-black text-slate-900 text-base">${escapeHtml(subject)}</span><span class="text-[10px] font-bold text-slate-400 whitespace-nowrap">${group.items.length}개 수업</span></div><span class="font-mono text-base font-black text-slate-900 whitespace-nowrap">${group.total.toLocaleString()}원</span></div><div class="px-2.5 py-1 rounded-lg bg-slate-50">${itemRows}</div></section>`;
             });
@@ -2388,7 +2497,7 @@
                     </div>
                     <div class="grid grid-cols-2 gap-2">
                         <div>
-                            <label class="block text-[10px] font-black text-slate-400 mb-1">추산 수강료</label>
+                            <label class="block text-[10px] font-black text-slate-400 mb-1">추산 수강료 총액</label>
                             <input type="number" class="guide-base-amount w-full p-2 border border-slate-200 rounded text-right text-sm font-bold" placeholder="0" value="${amountVal}" oninput="renderGuideEstimate()">
                             <div class="rate-preset-row mt-2 flex flex-wrap gap-1.5">${buildRatePresetButtons()}</div>
                         </div>
@@ -2526,7 +2635,7 @@
             const unique = Array.from(new Set(days));
             return unique.length ? unique : [...fallback];
         }
-        function addFirstRegRow(nameVal = '', weekdayVal = [1], hoursVal = 3, rateVal = '', startDateVal = '') {
+        function addFirstRegRow(nameVal = '', weekdayVal = [1], hoursVal = 3, rateVal = '', startDateVal = '', rateModeVal = 'perClass') {
             const id = generateSafeId();
             const safeWeekdays = normalizeWeekdayList(weekdayVal);
             const safeHours = parseFloat(hoursVal) || '';
@@ -2540,7 +2649,8 @@
                     <div><label class="block text-gray-400 mb-0.5">등원 시작일</label><input type="date" class="first-start-date w-full p-2 border rounded text-sm font-bold" value="${escapeHtml(startDate)}" onchange="renderFirstRegistrationView()"></div>
                     <div><label class="block text-gray-400 mb-1">수업 요일</label><div class="flex justify-between px-1">${dayButtons}</div></div>
                     <div><label class="block text-gray-400 mb-0.5">수업 시간</label><input type="number" class="first-hours w-full p-2 border rounded text-right text-sm font-bold" placeholder="3" value="${safeHours}" oninput="renderFirstRegistrationView()"></div>
-                    <div><label class="block text-gray-400 mb-0.5">회당 수강료</label><input type="number" class="sub-rate w-full p-2 border rounded text-right text-sm font-bold" placeholder="0" value="${safeRate}" oninput="renderFirstRegistrationView()"><div class="rate-preset-row mt-2 flex flex-wrap gap-1.5">${buildRatePresetButtons()}</div></div>
+                    <div><label class="block text-gray-400 mb-0.5">단가 기준</label>${buildRateModeSelect(rateModeVal, 'renderFirstRegistrationView()')}</div>
+                    <div class="col-span-2"><label class="block text-gray-400 mb-0.5">수강료 단가</label><input type="number" min="0" class="sub-rate rate-value-input" placeholder="0" value="${safeRate}" oninput="renderFirstRegistrationView()"><div class="rate-preset-row mt-2 flex flex-wrap gap-1.5">${buildRatePresetButtons()}</div></div>
                 </div>
                 <div class="mt-3 rounded-lg bg-rose-50 border border-rose-100 px-3 py-2 text-[11px] leading-5 font-bold text-rose-700">첫 등록 청구는 선택한 요일 수 × 4주 기준으로 계산됩니다.</div>
             </div>`;
@@ -2558,8 +2668,9 @@
                 const weekdays = Array.from(row.querySelectorAll('.first-weekday:checked')).map(input => parseInt(input.value, 10)).filter(day => Number.isFinite(day));
                 const hours = parseFloat(row.querySelector('.first-hours')?.value) || 0;
                 const rate = parseInt(row.querySelector('.sub-rate')?.value, 10) || 0;
+                const rateMode = getRowRateMode(row, 'perClass');
                 const startDate = row.querySelector('.first-start-date')?.value || '';
-                return { name: name.trim(), weekdays: normalizeWeekdayList(weekdays), hours, rate, startDate, index };
+                return { name: name.trim(), weekdays: normalizeWeekdayList(weekdays), hours, rate, rateMode, startDate, index };
             }).filter(item => includeBlank || item.name || item.rate || item.startDate);
         }
         function getFirstRegistrationMonthDates(row) {
@@ -2634,7 +2745,7 @@
                 const info = parseSubjectInfo(row.name);
                 if (row.hours) info.timeText = `${row.hours}시간`;
                 const billingCount = getFirstRegistrationBillingCount(row);
-                const total = row.rate * billingCount;
+                const total = calculateRateTotal(billingCount, row.hours, row.rate, row.rateMode);
                 subtotal += total;
                 const dates = getFirstRegistrationMonthDates(row);
                 dates.forEach(day => calendarEvents.push({ day, name: info.mainName || row.name || '수업', rawName: row.name, durationHours: row.hours }));
@@ -2644,7 +2755,7 @@
                 const dateText = dates.length ? `${dates.join(', ')}일` : '이번 달 표시 일정 없음';
                 return {
                     sortMeta: getSubjectSortMeta(row.name, row.hours, index),
-                    html: `<tr class="border-b border-dashed border-gray-200 last:border-0"><td class="py-2 pl-1 pr-2 align-top no-wrap-cell"><div class="flex items-center flex-wrap gap-y-1 mb-0.5"><span class="font-extrabold text-gray-800 text-base mr-1">${escapeHtml(info.mainName || row.name || '수업')}</span>${timeDisplay}${badges}</div><div class="text-xs text-gray-500 pl-0.5">4주 기준 ${billingCount}회 × ${row.rate.toLocaleString()}원</div><div class="text-[11px] font-bold text-rose-500 pl-0.5 mt-0.5">${weekdayName}요일 등원 / ${escapeHtml(dateText)}</div></td><td class="py-2 pr-1 text-right font-mono text-base font-black text-gray-800 align-top pt-1.5">${total.toLocaleString()}원</td></tr>`
+                    html: `<tr class="border-b border-dashed border-gray-200 last:border-0"><td class="py-2 pl-1 pr-2 align-top no-wrap-cell"><div class="flex items-center flex-wrap gap-y-1 mb-0.5"><span class="font-extrabold text-gray-800 text-base mr-1">${escapeHtml(info.mainName || row.name || '수업')}</span>${timeDisplay}${badges}</div><div class="text-xs text-gray-500 pl-0.5">${buildRateDetail(billingCount, row.hours, row.rate, row.rateMode, '4주 기준')}</div><div class="text-[11px] font-bold text-rose-500 pl-0.5 mt-0.5">${weekdayName}요일 등원 / ${escapeHtml(dateText)}</div></td><td class="py-2 pr-1 text-right font-mono text-base font-black text-gray-800 align-top pt-1.5">${total.toLocaleString()}원</td></tr>`
                 };
             });
             tbody.innerHTML = receiptRows.length
@@ -2669,7 +2780,15 @@
 
         function setActiveTtRow(idx) { activeTtRowIndex = idx; document.querySelectorAll('#ttList > div').forEach((row, i) => row.classList.toggle('active-row', i === idx)); renderCalendar(); }
         function getTtManualDates(idx) { if (!ttData[idx]) return []; if (!Array.isArray(ttData[idx].manualDates)) ttData[idx].manualDates = []; return ttData[idx].manualDates; }
-        function addSelectRow(nameVal = '') { const id = generateSafeId(); selectRowDates[id] = new Set(); const html = `<div class="bg-white p-4 border border-gray-200 rounded-lg shadow-sm relative group select-row" id="srow-${id}" onclick="activeSelectRowId='${id}'; document.querySelectorAll('.select-row').forEach(r=>r.classList.remove('active-row')); this.classList.add('active-row'); renderCalendar();"><button onclick="event.stopPropagation(); removeEl('srow-${id}')" class="absolute top-2 right-2 text-gray-300 hover:text-red-500">✖</button><div class="mb-3"><input type="text" class="sub-name w-full text-base font-bold border-b p-1 focus:outline-none focus:border-[#004094]" placeholder="과목명" value="${escapeHtml(nameVal)}" oninput="updateAll()"></div><div class="flex gap-2 bg-gray-50 p-2 rounded items-start"><input type="text" class="sub-count w-8 text-sm text-center bg-transparent font-bold text-[#004094] mt-1.5" readonly value="0"><span class="text-xs font-bold text-gray-400 mt-2">회 ×</span><div class="w-32"><input type="number" class="sub-rate w-full text-sm p-1 border rounded text-right" placeholder="단가" oninput="updateAll()"><div class="rate-preset-row mt-2 flex flex-wrap gap-1.5">${buildRatePresetButtons()}</div></div></div></div>`; document.getElementById('selectList').insertAdjacentHTML('beforeend', html); if (!activeSelectRowId) activeSelectRowId = id; updateAll(); }
+        function addSelectRow(nameVal = '') {
+            const id = generateSafeId();
+            const parsedHours = parseDurationHours(parseSubjectInfo(nameVal).timeText) || '';
+            selectRowDates[id] = new Set();
+            const html = `<div class="bg-white p-4 border border-gray-200 rounded-lg shadow-sm relative group select-row" id="srow-${id}" onclick="activeSelectRowId='${id}'; document.querySelectorAll('.select-row').forEach(r=>r.classList.remove('active-row')); this.classList.add('active-row'); renderCalendar();"><button onclick="event.stopPropagation(); removeEl('srow-${id}')" aria-label="과목 삭제" class="absolute top-2 right-2 w-10 h-10 text-gray-300 hover:text-red-500">✖</button><div class="mb-3 pr-8"><input type="text" class="sub-name w-full text-base font-bold border-b p-1 focus:outline-none focus:border-[#004094]" placeholder="과목명" value="${escapeHtml(nameVal)}" oninput="updateAll()"></div><div class="bg-gray-50 p-2 rounded"><div class="rate-input-grid"><div><label class="rate-field-label">선택 횟수</label><input type="text" class="sub-count rate-hours-input text-[#004094]" readonly value="0"></div><div><label class="rate-field-label">수업 시간</label><input type="number" min="0" step="0.5" class="sub-hours rate-hours-input" placeholder="반명 자동" value="${parsedHours}" oninput="updateAll()"></div><div><label class="rate-field-label">단가 기준</label>${buildRateModeSelect('perClass', 'updateAll()')}</div></div><div class="mt-2"><label class="rate-field-label">수강료 단가</label><input type="number" min="0" class="sub-rate rate-value-input" placeholder="단가" oninput="updateAll()"><div class="rate-preset-row mt-2 flex flex-wrap gap-1.5">${buildRatePresetButtons()}</div></div></div></div>`;
+            document.getElementById('selectList').insertAdjacentHTML('beforeend', html);
+            if (!activeSelectRowId) activeSelectRowId = id;
+            updateAll();
+        }
         function removeEl(id) { const el = document.getElementById(id); if(!el) return; if (id.startsWith('srow-')) { const key = id.replace('srow-', ''); delete selectRowDates[key]; if (activeSelectRowId === key) activeSelectRowId = null; } if (id.startsWith('arow-')) { const key = id.replace('arow-', ''); delete autoRowExcludedDates[key]; } el.remove(); updateAll(); renderCalendar(); }
         function updatePaymentView() { if (currentTab !== 'payment') return; const m = parseInt(document.getElementById('targetMonth').value) || 0; document.getElementById('calTitle').innerText = `${m}월 납부/차액`; document.getElementById('calBadge').innerText = '수정 모드'; document.getElementById('calendarGrid').innerHTML = ''; }
         async function downloadImage() {
@@ -2677,6 +2796,8 @@
             let previousMaxWidth = '';
             try {
                 const target = document.getElementById('captureArea');
+                const captureStudentName = currentTab === 'guide' ? getGuideEstimateStudentLabel() : (document.getElementById('studentName').value || '학생명');
+                document.getElementById('dispName').textContent = captureStudentName;
                 previousWidth = target.style.width;
                 previousMaxWidth = target.style.maxWidth;
                 target.style.width = '1000px';
@@ -2687,10 +2808,14 @@
                     scale: 2,
                     useCORS: true,
                     backgroundColor: '#fff',
-                    onclone: (doc) => { doc.body.classList.add('capture-mode'); }
+                    onclone: (doc) => {
+                        doc.body.classList.add('capture-mode');
+                        const clonedName = doc.getElementById('dispName');
+                        if (clonedName) clonedName.textContent = captureStudentName;
+                    }
                 });
                 const a = document.createElement('a');
-                const name = (currentTab === 'guide' ? getGuideEstimateStudentLabel() : (document.getElementById('studentName').value || '학생명')).replace(/[^\w가-힣-]/g, '_');
+                const name = captureStudentName.replace(/[^\w가-힣-]/g, '_');
                 a.download = `${name}_${document.getElementById('targetYear').value}-${document.getElementById('targetMonth').value}.png`;
                 a.href = canvas.toDataURL('image/png');
                 a.click();
@@ -2705,7 +2830,18 @@
             }
         }
 
-        function renderTimetableResult() { const listDiv = document.getElementById('ttList'); listDiv.innerHTML = ''; const dayNames = ['일', '월', '화', '수', '목', '금', '토']; ttData.forEach((item, idx) => { if (!Array.isArray(item.manualDates)) item.manualDates = []; const html = `<div class="bg-white p-2 border border-orange-200 rounded flex items-center justify-between gap-2 ${activeTtRowIndex===idx?'active-row':''}" onclick="setActiveTtRow(${idx})"><div class="flex items-center gap-1.5 flex-1 overflow-hidden"><span class="text-orange-600 font-bold bg-orange-50 px-1.5 py-0.5 rounded text-[10px] whitespace-nowrap">${dayNames[item.day]}</span><input type="text" class="tt-name-input text-xs font-bold text-gray-700 bg-transparent outline-none w-full" value="${escapeHtml(item.subject)}" oninput="ttData[${idx}].subject=this.value; updateTimetableView(); event.stopPropagation();"><span class="text-gray-400 text-[10px] whitespace-nowrap">(${item.duration}h${item.manualDates.length?` +${item.manualDates.length}회`:''})</span></div><div class="flex items-center gap-1"><input type="number" class="tt-price-input w-16 p-1 border rounded text-right text-xs font-bold" value="${item.price||''}" placeholder="단가" oninput="ttData[${idx}].price=parseInt(this.value)||0; updateTimetableView(); event.stopPropagation();"><button onclick="event.stopPropagation(); ttData.splice(${idx}, 1); if(activeTtRowIndex===${idx}) activeTtRowIndex=null; renderTimetableResult();" class="text-red-400 hover:text-red-600 font-bold px-1">X</button><input type="hidden" class="tt-day-val" value="${item.day}"><input type="hidden" class="tt-dur-val" value="${item.duration}"></div></div>`; listDiv.insertAdjacentHTML('beforeend', html); }); updateTimetableView(); }
+        function renderTimetableResult() {
+            const listDiv = document.getElementById('ttList');
+            listDiv.innerHTML = '';
+            const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
+            ttData.forEach((item, idx) => {
+                if (!Array.isArray(item.manualDates)) item.manualDates = [];
+                item.rateMode = normalizeRateMode(item.rateMode, 'perClass');
+                const html = `<div class="timetable-row bg-white p-3 border border-orange-200 rounded ${activeTtRowIndex===idx?'active-row':''}" data-index="${idx}" onclick="setActiveTtRow(${idx})"><div class="flex items-center gap-2"><span class="text-orange-600 font-bold bg-orange-50 px-2 py-1 rounded text-[10px] whitespace-nowrap">${dayNames[item.day]}</span><input type="text" class="tt-name-input text-xs font-bold text-gray-700 bg-transparent outline-none min-w-0 flex-1" value="${escapeHtml(item.subject)}" oninput="ttData[${idx}].subject=this.value; updateTimetableView(); event.stopPropagation();"><span class="text-gray-400 text-[10px] whitespace-nowrap">${item.duration}시간${item.manualDates.length?` +${item.manualDates.length}회`:''}</span><button aria-label="시간표 과목 삭제" onclick="event.stopPropagation(); ttData.splice(${idx}, 1); if(activeTtRowIndex===${idx}) activeTtRowIndex=null; renderTimetableResult();" class="w-10 h-10 text-red-400 hover:text-red-600 font-bold">X</button></div><div class="mt-2 grid grid-cols-[88px_minmax(0,1fr)] gap-2"><div>${buildRateModeSelect(item.rateMode, `ttData[${idx}].rateMode=this.value; updateTimetableView(); event.stopPropagation();`)}</div><div><input type="number" min="0" class="tt-price-input rate-value-input" value="${item.price||''}" placeholder="수강료 단가" oninput="ttData[${idx}].price=parseInt(this.value)||0; updateTimetableView(); event.stopPropagation();"><div class="rate-preset-row mt-2 flex flex-wrap gap-1.5">${buildRatePresetButtons()}</div></div></div><input type="hidden" class="tt-day-val" value="${item.day}"><input type="hidden" class="tt-dur-val" value="${item.duration}"></div>`;
+                listDiv.insertAdjacentHTML('beforeend', html);
+            });
+            updateTimetableView();
+        }
 
         function toggleDateExclusion(day) {
             if (currentTab === 'timetable') {
@@ -2778,6 +2914,7 @@
                 const subject = item.subject || '';
                 const duration = parseInt(item.duration) || 1;
                 const price = parseInt(item.price) || 0;
+                const rateMode = normalizeRateMode(item.rateMode, 'perClass');
                 const info = parseSubjectInfo(subject);
                 const daySet = new Set();
                 const date = new Date(year, month - 1, 1);
@@ -2789,10 +2926,10 @@
                 const count = daySet.size;
                 daySet.forEach(d => calendarEvents.push({ day: d, name: info.mainName, rawName: subject, isTt: true, durationHours: duration }));
                 if (count > 0) {
-                    const rowTotal = count * price;
+                    const rowTotal = calculateRateTotal(count, duration, price, rateMode);
                     totalAmount += rowTotal;
-                    const key = `${info.mainName}|${info.type}|${info.teacher}|${duration}|${price}`;
-                    if (!grouped[key]) grouped[key] = { info, duration, price, count: 0, total: 0 };
+                    const key = `${info.mainName}|${info.type}|${info.teacher}|${duration}|${price}|${rateMode}`;
+                    if (!grouped[key]) grouped[key] = { info, duration, price, rateMode, count: 0, total: 0 };
                     grouped[key].count += count;
                     grouped[key].total += rowTotal;
                 }
@@ -2801,7 +2938,7 @@
             Object.values(grouped).forEach(g => {
                 const badges = buildSubjectBadges(g.info);
                 const timeDisplay = `<span class="time-badge badge-base text-optical-center mr-1">${g.duration}시간</span>`;
-                tbody.innerHTML += `<tr class="border-b border-dashed border-gray-200"><td class="py-2 pl-1 pr-2 align-top"><div class="flex items-center flex-wrap gap-y-1 mb-0.5"><span class="font-extrabold text-gray-800 text-base mr-1">${escapeHtml(g.info.mainName)}</span>${timeDisplay}${badges}</div><div class="text-xs text-gray-500 pl-0.5">월 ${g.count}회 × ${g.price.toLocaleString()}원</div></td><td class="py-2 pr-1 text-right font-mono text-base font-black text-gray-800 align-top pt-1.5">${g.total.toLocaleString()}원</td></tr>`;
+                tbody.innerHTML += `<tr class="border-b border-dashed border-gray-200"><td class="py-2 pl-1 pr-2 align-top"><div class="flex items-center flex-wrap gap-y-1 mb-0.5"><span class="font-extrabold text-gray-800 text-base mr-1">${escapeHtml(g.info.mainName)}</span>${timeDisplay}${badges}</div><div class="text-xs text-gray-500 pl-0.5">${buildRateDetail(g.count, g.duration, g.price, g.rateMode, '월')}</div></td><td class="py-2 pr-1 text-right font-mono text-base font-black text-gray-800 align-top pt-1.5">${g.total.toLocaleString()}원</td></tr>`;
             });
             const discountInfo = getPercentDiscountInfo(totalAmount);
             const finalTotal = discountInfo.discountedBase + adj;
@@ -3159,12 +3296,12 @@
                     adText: adNotices.join('\n'),
                     guideMessages: normalizeGuideMessages(guideMessages),
                     excludedDates: Array.from(excludedDates).map(n => parseInt(n, 10)).filter(n => !isNaN(n)),
-                autoRows: collectCoreRows('#autoList .auto-row', row => { const id = row.id.replace('arow-', ''); return { name: row.querySelector('.sub-name').value || '', rate: parseInt(row.querySelector('.sub-rate').value, 10) || 0, days: Array.from(row.querySelectorAll('.day-chk:checked')).map(c => parseInt(c.value, 10)), excludedDates: Array.from(autoRowExcludedDates[id] || []).map(n => parseInt(n, 10)).filter(n => !isNaN(n)) }; }),
-                selectRows: collectCoreRows('#selectList .select-row', row => { const id = row.id.replace('srow-', ''); return { name: row.querySelector('.sub-name').value || '', rate: parseInt(row.querySelector('.sub-rate').value, 10) || 0, dates: Array.from(selectRowDates[id] || []).map(n => parseInt(n, 10)) }; }),
-                manualRows: collectCoreRows('#manualList .manual-row', row => ({ name: row.querySelector('.sub-name').value || '', time: parseFloat(row.querySelector('.sub-time').value) || 0, count: parseFloat(row.querySelector('.sub-count').value) || 0, rate: parseInt(row.querySelector('.sub-rate').value, 10) || 0 })),
+                autoRows: collectCoreRows('#autoList .auto-row', row => { const id = row.id.replace('arow-', ''); return { name: row.querySelector('.sub-name').value || '', hours: getBillableDuration(row, row.querySelector('.sub-name').value || '', 0), rateMode: getRowRateMode(row, 'perClass'), rate: parseInt(row.querySelector('.sub-rate').value, 10) || 0, days: Array.from(row.querySelectorAll('.day-chk:checked')).map(c => parseInt(c.value, 10)), excludedDates: Array.from(autoRowExcludedDates[id] || []).map(n => parseInt(n, 10)).filter(n => !isNaN(n)) }; }),
+                selectRows: collectCoreRows('#selectList .select-row', row => { const id = row.id.replace('srow-', ''); return { name: row.querySelector('.sub-name').value || '', hours: getBillableDuration(row, row.querySelector('.sub-name').value || '', 0), rateMode: getRowRateMode(row, 'perClass'), rate: parseInt(row.querySelector('.sub-rate').value, 10) || 0, dates: Array.from(selectRowDates[id] || []).map(n => parseInt(n, 10)) }; }),
+                manualRows: collectCoreRows('#manualList .manual-row', row => ({ name: row.querySelector('.sub-name').value || '', time: parseFloat(row.querySelector('.sub-time').value) || 0, count: parseFloat(row.querySelector('.sub-count').value) || 0, rateMode: getRowRateMode(row, 'perHour'), rate: parseInt(row.querySelector('.sub-rate').value, 10) || 0 })),
                 guideRows: collectGuideEstimateRows().map(item => ({ name: item.name, baseAmount: item.baseAmount, adjustment: item.adjustment })),
-                firstRows: collectFirstRegistrationRows(true).map(item => ({ name: item.name, weekdays: item.weekdays, hours: item.hours, rate: item.rate, startDate: item.startDate })),
-                ttRows: (ttData || []).map(item => ({ day: parseInt(item.day, 10) || 0, subject: item.subject || '', start: parseInt(item.start, 10) || 0, duration: parseInt(item.duration, 10) || 1, price: parseInt(item.price, 10) || 0, manualDates: Array.from(item.manualDates || []).map(n => parseInt(n, 10)).filter(n => !isNaN(n)) })),
+                firstRows: collectFirstRegistrationRows(true).map(item => ({ name: item.name, weekdays: item.weekdays, hours: item.hours, rateMode: item.rateMode, rate: item.rate, startDate: item.startDate })),
+                ttRows: (ttData || []).map(item => ({ day: parseInt(item.day, 10) || 0, subject: item.subject || '', start: parseInt(item.start, 10) || 0, duration: parseInt(item.duration, 10) || 1, rateMode: normalizeRateMode(item.rateMode, 'perClass'), price: parseInt(item.price, 10) || 0, manualDates: Array.from(item.manualDates || []).map(n => parseInt(n, 10)).filter(n => !isNaN(n)) })),
                 historyData: JSON.parse(JSON.stringify(historyData || [])),
                 aiData: JSON.parse(JSON.stringify(aiData || [])),
                 paymentRows: collectPaymentRows(),
@@ -3223,6 +3360,8 @@
                 addAutoRow(rowData.name || '');
                 const row = document.querySelector('#autoList .auto-row:last-child');
                 row.querySelector('.sub-rate').value = rowData.rate || '';
+                row.querySelector('.sub-hours').value = rowData.hours || '';
+                row.querySelector('.rate-mode').value = normalizeRateMode(rowData.rateMode, 'perClass');
                 (rowData.days || []).forEach(day => {
                     const checkbox = row.querySelector(`.day-chk[value="${day}"]`);
                     if (checkbox) checkbox.checked = true;
@@ -3236,6 +3375,8 @@
                 const row = document.querySelector('#selectList .select-row:last-child');
                 const rowId = row.id.replace('srow-', '');
                 row.querySelector('.sub-rate').value = rowData.rate || '';
+                row.querySelector('.sub-hours').value = rowData.hours || '';
+                row.querySelector('.rate-mode').value = normalizeRateMode(rowData.rateMode, 'perClass');
                 selectRowDates[rowId] = new Set((rowData.dates || []).map(n => parseInt(n, 10)).filter(n => !isNaN(n)));
             });
             (data.manualRows || []).forEach(rowData => {
@@ -3243,13 +3384,14 @@
                 const row = document.querySelector('#manualList .manual-row:last-child');
                 row.querySelector('.sub-count').value = rowData.count || '';
                 row.querySelector('.sub-rate').value = rowData.rate || '';
+                row.querySelector('.rate-mode').value = normalizeRateMode(rowData.rateMode, 'perHour');
             });
             (data.guideRows || []).forEach(rowData => {
                 addGuideEstimateRow(rowData.name || '', rowData.baseAmount || '', rowData.adjustment || '');
             });
             if (!document.querySelector('#guideEstimateList .guide-estimate-row')) addGuideEstimateRow();
             (data.firstRows || []).forEach(rowData => {
-                addFirstRegRow(rowData.name || '', rowData.weekdays || rowData.weekday || [1], rowData.hours || '', rowData.rate || '', rowData.startDate || '');
+                addFirstRegRow(rowData.name || '', rowData.weekdays || rowData.weekday || [1], rowData.hours || '', rowData.rate || '', rowData.startDate || '', normalizeRateMode(rowData.rateMode, 'perClass'));
             });
             if (!document.querySelector('#firstRegList .first-reg-row')) addFirstRegRow();
 
@@ -3258,6 +3400,7 @@
                 subject: item.subject || '',
                 start: parseInt(item.start, 10) || 0,
                 duration: parseInt(item.duration, 10) || 1,
+                rateMode: normalizeRateMode(item.rateMode, 'perClass'),
                 price: parseInt(item.price, 10) || 0,
                 manualDates: Array.from(item.manualDates || []).map(n => parseInt(n, 10)).filter(n => !isNaN(n))
             }));

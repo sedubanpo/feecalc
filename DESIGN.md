@@ -21,17 +21,29 @@
 
 기본 본문과 표면의 대비는 4.5:1 이상을 유지한다.
 
+기존 기능별 색상은 화면 의미를 보존하기 위한 확장 팔레트로 관리한다.
+
+| Group | Declared values | Role |
+| --- | --- | --- |
+| Neutral | `#FFFFFF`, `#FFF`, `#F8FAFC`, `#F8FBFF`, `#F4F8FF`, `#F3F4F6`, `#F1F5F9`, `#F1F1F1`, `#E5E7EB`, `#E2E8F0`, `#D1D5DB`, `#CBD5E1`, `#9CA3AF`, `#94A3B8`, `#64748B`, `#4B5563`, `#475569`, `#334155` | 배경, 경계, 보조 텍스트 |
+| Blue / indigo | `#F0F7FF`, `#EAF2FF`, `#EDF0FF`, `#EFF6FF`, `#E0E7FF`, `#DBEAFE`, `#D9E8FF`, `#D2E0F6`, `#C7D2FE`, `#BFD7FB`, `#BFDBFE`, `#9AA9DC`, `#93C5FD`, `#8EA9C9`, `#7DA8DE`, `#5968AA`, `#496580`, `#486581`, `#3B82F6`, `#38BDF8`, `#3730A3`, `#355C9A`, `#35548F` | 수학, 선택, AI, 기록 상태 |
+| Green / cyan | `#ECFDF5`, `#DCFCE7`, `#DAF4E4`, `#BFE9CF`, `#A7F3D0`, `#86EFAC`, `#7BBF98`, `#2F7A55`, `#2C6A4B`, `#166534`, `#047857` | 국어, 이력, 시간 상태 |
+| Rose / orange / amber | `#FEF2F2`, `#FFF1F2`, `#FFF7ED`, `#FFF8DC`, `#FEE9D8`, `#FEE2E2`, `#FED7AA`, `#FECACA`, `#FECDD3`, `#FDE68A`, `#FDE3E3`, `#FAEFC9`, `#F8CCAB`, `#F6C7D1`, `#F3DFA8`, `#D592A3`, `#CFB075`, `#BE123C`, `#B7784B`, `#A65A66`, `#967243`, `#8E4F65`, `#84673B`, `#EF4444`, `#EA580C`, `#DC2626` | 취소, 시간표, 영어, 사회 상태 |
+| Violet / specialty | `#F9E0EF`, `#F3BEDB`, `#ECE4FF`, `#E8E2FB`, `#D9C9F6`, `#D4C9F5`, `#B25D88`, `#9B8ACA`, `#7C3AED`, `#6D60A8`, `#6D58A8`, `#654D94` | 과학, 1:1, 2:1 상태 |
+
 ## 3. Typography
 
 `Arial, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif`를 사용한다. 본문은 12px/400/1.5, 보조 정보는 10px/700/1.4, 섹션 제목은 12px/700/1.4, 금액은 16px/800/1.2이며 `tabular-nums`를 사용한다.
 
 ## 4. Spacing
 
-기본 단위는 4px이다. `--space-1: 4px`, `--space-2: 8px`, `--space-3: 12px`, `--space-4: 16px`, `--space-5: 20px`, `--space-6: 24px`를 사용한다. 표 행은 12px 수직 여백, 입력 패널은 12px 안쪽 여백을 기준으로 한다.
+기본 단위는 4px이다. `--space-1: 4px`, `--space-2: 8px`, `--space-3: 12px`, `--space-4: 16px`, `--space-5: 20px`, `--space-6: 24px`를 사용한다. 표 행은 12px 수직 여백, 입력 패널은 12px 안쪽 여백을 기준으로 한다. 기존 달력·뱃지의 정렬과 탭 안내 위치를 보존하는 광학 보정에는 `--space-optical-2: 2px`, `--space-optical-3: 3px`, `--space-optical-5: 5px`, `--space-optical-6: 6px`, `--space-optical-9: 9px`, `--space-optical-10: 10px`, `--space-optical-14: 14px`, `--space-tab-guide: 58px`만 허용한다.
 
 ## 5. Components
 
 문서 패널은 흰색 표면, 8px 반경, `--color-border` 1px 경계를 사용한다. 상태 표지는 4px 반경, 6px 가로와 2px 세로 여백, 10px 굵은 글꼴을 사용한다. 버튼은 최소 40px 클릭 영역을 유지하고 hover, focus, active 상태를 제공한다. 과금 상태는 녹색, 취소 주의는 장미색, 무상 보충은 청록색으로 고정한다.
+
+좁은 기록 패널의 제목과 작업 버튼은 서로 다른 행으로 분리한다. 수강료 단가 입력은 `회당`/`시간당` 단위를 같은 행에서 명시하고, 시간당 단가는 수업 시간 입력 또는 반명의 `-3h` 형식과 함께 계산한다. 금액 입력과 결과에는 `tabular-nums`를 적용한다.
 
 ## 6. Motion
 

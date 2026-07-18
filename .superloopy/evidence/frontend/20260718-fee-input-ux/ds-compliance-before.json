@@ -1,0 +1,1097 @@
+{
+  "ok": false,
+  "design": "DESIGN.md",
+  "base": 4,
+  "declaredColors": 9,
+  "counts": {
+    "undeclared-color": 124,
+    "off-scale-spacing": 31
+  },
+  "violations": [
+    {
+      "file": "index.html",
+      "line": 57,
+      "kind": "undeclared-color",
+      "value": "#ef4444",
+      "snippet": ".sun { color: #ef4444; } .sat { color: #3b82f6; }"
+    },
+    {
+      "file": "index.html",
+      "line": 57,
+      "kind": "undeclared-color",
+      "value": "#3b82f6",
+      "snippet": ".sun { color: #ef4444; } .sat { color: #3b82f6; }"
+    },
+    {
+      "file": "index.html",
+      "line": 59,
+      "kind": "undeclared-color",
+      "value": "#dbeafe",
+      "snippet": ".mode-auto .highlight-day { background-color: #dbeafe; color: #004094; font-weight: bold; border: 1px solid #004094; }"
+    },
+    {
+      "file": "index.html",
+      "line": 60,
+      "kind": "undeclared-color",
+      "value": "#fee2e2",
+      "snippet": ".mode-auto .excluded-day { background-color: #fee2e2 !important; color: #ef4444 !important; text-decoration: line-throug"
+    },
+    {
+      "file": "index.html",
+      "line": 60,
+      "kind": "undeclared-color",
+      "value": "#ef4444",
+      "snippet": ".mode-auto .excluded-day { background-color: #fee2e2 !important; color: #ef4444 !important; text-decoration: line-throug"
+    },
+    {
+      "file": "index.html",
+      "line": 60,
+      "kind": "undeclared-color",
+      "value": "#ef4444",
+      "snippet": ".mode-auto .excluded-day { background-color: #fee2e2 !important; color: #ef4444 !important; text-decoration: line-throug"
+    },
+    {
+      "file": "index.html",
+      "line": 62,
+      "kind": "undeclared-color",
+      "value": "#dcfce7",
+      "snippet": ".mode-history .history-day { background-color: #dcfce7 !important; color: #166534 !important; font-weight: bold; border:"
+    },
+    {
+      "file": "index.html",
+      "line": 62,
+      "kind": "undeclared-color",
+      "value": "#166534",
+      "snippet": ".mode-history .history-day { background-color: #dcfce7 !important; color: #166534 !important; font-weight: bold; border:"
+    },
+    {
+      "file": "index.html",
+      "line": 62,
+      "kind": "undeclared-color",
+      "value": "#86efac",
+      "snippet": ".mode-history .history-day { background-color: #dcfce7 !important; color: #166534 !important; font-weight: bold; border:"
+    },
+    {
+      "file": "index.html",
+      "line": 63,
+      "kind": "undeclared-color",
+      "value": "#e0e7ff",
+      "snippet": ".mode-ai .ai-day { background-color: #e0e7ff !important; color: #3730a3 !important; font-weight: bold; border: 1px solid"
+    },
+    {
+      "file": "index.html",
+      "line": 63,
+      "kind": "undeclared-color",
+      "value": "#3730a3",
+      "snippet": ".mode-ai .ai-day { background-color: #e0e7ff !important; color: #3730a3 !important; font-weight: bold; border: 1px solid"
+    },
+    {
+      "file": "index.html",
+      "line": 63,
+      "kind": "undeclared-color",
+      "value": "#c7d2fe",
+      "snippet": ".mode-ai .ai-day { background-color: #e0e7ff !important; color: #3730a3 !important; font-weight: bold; border: 1px solid"
+    },
+    {
+      "file": "index.html",
+      "line": 64,
+      "kind": "undeclared-color",
+      "value": "#fff7ed",
+      "snippet": ".mode-timetable .tt-day { background-color: #fff7ed !important; color: #ea580c !important; font-weight: bold; border: 1p"
+    },
+    {
+      "file": "index.html",
+      "line": 64,
+      "kind": "undeclared-color",
+      "value": "#ea580c",
+      "snippet": ".mode-timetable .tt-day { background-color: #fff7ed !important; color: #ea580c !important; font-weight: bold; border: 1p"
+    },
+    {
+      "file": "index.html",
+      "line": 64,
+      "kind": "undeclared-color",
+      "value": "#fed7aa",
+      "snippet": ".mode-timetable .tt-day { background-color: #fff7ed !important; color: #ea580c !important; font-weight: bold; border: 1p"
+    },
+    {
+      "file": "index.html",
+      "line": 67,
+      "kind": "off-scale-spacing",
+      "value": "2px",
+      "snippet": ".receipt-cal-cell { background-color: white; min-height: 65px; height: auto; padding: 2px; display: flex; flex-direction"
+    },
+    {
+      "file": "index.html",
+      "line": 68,
+      "kind": "undeclared-color",
+      "value": "#9ca3af",
+      "snippet": ".rc-date { font-size: 0.75rem; font-weight: bold; color: #9ca3af; margin-bottom: 2px; line-height: 1; width: 100%; text-"
+    },
+    {
+      "file": "index.html",
+      "line": 68,
+      "kind": "off-scale-spacing",
+      "value": "2px",
+      "snippet": ".rc-date { font-size: 0.75rem; font-weight: bold; color: #9ca3af; margin-bottom: 2px; line-height: 1; width: 100%; text-"
+    },
+    {
+      "file": "index.html",
+      "line": 69,
+      "kind": "off-scale-spacing",
+      "value": "3px",
+      "snippet": ".rc-subject { width: 100%; text-align: center; padding: 3px 4px; border-radius: 6px; margin-bottom: 2px; font-weight: 80"
+    },
+    {
+      "file": "index.html",
+      "line": 69,
+      "kind": "off-scale-spacing",
+      "value": "2px",
+      "snippet": ".rc-subject { width: 100%; text-align: center; padding: 3px 4px; border-radius: 6px; margin-bottom: 2px; font-weight: 80"
+    },
+    {
+      "file": "index.html",
+      "line": 72,
+      "kind": "undeclared-color",
+      "value": "#be123c",
+      "snippet": ".rc-type-badge { display: inline-flex; align-items: center; justify-content: center; height: 13px; min-width: 20px; padd"
+    },
+    {
+      "file": "index.html",
+      "line": 72,
+      "kind": "off-scale-spacing",
+      "value": "3px",
+      "snippet": ".rc-type-badge { display: inline-flex; align-items: center; justify-content: center; height: 13px; min-width: 20px; padd"
+    },
+    {
+      "file": "index.html",
+      "line": 74,
+      "kind": "undeclared-color",
+      "value": "#eaf2ff",
+      "snippet": ".subj-default { background-color: #eaf2ff; color: #486581; }"
+    },
+    {
+      "file": "index.html",
+      "line": 74,
+      "kind": "undeclared-color",
+      "value": "#486581",
+      "snippet": ".subj-default { background-color: #eaf2ff; color: #486581; }"
+    },
+    {
+      "file": "index.html",
+      "line": 75,
+      "kind": "undeclared-color",
+      "value": "#d9e8ff",
+      "snippet": ".subj-math { background-color: #d9e8ff; color: #355c9a; }"
+    },
+    {
+      "file": "index.html",
+      "line": 75,
+      "kind": "undeclared-color",
+      "value": "#355c9a",
+      "snippet": ".subj-math { background-color: #d9e8ff; color: #355c9a; }"
+    },
+    {
+      "file": "index.html",
+      "line": 76,
+      "kind": "undeclared-color",
+      "value": "#daf4e4",
+      "snippet": ".subj-kor { background-color: #daf4e4; color: #2f7a55; }"
+    },
+    {
+      "file": "index.html",
+      "line": 76,
+      "kind": "undeclared-color",
+      "value": "#2f7a55",
+      "snippet": ".subj-kor { background-color: #daf4e4; color: #2f7a55; }"
+    },
+    {
+      "file": "index.html",
+      "line": 77,
+      "kind": "undeclared-color",
+      "value": "#fde3e3",
+      "snippet": ".subj-eng { background-color: #fde3e3; color: #a65a66; }"
+    },
+    {
+      "file": "index.html",
+      "line": 77,
+      "kind": "undeclared-color",
+      "value": "#a65a66",
+      "snippet": ".subj-eng { background-color: #fde3e3; color: #a65a66; }"
+    },
+    {
+      "file": "index.html",
+      "line": 78,
+      "kind": "undeclared-color",
+      "value": "#ece4ff",
+      "snippet": ".subj-sci { background-color: #ece4ff; color: #6d58a8; }"
+    },
+    {
+      "file": "index.html",
+      "line": 78,
+      "kind": "undeclared-color",
+      "value": "#6d58a8",
+      "snippet": ".subj-sci { background-color: #ece4ff; color: #6d58a8; }"
+    },
+    {
+      "file": "index.html",
+      "line": 79,
+      "kind": "undeclared-color",
+      "value": "#faefc9",
+      "snippet": ".subj-soc { background-color: #faefc9; color: #967243; }"
+    },
+    {
+      "file": "index.html",
+      "line": 79,
+      "kind": "undeclared-color",
+      "value": "#967243",
+      "snippet": ".subj-soc { background-color: #faefc9; color: #967243; }"
+    },
+    {
+      "file": "index.html",
+      "line": 80,
+      "kind": "undeclared-color",
+      "value": "#f9e0ef",
+      "snippet": ".subj-oneonone { background-color: #f9e0ef; color: #b25d88; border: 1px solid #f3bedb; }"
+    },
+    {
+      "file": "index.html",
+      "line": 80,
+      "kind": "undeclared-color",
+      "value": "#b25d88",
+      "snippet": ".subj-oneonone { background-color: #f9e0ef; color: #b25d88; border: 1px solid #f3bedb; }"
+    },
+    {
+      "file": "index.html",
+      "line": 80,
+      "kind": "undeclared-color",
+      "value": "#f3bedb",
+      "snippet": ".subj-oneonone { background-color: #f9e0ef; color: #b25d88; border: 1px solid #f3bedb; }"
+    },
+    {
+      "file": "index.html",
+      "line": 81,
+      "kind": "undeclared-color",
+      "value": "#e8e2fb",
+      "snippet": ".subj-twoonone { background-color: #e8e2fb; color: #6d60a8; border: 1px solid #d4c9f5; }"
+    },
+    {
+      "file": "index.html",
+      "line": 81,
+      "kind": "undeclared-color",
+      "value": "#6d60a8",
+      "snippet": ".subj-twoonone { background-color: #e8e2fb; color: #6d60a8; border: 1px solid #d4c9f5; }"
+    },
+    {
+      "file": "index.html",
+      "line": 81,
+      "kind": "undeclared-color",
+      "value": "#d4c9f5",
+      "snippet": ".subj-twoonone { background-color: #e8e2fb; color: #6d60a8; border: 1px solid #d4c9f5; }"
+    },
+    {
+      "file": "index.html",
+      "line": 82,
+      "kind": "undeclared-color",
+      "value": "#fee9d8",
+      "snippet": ".subj-makeup { background-color: #fee9d8; color: #b7784b; border: 1px solid #f8ccab; }"
+    },
+    {
+      "file": "index.html",
+      "line": 82,
+      "kind": "undeclared-color",
+      "value": "#b7784b",
+      "snippet": ".subj-makeup { background-color: #fee9d8; color: #b7784b; border: 1px solid #f8ccab; }"
+    },
+    {
+      "file": "index.html",
+      "line": 82,
+      "kind": "undeclared-color",
+      "value": "#f8ccab",
+      "snippet": ".subj-makeup { background-color: #fee9d8; color: #b7784b; border: 1px solid #f8ccab; }"
+    },
+    {
+      "file": "index.html",
+      "line": 83,
+      "kind": "undeclared-color",
+      "value": "#9aa9dc",
+      "snippet": ".subj-predicted { border: 1px dashed #9aa9dc; background-color: #edf0ff; color: #5968aa; }"
+    },
+    {
+      "file": "index.html",
+      "line": 83,
+      "kind": "undeclared-color",
+      "value": "#edf0ff",
+      "snippet": ".subj-predicted { border: 1px dashed #9aa9dc; background-color: #edf0ff; color: #5968aa; }"
+    },
+    {
+      "file": "index.html",
+      "line": 83,
+      "kind": "undeclared-color",
+      "value": "#5968aa",
+      "snippet": ".subj-predicted { border: 1px dashed #9aa9dc; background-color: #edf0ff; color: #5968aa; }"
+    },
+    {
+      "file": "index.html",
+      "line": 88,
+      "kind": "off-scale-spacing",
+      "value": "3px",
+      "snippet": ".badge-base { display: inline-flex; align-items: center; justify-content: center; height: 24px; min-height: 24px; paddin"
+    },
+    {
+      "file": "index.html",
+      "line": 91,
+      "kind": "undeclared-color",
+      "value": "#be123c",
+      "snippet": ".badge-1on1 { background-color: #be123c; color: white; }"
+    },
+    {
+      "file": "index.html",
+      "line": 92,
+      "kind": "undeclared-color",
+      "value": "#7c3aed",
+      "snippet": ".badge-2on1 { background-color: #7c3aed; color: white; }"
+    },
+    {
+      "file": "index.html",
+      "line": 93,
+      "kind": "undeclared-color",
+      "value": "#f3f4f6",
+      "snippet": ".teacher-badge { background-color: #f3f4f6; color: #4b5563; border: 1px solid #d1d5db; }"
+    },
+    {
+      "file": "index.html",
+      "line": 93,
+      "kind": "undeclared-color",
+      "value": "#4b5563",
+      "snippet": ".teacher-badge { background-color: #f3f4f6; color: #4b5563; border: 1px solid #d1d5db; }"
+    },
+    {
+      "file": "index.html",
+      "line": 93,
+      "kind": "undeclared-color",
+      "value": "#d1d5db",
+      "snippet": ".teacher-badge { background-color: #f3f4f6; color: #4b5563; border: 1px solid #d1d5db; }"
+    },
+    {
+      "file": "index.html",
+      "line": 94,
+      "kind": "undeclared-color",
+      "value": "#ecfdf5",
+      "snippet": ".time-badge { background-color: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; }"
+    },
+    {
+      "file": "index.html",
+      "line": 94,
+      "kind": "undeclared-color",
+      "value": "#047857",
+      "snippet": ".time-badge { background-color: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; }"
+    },
+    {
+      "file": "index.html",
+      "line": 94,
+      "kind": "undeclared-color",
+      "value": "#a7f3d0",
+      "snippet": ".time-badge { background-color: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; }"
+    },
+    {
+      "file": "index.html",
+      "line": 95,
+      "kind": "undeclared-color",
+      "value": "#fff7ed",
+      "snippet": ".makeup-badge { background-color: #fff7ed; color: #ea580c; border: 1px solid #fed7aa; }"
+    },
+    {
+      "file": "index.html",
+      "line": 95,
+      "kind": "undeclared-color",
+      "value": "#ea580c",
+      "snippet": ".makeup-badge { background-color: #fff7ed; color: #ea580c; border: 1px solid #fed7aa; }"
+    },
+    {
+      "file": "index.html",
+      "line": 95,
+      "kind": "undeclared-color",
+      "value": "#fed7aa",
+      "snippet": ".makeup-badge { background-color: #fff7ed; color: #ea580c; border: 1px solid #fed7aa; }"
+    },
+    {
+      "file": "index.html",
+      "line": 96,
+      "kind": "off-scale-spacing",
+      "value": "2px",
+      "snippet": ".rc-subject { line-height: 1.25; padding: 2px 3px; }"
+    },
+    {
+      "file": "index.html",
+      "line": 96,
+      "kind": "off-scale-spacing",
+      "value": "3px",
+      "snippet": ".rc-subject { line-height: 1.25; padding: 2px 3px; }"
+    },
+    {
+      "file": "index.html",
+      "line": 98,
+      "kind": "undeclared-color",
+      "value": "#bfe9cf",
+      "snippet": ".rc-duration-strong.subj-kor { background-color: #bfe9cf; color: #2c6a4b; }"
+    },
+    {
+      "file": "index.html",
+      "line": 98,
+      "kind": "undeclared-color",
+      "value": "#2c6a4b",
+      "snippet": ".rc-duration-strong.subj-kor { background-color: #bfe9cf; color: #2c6a4b; }"
+    },
+    {
+      "file": "index.html",
+      "line": 99,
+      "kind": "undeclared-color",
+      "value": "#bfd7fb",
+      "snippet": ".rc-duration-strong.subj-math { background-color: #bfd7fb; color: #35548f; }"
+    },
+    {
+      "file": "index.html",
+      "line": 99,
+      "kind": "undeclared-color",
+      "value": "#35548f",
+      "snippet": ".rc-duration-strong.subj-math { background-color: #bfd7fb; color: #35548f; }"
+    },
+    {
+      "file": "index.html",
+      "line": 100,
+      "kind": "undeclared-color",
+      "value": "#f6c7d1",
+      "snippet": ".rc-duration-strong.subj-eng { background-color: #f6c7d1; color: #8e4f65; }"
+    },
+    {
+      "file": "index.html",
+      "line": 100,
+      "kind": "undeclared-color",
+      "value": "#8e4f65",
+      "snippet": ".rc-duration-strong.subj-eng { background-color: #f6c7d1; color: #8e4f65; }"
+    },
+    {
+      "file": "index.html",
+      "line": 101,
+      "kind": "undeclared-color",
+      "value": "#d9c9f6",
+      "snippet": ".rc-duration-strong.subj-sci { background-color: #d9c9f6; color: #654d94; }"
+    },
+    {
+      "file": "index.html",
+      "line": 101,
+      "kind": "undeclared-color",
+      "value": "#654d94",
+      "snippet": ".rc-duration-strong.subj-sci { background-color: #d9c9f6; color: #654d94; }"
+    },
+    {
+      "file": "index.html",
+      "line": 102,
+      "kind": "undeclared-color",
+      "value": "#f3dfa8",
+      "snippet": ".rc-duration-strong.subj-soc { background-color: #f3dfa8; color: #84673b; }"
+    },
+    {
+      "file": "index.html",
+      "line": 102,
+      "kind": "undeclared-color",
+      "value": "#84673b",
+      "snippet": ".rc-duration-strong.subj-soc { background-color: #f3dfa8; color: #84673b; }"
+    },
+    {
+      "file": "index.html",
+      "line": 103,
+      "kind": "undeclared-color",
+      "value": "#d2e0f6",
+      "snippet": ".rc-duration-strong.subj-default { background-color: #d2e0f6; color: #496580; }"
+    },
+    {
+      "file": "index.html",
+      "line": 103,
+      "kind": "undeclared-color",
+      "value": "#496580",
+      "snippet": ".rc-duration-strong.subj-default { background-color: #d2e0f6; color: #496580; }"
+    },
+    {
+      "file": "index.html",
+      "line": 105,
+      "kind": "undeclared-color",
+      "value": "#7bbf98",
+      "snippet": ".rc-duration-max.subj-kor { background-color: #7bbf98; color: #ffffff; }"
+    },
+    {
+      "file": "index.html",
+      "line": 106,
+      "kind": "undeclared-color",
+      "value": "#7da8de",
+      "snippet": ".rc-duration-max.subj-math { background-color: #7da8de; color: #ffffff; }"
+    },
+    {
+      "file": "index.html",
+      "line": 107,
+      "kind": "undeclared-color",
+      "value": "#d592a3",
+      "snippet": ".rc-duration-max.subj-eng { background-color: #d592a3; color: #ffffff; }"
+    },
+    {
+      "file": "index.html",
+      "line": 108,
+      "kind": "undeclared-color",
+      "value": "#9b8aca",
+      "snippet": ".rc-duration-max.subj-sci { background-color: #9b8aca; color: #ffffff; }"
+    },
+    {
+      "file": "index.html",
+      "line": 109,
+      "kind": "undeclared-color",
+      "value": "#cfb075",
+      "snippet": ".rc-duration-max.subj-soc { background-color: #cfb075; color: #ffffff; }"
+    },
+    {
+      "file": "index.html",
+      "line": 110,
+      "kind": "undeclared-color",
+      "value": "#8ea9c9",
+      "snippet": ".rc-duration-max.subj-default { background-color: #8ea9c9; color: #ffffff; }"
+    },
+    {
+      "file": "index.html",
+      "line": 148,
+      "kind": "undeclared-color",
+      "value": "#f1f1f1",
+      "snippet": ".custom-scroll::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 3px; }"
+    },
+    {
+      "file": "index.html",
+      "line": 149,
+      "kind": "undeclared-color",
+      "value": "#cbd5e1",
+      "snippet": ".custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }"
+    },
+    {
+      "file": "index.html",
+      "line": 150,
+      "kind": "undeclared-color",
+      "value": "#94a3b8",
+      "snippet": ".custom-scroll::-webkit-scrollbar-thumb:hover { background: #94a3b8; }"
+    },
+    {
+      "file": "index.html",
+      "line": 151,
+      "kind": "undeclared-color",
+      "value": "#f0f7ff",
+      "snippet": ".active-row { border: 2px solid #004094 !important; background-color: #f0f7ff !important; }"
+    },
+    {
+      "file": "index.html",
+      "line": 154,
+      "kind": "off-scale-spacing",
+      "value": "5px",
+      "snippet": ".grid-editor { width: 100%; border-collapse: collapse; margin-top: 5px; font-size: 11px; background: white; }"
+    },
+    {
+      "file": "index.html",
+      "line": 155,
+      "kind": "undeclared-color",
+      "value": "#f3f4f6",
+      "snippet": ".grid-editor th { background-color: #f3f4f6; border: 1px solid #e5e7eb; padding: 6px; text-align: left; color: #4b5563; "
+    },
+    {
+      "file": "index.html",
+      "line": 155,
+      "kind": "undeclared-color",
+      "value": "#4b5563",
+      "snippet": ".grid-editor th { background-color: #f3f4f6; border: 1px solid #e5e7eb; padding: 6px; text-align: left; color: #4b5563; "
+    },
+    {
+      "file": "index.html",
+      "line": 155,
+      "kind": "off-scale-spacing",
+      "value": "6px",
+      "snippet": ".grid-editor th { background-color: #f3f4f6; border: 1px solid #e5e7eb; padding: 6px; text-align: left; color: #4b5563; "
+    },
+    {
+      "file": "index.html",
+      "line": 156,
+      "kind": "off-scale-spacing",
+      "value": "2px",
+      "snippet": ".grid-editor td { border: 1px solid #e5e7eb; padding: 2px; }"
+    },
+    {
+      "file": "index.html",
+      "line": 157,
+      "kind": "off-scale-spacing",
+      "value": "6px",
+      "snippet": ".grid-input { width: 100%; border: none; padding: 6px; outline: none; background: transparent; font-size: 11px; font-fam"
+    },
+    {
+      "file": "index.html",
+      "line": 158,
+      "kind": "undeclared-color",
+      "value": "#eff6ff",
+      "snippet": ".grid-input:focus { background-color: #eff6ff; }"
+    },
+    {
+      "file": "index.html",
+      "line": 159,
+      "kind": "off-scale-spacing",
+      "value": "6px",
+      "snippet": ".grid-select { width: 100%; border: none; padding: 6px; outline: none; background: transparent; cursor: pointer; font-si"
+    },
+    {
+      "file": "index.html",
+      "line": 160,
+      "kind": "undeclared-color",
+      "value": "#ef4444",
+      "snippet": ".grid-btn-del { color: #ef4444; font-weight: bold; cursor: pointer; text-align: center; font-size: 12px; }"
+    },
+    {
+      "file": "index.html",
+      "line": 161,
+      "kind": "undeclared-color",
+      "value": "#fee2e2",
+      "snippet": ".grid-btn-del:hover { background-color: #fee2e2; }"
+    },
+    {
+      "file": "index.html",
+      "line": 163,
+      "kind": "off-scale-spacing",
+      "value": "58px",
+      "snippet": "#topTabBarSlot { position: relative; padding-top: 58px; overflow: visible; }"
+    },
+    {
+      "file": "index.html",
+      "line": 176,
+      "kind": "undeclared-color",
+      "value": "#fde68a",
+      "snippet": "border: 1px solid #fde68a;"
+    },
+    {
+      "file": "index.html",
+      "line": 177,
+      "kind": "undeclared-color",
+      "value": "#fff8dc",
+      "snippet": "background: #fff8dc;"
+    },
+    {
+      "file": "index.html",
+      "line": 178,
+      "kind": "undeclared-color",
+      "value": "#475569",
+      "snippet": "color: #475569;"
+    },
+    {
+      "file": "index.html",
+      "line": 191,
+      "kind": "off-scale-spacing",
+      "value": "6px",
+      "snippet": "bottom: -6px;"
+    },
+    {
+      "file": "index.html",
+      "line": 194,
+      "kind": "undeclared-color",
+      "value": "#fff8dc",
+      "snippet": "background: #fff8dc;"
+    },
+    {
+      "file": "index.html",
+      "line": 195,
+      "kind": "undeclared-color",
+      "value": "#fde68a",
+      "snippet": "border-right: 1px solid #fde68a;"
+    },
+    {
+      "file": "index.html",
+      "line": 196,
+      "kind": "undeclared-color",
+      "value": "#fde68a",
+      "snippet": "border-bottom: 1px solid #fde68a;"
+    },
+    {
+      "file": "index.html",
+      "line": 199,
+      "kind": "undeclared-color",
+      "value": "#dbeafe",
+      "snippet": ".record-item { border-radius: 18px; border: 1px solid #dbeafe; background: linear-gradient(180deg, #ffffff 0%, #f8fbff 1"
+    },
+    {
+      "file": "index.html",
+      "line": 199,
+      "kind": "undeclared-color",
+      "value": "#f8fbff",
+      "snippet": ".record-item { border-radius: 18px; border: 1px solid #dbeafe; background: linear-gradient(180deg, #ffffff 0%, #f8fbff 1"
+    },
+    {
+      "file": "index.html",
+      "line": 200,
+      "kind": "undeclared-color",
+      "value": "#38bdf8",
+      "snippet": ".record-item-active { border-color: #38bdf8; box-shadow: 0 18px 40px -26px rgba(14, 165, 233, 0.5); background: linear-g"
+    },
+    {
+      "file": "index.html",
+      "line": 200,
+      "kind": "undeclared-color",
+      "value": "#eff6ff",
+      "snippet": ".record-item-active { border-color: #38bdf8; box-shadow: 0 18px 40px -26px rgba(14, 165, 233, 0.5); background: linear-g"
+    },
+    {
+      "file": "index.html",
+      "line": 200,
+      "kind": "undeclared-color",
+      "value": "#f8fbff",
+      "snippet": ".record-item-active { border-color: #38bdf8; box-shadow: 0 18px 40px -26px rgba(14, 165, 233, 0.5); background: linear-g"
+    },
+    {
+      "file": "index.html",
+      "line": 204,
+      "kind": "off-scale-spacing",
+      "value": "10px",
+      "snippet": ".history-subject-pill { display: inline-flex; align-items: center; padding: 4px 10px; border-radius: 9999px; font-size: "
+    },
+    {
+      "file": "index.html",
+      "line": 205,
+      "kind": "off-scale-spacing",
+      "value": "9px",
+      "snippet": ".history-teacher-pill { display: inline-flex; align-items: center; padding: 4px 9px; border-radius: 9999px; font-size: 0"
+    },
+    {
+      "file": "index.html",
+      "line": 206,
+      "kind": "off-scale-spacing",
+      "value": "9px",
+      "snippet": ".history-status-pill { display: inline-flex; align-items: center; padding: 4px 9px; border-radius: 9999px; font-size: 0."
+    },
+    {
+      "file": "index.html",
+      "line": 207,
+      "kind": "undeclared-color",
+      "value": "#64748b",
+      "snippet": ".history-row-detail { color: #64748b; font-size: 0.92rem; font-weight: 700; }"
+    },
+    {
+      "file": "index.html",
+      "line": 208,
+      "kind": "undeclared-color",
+      "value": "#94a3b8",
+      "snippet": ".history-row-note { color: #94a3b8; font-size: 0.76rem; font-weight: 700; margin-top: 0.2rem; }"
+    },
+    {
+      "file": "index.html",
+      "line": 209,
+      "kind": "undeclared-color",
+      "value": "#fef2f2",
+      "snippet": ".history-status-cancel { background-color: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }"
+    },
+    {
+      "file": "index.html",
+      "line": 209,
+      "kind": "undeclared-color",
+      "value": "#dc2626",
+      "snippet": ".history-status-cancel { background-color: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }"
+    },
+    {
+      "file": "index.html",
+      "line": 209,
+      "kind": "undeclared-color",
+      "value": "#fecaca",
+      "snippet": ".history-status-cancel { background-color: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }"
+    },
+    {
+      "file": "index.html",
+      "line": 210,
+      "kind": "undeclared-color",
+      "value": "#fff7ed",
+      "snippet": ".history-status-makeup { background-color: #fff7ed; color: #ea580c; border: 1px solid #fed7aa; }"
+    },
+    {
+      "file": "index.html",
+      "line": 210,
+      "kind": "undeclared-color",
+      "value": "#ea580c",
+      "snippet": ".history-status-makeup { background-color: #fff7ed; color: #ea580c; border: 1px solid #fed7aa; }"
+    },
+    {
+      "file": "index.html",
+      "line": 210,
+      "kind": "undeclared-color",
+      "value": "#fed7aa",
+      "snippet": ".history-status-makeup { background-color: #fff7ed; color: #ea580c; border: 1px solid #fed7aa; }"
+    },
+    {
+      "file": "index.html",
+      "line": 212,
+      "kind": "undeclared-color",
+      "value": "#dbeafe",
+      "snippet": ".rate-preset-chip { display: inline-flex; align-items: center; justify-content: center; height: 40px; min-height: 40px; "
+    },
+    {
+      "file": "index.html",
+      "line": 212,
+      "kind": "undeclared-color",
+      "value": "#eff6ff",
+      "snippet": ".rate-preset-chip { display: inline-flex; align-items: center; justify-content: center; height: 40px; min-height: 40px; "
+    },
+    {
+      "file": "index.html",
+      "line": 213,
+      "kind": "undeclared-color",
+      "value": "#dbeafe",
+      "snippet": ".rate-preset-chip:hover { background: #dbeafe; border-color: #93c5fd; }"
+    },
+    {
+      "file": "index.html",
+      "line": 213,
+      "kind": "undeclared-color",
+      "value": "#93c5fd",
+      "snippet": ".rate-preset-chip:hover { background: #dbeafe; border-color: #93c5fd; }"
+    },
+    {
+      "file": "index.html",
+      "line": 214,
+      "kind": "undeclared-color",
+      "value": "#bfdbfe",
+      "snippet": ".auto-date-pill { display: inline-flex; align-items: center; justify-content: center; min-width: 28px; height: 26px; pad"
+    },
+    {
+      "file": "index.html",
+      "line": 214,
+      "kind": "undeclared-color",
+      "value": "#eff6ff",
+      "snippet": ".auto-date-pill { display: inline-flex; align-items: center; justify-content: center; min-width: 28px; height: 26px; pad"
+    },
+    {
+      "file": "index.html",
+      "line": 215,
+      "kind": "undeclared-color",
+      "value": "#dbeafe",
+      "snippet": ".auto-date-pill:hover { background: #dbeafe; border-color: #004094; }"
+    },
+    {
+      "file": "index.html",
+      "line": 216,
+      "kind": "undeclared-color",
+      "value": "#fff1f2",
+      "snippet": ".auto-date-pill-off { background: #fff1f2; border-color: #fecdd3; color: #e11d48; text-decoration: line-through; }"
+    },
+    {
+      "file": "index.html",
+      "line": 216,
+      "kind": "undeclared-color",
+      "value": "#fecdd3",
+      "snippet": ".auto-date-pill-off { background: #fff1f2; border-color: #fecdd3; color: #e11d48; text-decoration: line-through; }"
+    },
+    {
+      "file": "index.html",
+      "line": 217,
+      "kind": "undeclared-color",
+      "value": "#f1f5f9",
+      "snippet": ".auto-date-pill-global { background: #f1f5f9; border-color: #cbd5e1; color: #94a3b8; text-decoration: line-through; curs"
+    },
+    {
+      "file": "index.html",
+      "line": 217,
+      "kind": "undeclared-color",
+      "value": "#cbd5e1",
+      "snippet": ".auto-date-pill-global { background: #f1f5f9; border-color: #cbd5e1; color: #94a3b8; text-decoration: line-through; curs"
+    },
+    {
+      "file": "index.html",
+      "line": 217,
+      "kind": "undeclared-color",
+      "value": "#94a3b8",
+      "snippet": ".auto-date-pill-global { background: #f1f5f9; border-color: #cbd5e1; color: #94a3b8; text-decoration: line-through; curs"
+    },
+    {
+      "file": "index.html",
+      "line": 218,
+      "kind": "undeclared-color",
+      "value": "#94a3b8",
+      "snippet": ".auto-date-pill-empty { color: #94a3b8; font-size: 10px; font-weight: 800; }"
+    },
+    {
+      "file": "index.html",
+      "line": 230,
+      "kind": "off-scale-spacing",
+      "value": "14px",
+      "snippet": ".voucher-guide-inner { padding: 14px 16px; }"
+    },
+    {
+      "file": "index.html",
+      "line": 234,
+      "kind": "off-scale-spacing",
+      "value": "10px",
+      "snippet": "padding: 4px 10px;"
+    },
+    {
+      "file": "index.html",
+      "line": 236,
+      "kind": "undeclared-color",
+      "value": "#e2e8f0",
+      "snippet": "background: #e2e8f0;"
+    },
+    {
+      "file": "index.html",
+      "line": 237,
+      "kind": "undeclared-color",
+      "value": "#64748b",
+      "snippet": "color: #64748b;"
+    },
+    {
+      "file": "index.html",
+      "line": 241,
+      "kind": "off-scale-spacing",
+      "value": "10px",
+      "snippet": "margin-bottom: 10px;"
+    },
+    {
+      "file": "index.html",
+      "line": 243,
+      "kind": "undeclared-color",
+      "value": "#334155",
+      "snippet": ".voucher-guide-title { color: #334155; font-size: 0.75rem; font-weight: 600; line-height: 1.8; margin-bottom: 0; }"
+    },
+    {
+      "file": "index.html",
+      "line": 244,
+      "kind": "undeclared-color",
+      "value": "#64748b",
+      "snippet": ".voucher-guide-desc { color: #64748b; font-size: 0.75rem; font-weight: 600; line-height: 1.8; margin-top: 6px; }"
+    },
+    {
+      "file": "index.html",
+      "line": 244,
+      "kind": "off-scale-spacing",
+      "value": "6px",
+      "snippet": ".voucher-guide-desc { color: #64748b; font-size: 0.75rem; font-weight: 600; line-height: 1.8; margin-top: 6px; }"
+    },
+    {
+      "file": "index.html",
+      "line": 245,
+      "kind": "undeclared-color",
+      "value": "#ef4444",
+      "snippet": ".voucher-guide-red { color: #ef4444; font-weight: 900; }"
+    },
+    {
+      "file": "index.html",
+      "line": 247,
+      "kind": "undeclared-color",
+      "value": "#cbd5e1",
+      "snippet": ".receipt-notice-list { margin-top: 12px; padding-top: 10px; border-top: 1px dashed #cbd5e1; display: flex; flex-directio"
+    },
+    {
+      "file": "index.html",
+      "line": 247,
+      "kind": "off-scale-spacing",
+      "value": "10px",
+      "snippet": ".receipt-notice-list { margin-top: 12px; padding-top: 10px; border-top: 1px dashed #cbd5e1; display: flex; flex-directio"
+    },
+    {
+      "file": "index.html",
+      "line": 249,
+      "kind": "undeclared-color",
+      "value": "#dbeafe",
+      "snippet": ".receipt-notice-box { display: grid; grid-template-columns: 26px 1fr; gap: 8px; align-items: start; padding: 9px 10px; b"
+    },
+    {
+      "file": "index.html",
+      "line": 249,
+      "kind": "undeclared-color",
+      "value": "#f4f8ff",
+      "snippet": ".receipt-notice-box { display: grid; grid-template-columns: 26px 1fr; gap: 8px; align-items: start; padding: 9px 10px; b"
+    },
+    {
+      "file": "index.html",
+      "line": 249,
+      "kind": "undeclared-color",
+      "value": "#334155",
+      "snippet": ".receipt-notice-box { display: grid; grid-template-columns: 26px 1fr; gap: 8px; align-items: start; padding: 9px 10px; b"
+    },
+    {
+      "file": "index.html",
+      "line": 249,
+      "kind": "off-scale-spacing",
+      "value": "9px",
+      "snippet": ".receipt-notice-box { display: grid; grid-template-columns: 26px 1fr; gap: 8px; align-items: start; padding: 9px 10px; b"
+    },
+    {
+      "file": "index.html",
+      "line": 249,
+      "kind": "off-scale-spacing",
+      "value": "10px",
+      "snippet": ".receipt-notice-box { display: grid; grid-template-columns: 26px 1fr; gap: 8px; align-items: start; padding: 9px 10px; b"
+    },
+    {
+      "file": "index.html",
+      "line": 252,
+      "kind": "off-scale-spacing",
+      "value": "2px",
+      "snippet": ".receipt-notice-label { color: #004094; font-size: 0.68rem; font-weight: 900; line-height: 1.2; margin-bottom: 2px; }"
+    },
+    {
+      "file": "index.html",
+      "line": 253,
+      "kind": "undeclared-color",
+      "value": "#334155",
+      "snippet": ".receipt-notice-text { color: #334155; font-size: 0.75rem; font-weight: 800; line-height: 1.55; white-space: pre-line; w"
+    },
+    {
+      "file": "index.html",
+      "line": 257,
+      "kind": "undeclared-color",
+      "value": "#e2e8f0",
+      "snippet": ".notice-setting-row { border: 1px solid #e2e8f0; border-radius: 14px; padding: 10px; background: #f8fafc; }"
+    },
+    {
+      "file": "index.html",
+      "line": 257,
+      "kind": "off-scale-spacing",
+      "value": "10px",
+      "snippet": ".notice-setting-row { border: 1px solid #e2e8f0; border-radius: 14px; padding: 10px; background: #f8fafc; }"
+    },
+    {
+      "file": "index.html",
+      "line": 259,
+      "kind": "undeclared-color",
+      "value": "#64748b",
+      "snippet": ".settings-tab-btn { flex: 1; border: 0; border-radius: 10px; padding: 9px 10px; font-size: 0.72rem; font-weight: 900; co"
+    },
+    {
+      "file": "index.html",
+      "line": 259,
+      "kind": "off-scale-spacing",
+      "value": "9px",
+      "snippet": ".settings-tab-btn { flex: 1; border: 0; border-radius: 10px; padding: 9px 10px; font-size: 0.72rem; font-weight: 900; co"
+    },
+    {
+      "file": "index.html",
+      "line": 259,
+      "kind": "off-scale-spacing",
+      "value": "10px",
+      "snippet": ".settings-tab-btn { flex: 1; border: 0; border-radius: 10px; padding: 9px 10px; font-size: 0.72rem; font-weight: 900; co"
+    },
+    {
+      "file": "index.html",
+      "line": 261,
+      "kind": "undeclared-color",
+      "value": "#e2e8f0",
+      "snippet": ".guide-setting-row { border: 1px solid #e2e8f0; border-radius: 14px; padding: 10px; background: #f8fafc; }"
+    },
+    {
+      "file": "index.html",
+      "line": 261,
+      "kind": "off-scale-spacing",
+      "value": "10px",
+      "snippet": ".guide-setting-row { border: 1px solid #e2e8f0; border-radius: 14px; padding: 10px; background: #f8fafc; }"
+    },
+    {
+      "file": "index.html",
+      "line": 2190,
+      "kind": "off-scale-spacing",
+      "value": "11px",
+      "snippet": "return `<div class=\"grid grid-cols-[1fr_auto] gap-3 py-1.5 border-t border-slate-100 first:border-t-0 text-[11px]\"><div "
+    }
+  ]
+}
