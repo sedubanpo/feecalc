@@ -178,23 +178,33 @@
         .payment-parse-status { min-height: 40px; display: flex; align-items: center; gap: var(--space-2); margin-top: var(--space-2); padding: var(--space-2) var(--space-3); border-radius: 10px; background: #f8fafc; color: #475569; font-size: 11px; font-weight: 800; line-height: 1.5; }
         .payment-parse-status[data-state="success"] { background: #ecfdf5; color: #166534; }
         .payment-parse-status[data-state="warning"] { background: #fff8dc; color: #84673b; }
-        .payment-subject-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3); }
-        .payment-subject-card { min-width: 0; border-radius: 12px; padding: var(--space-3); color: #334155; }
-        .payment-subject-card.subj-math { background-color: #f4f8ff; box-shadow: inset 3px 0 0 #7da8de, 0 0 0 1px #d9e8ff; }
-        .payment-subject-card.subj-kor { background-color: #ecfdf5; box-shadow: inset 3px 0 0 #7bbf98, 0 0 0 1px #daf4e4; }
-        .payment-subject-card.subj-eng { background-color: #fef2f2; box-shadow: inset 3px 0 0 #d592a3, 0 0 0 1px #fde3e3; }
-        .payment-subject-card.subj-sci { background-color: #ece4ff; box-shadow: inset 3px 0 0 #9b8aca, 0 0 0 1px #d9c9f6; }
-        .payment-subject-card.subj-soc { background-color: #fff8dc; box-shadow: inset 3px 0 0 #cfb075, 0 0 0 1px #faefc9; }
-        .payment-subject-card.subj-default { background-color: #f8fafc; box-shadow: inset 3px 0 0 #8ea9c9, 0 0 0 1px #d2e0f6; }
-        .payment-subject-card .payment-card-items { margin-top: var(--space-2); padding: var(--space-optical-6) var(--space-2); border-radius: 8px; background: rgba(255, 255, 255, 0.72); }
-        .payment-item-basis { color: #475569; font-size: 10px; font-weight: 800; line-height: 1.45; text-wrap: pretty; }
-        .payment-source-check { border-radius: 12px; padding: var(--space-3) var(--space-4); font-variant-numeric: tabular-nums; }
-        .payment-source-check[data-state="match"] { background: #ecfdf5; color: #166534; }
-        .payment-source-check[data-state="mismatch"] { background: #fff8dc; color: #84673b; }
-        .payment-source-check[data-state="unknown"] { background: #f8fafc; color: #64748b; }
-        @media (max-width: 767px) {
-            .payment-subject-grid { grid-template-columns: minmax(0, 1fr); }
-        }
+        .layout-payment .receipt-fee-table > thead { display: none; }
+        .payment-line-wrap { padding: var(--space-2) 0 var(--space-3); }
+        .payment-line-table { width: 100%; table-layout: fixed; border-collapse: collapse; color: #334155; }
+        .payment-line-table th,
+        .payment-line-table td { border-bottom: 1px solid #e5e7eb; padding: 8px 9px; vertical-align: middle; }
+        .payment-line-table thead th { background: #f8fafc; color: #64748b; font-size: 10px; font-weight: 900; text-align: left; }
+        .payment-line-table thead th:last-child { text-align: right; }
+        .payment-line-table tbody tr.group-start > * { border-top: 2px solid #cbd5e1; }
+        .payment-line-table tbody tr:first-child > * { border-top: 0; }
+        .payment-subject-cell { width: 16%; vertical-align: top !important; background: #f8fafc; color: #1f2937; text-align: left; }
+        .payment-subject-name { display: block; font-size: 13px; font-weight: 900; line-height: 1.3; }
+        .payment-subject-meta { display: block; margin-top: 3px; color: #64748b; font-size: 9px; font-weight: 800; line-height: 1.35; }
+        .payment-class-cell { width: 31%; min-width: 0; }
+        .payment-class-line { display: flex; align-items: baseline; gap: 5px; min-width: 0; }
+        .payment-class-type { flex: none; color: #64748b; font-size: 9px; font-weight: 900; }
+        .payment-teacher-name { min-width: 0; overflow: hidden; color: #1f2937; font-size: 11px; font-weight: 900; text-overflow: ellipsis; white-space: nowrap; }
+        .payment-line-basis { width: 34%; color: #64748b; font-size: 9px; font-weight: 800; line-height: 1.4; font-variant-numeric: tabular-nums; }
+        .payment-line-amount { width: 19%; color: #111827; font-family: monospace; font-size: 11px; font-weight: 900; text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+        .payment-line-discount { display: block; margin-top: 2px; color: #e11d48; font-size: 8px; font-weight: 900; }
+        .payment-settlement-line { display: grid; grid-template-columns: 112px minmax(0, 1fr) auto; align-items: baseline; gap: var(--space-3); border-bottom: 1px solid #e5e7eb; padding: 9px 1px; font-size: 11px; }
+        .payment-settlement-label { color: #64748b; font-size: 10px; font-weight: 900; }
+        .payment-settlement-name { min-width: 0; overflow: hidden; color: #334155; font-weight: 800; text-overflow: ellipsis; white-space: nowrap; }
+        .payment-settlement-amount { font-family: monospace; font-weight: 900; white-space: nowrap; font-variant-numeric: tabular-nums; }
+        .payment-summary-list { border-top: 2px solid #cbd5e1; padding-top: var(--space-3); }
+        .payment-summary-row { display: flex; justify-content: space-between; gap: var(--space-4); padding: 4px 1px; font-size: 14px; font-weight: 800; font-variant-numeric: tabular-nums; }
+        .payment-balance-row { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-4); margin-top: var(--space-3); border-top: 3px double #64748b; padding: var(--space-4) 1px var(--space-2); }
+        .payment-balance-row strong { font-size: 30px; font-variant-numeric: tabular-nums; }
         #workspaceTopBar { position: relative; z-index: 10; }
         #topTabBarSlot { position: relative; padding-top: var(--space-tab-guide); overflow: visible; }
         #tabNavRow { display: flex; flex-wrap: wrap; gap: 0.6rem; align-items: center; }
@@ -567,7 +577,7 @@
                             <div><span class="text-[10px] text-gray-500 font-bold block mb-0.5">학생명</span><h2 class="text-2xl font-black text-gray-900 leading-none" id="dispName">학생명</h2></div>
                             <div><div id="dateBadge" class="bg-[#004094] text-white px-4 h-7 rounded-full font-bold shadow-md flex items-center justify-center text-xs"><span id="dispDate">2026년 2월분</span></div></div>
                         </div>
-                        <table class="w-full text-sm mb-4">
+                        <table class="receipt-fee-table w-full text-sm mb-4">
                             <thead><tr class="text-gray-500 border-b-2 border-gray-200"><th class="text-left py-1.5 pl-1 font-extrabold text-sm th-nowrap">과목 / 상세 내용</th><th id="thAmount" class="text-right py-1.5 pr-1 font-extrabold w-28 text-sm th-nowrap">금액</th></tr></thead>
                             <tbody id="receiptBody"></tbody>
                         </table>
@@ -745,7 +755,7 @@
         const SUPABASE_TABLE = 'fee_calc_records';
         const FEECALC_ACCESS_CODE_KEY = 'feecalc_access_code';
         const FEECALC_DEFAULT_ACCESS_CODE = 'banpo-fee-2026-secure';
-        const FEECALC_STORAGE_VERSION = 4;
+        const FEECALC_STORAGE_VERSION = 5;
         const PRICE_PRESETS_STORAGE_KEY = 'feecalc_price_presets';
         const AD_TEXT_STORAGE_KEY = 'feecalc_ad_text';
         const GUIDE_MESSAGES_STORAGE_KEY = 'feecalc_guide_messages';
@@ -2140,6 +2150,16 @@
             const hourText = hours > 0 ? `1회당 ${formatPaymentNumber(hours)}시간` : '1회당 시간 미기재';
             return `${priceText} · ${hourText}`;
         }
+        function formatPaymentReceiptBasis(item = {}) {
+            const unitRate = parseInt(item.unitRate, 10) || 0;
+            const count = parseFloat(item.count) || 0;
+            const hours = getPaymentHours(item.name, item.hours);
+            const parts = [];
+            if (unitRate > 0 && count > 0) parts.push(`${unitRate.toLocaleString()}원 × ${formatPaymentNumber(count)}회`);
+            else if (count > 0) parts.push(`${formatPaymentNumber(count)}회`);
+            if (hours > 0) parts.push(`${formatPaymentNumber(hours)}시간/회`);
+            return parts.join(' · ') || '—';
+        }
         function updatePaymentGridBasis(row) {
             if (!row) return;
             const type = row.querySelector('.grid-select')?.value || row.dataset.type || 'class';
@@ -2331,45 +2351,44 @@
                 }
             });
 
-            const subjectCards = Array.from(subjectGroups.entries()).map(([subject, group]) => {
-                const itemRows = group.items.map(item => {
+            const subjectRows = Array.from(subjectGroups.entries()).map(([subject, group]) => {
+                const countText = group.sessionCount > 0
+                    ? `${group.items.length}개 · ${formatPaymentNumber(group.sessionCount)}회`
+                    : `${group.items.length}개`;
+                return group.items.map((item, index) => {
                     const typeText = item.info.type || '수업';
                     const teacherText = item.info.teacher || item.name;
-                    const basisText = formatPaymentBasis({ type: 'class', ...item });
-                    const discountText = item.discount > 0 ? `<span class="mt-1 inline-flex rounded bg-white px-1.5 py-0.5 text-[9px] font-black text-rose-600 shadow-sm">할인 -${item.discount.toLocaleString()}원</span>` : '';
-                    return `<div class="grid grid-cols-[minmax(0,1fr)_auto] gap-3 border-t border-slate-200/70 py-2 first:border-t-0"><div class="min-w-0"><div class="flex min-w-0 items-center gap-1.5"><span class="shrink-0 rounded px-1.5 py-0.5 ${typeText.includes('1:1') ? 'bg-rose-700 text-white' : 'bg-white text-slate-600 shadow-sm'} text-[9px] font-black">${escapeHtml(typeText)}</span><span class="truncate text-[11px] font-black text-slate-700">${escapeHtml(teacherText)}</span></div><div class="payment-item-basis mt-1">${escapeHtml(basisText)}</div>${discountText}</div><span class="whitespace-nowrap font-mono text-[11px] font-black text-slate-900">${item.amount.toLocaleString()}원</span></div>`;
+                    const basisText = formatPaymentReceiptBasis(item);
+                    const subjectCell = index === 0
+                        ? `<th scope="rowgroup" rowspan="${group.items.length}" class="payment-subject-cell"><span class="payment-subject-name">${escapeHtml(subject)}</span><span class="payment-subject-meta">${countText}</span></th>`
+                        : '';
+                    const discountText = item.discount > 0 ? `<span class="payment-line-discount">할인 -${item.discount.toLocaleString()}원</span>` : '';
+                    return `<tr class="${index === 0 ? 'group-start' : ''}">${subjectCell}<td class="payment-class-cell"><div class="payment-class-line"><span class="payment-class-type">${escapeHtml(typeText)}</span><span class="payment-teacher-name">${escapeHtml(teacherText)}</span></div></td><td class="payment-line-basis">${escapeHtml(basisText)}</td><td class="payment-line-amount">${item.amount.toLocaleString()}원${discountText}</td></tr>`;
                 }).join('');
-                const colorClass = getSubjectColorClass(subject, false, false);
-                const countText = group.sessionCount > 0 ? `${group.items.length}개 항목 · 총 ${formatPaymentNumber(group.sessionCount)}회` : `${group.items.length}개 항목`;
-                return `<section class="payment-subject-card ${colorClass}"><div class="flex items-baseline justify-between gap-3"><div class="flex min-w-0 items-center gap-2"><span class="text-base font-black text-slate-900">${escapeHtml(subject)}</span><span class="whitespace-nowrap text-[10px] font-bold text-slate-600">${countText}</span></div><span class="whitespace-nowrap font-mono text-base font-black text-slate-900">${group.total.toLocaleString()}원</span></div><div class="payment-card-items">${itemRows}</div></section>`;
-            });
-            if (subjectCards.length) tbody.innerHTML += `<tr><td colspan="2" class="px-1 py-3"><div class="payment-subject-grid">${subjectCards.join('')}</div></td></tr>`;
+            }).join('');
+            if (subjectRows) {
+                tbody.innerHTML += `<tr><td colspan="2" class="payment-line-wrap"><table class="payment-line-table"><colgroup><col style="width:16%"><col style="width:31%"><col style="width:34%"><col style="width:19%"></colgroup><thead><tr><th scope="col">과목</th><th scope="col">강사·수업</th><th scope="col">산출 기준</th><th scope="col">금액</th></tr></thead><tbody>${subjectRows}</tbody></table></td></tr>`;
+            }
 
             if (adjustmentRows.length) {
                 const rowsHtml = adjustmentRows.map(item => {
                     const positive = item.amount > 0;
-                    return `<div class="flex justify-between gap-3 py-1 text-[11px] font-black ${positive ? 'text-[#004094]' : 'text-red-500'}"><span>${escapeHtml(item.name)}</span><span class="font-mono">${positive ? '+' : ''}${item.amount.toLocaleString()}원</span></div>`;
+                    return `<div class="payment-settlement-line"><span class="payment-settlement-label">이월/초과금</span><span class="payment-settlement-name">${escapeHtml(item.name)}</span><span class="payment-settlement-amount ${positive ? 'text-[#004094]' : 'text-red-500'}">${positive ? '+' : ''}${item.amount.toLocaleString()}원</span></div>`;
                 }).join('');
-                tbody.innerHTML += `<tr class="border-b border-slate-200"><td colspan="2" class="py-3 px-1"><div class="rounded-lg border border-blue-100 bg-blue-50/60 px-3 py-2"><div class="text-[10px] font-black text-slate-500 mb-1">이월/초과금 조정</div>${rowsHtml}</div></td></tr>`;
+                tbody.innerHTML += `<tr><td colspan="2">${rowsHtml}</td></tr>`;
             }
             if (paymentRows.length) {
-                const rowsHtml = paymentRows.map(item => `<div class="flex items-baseline justify-between gap-3 border-b border-purple-100 py-2 text-purple-600 font-bold"><span class="min-w-0 truncate text-sm">${escapeHtml(item.name || '기납부')}</span><span class="font-mono shrink-0 text-base font-black">-${item.amount.toLocaleString()}원</span></div>`).join('');
-                tbody.innerHTML += `<tr><td colspan="2" class="py-3 px-1 border-t-2 border-slate-200"><div class="text-[10px] font-black text-purple-500 mb-1.5">기납부 내역</div><div class="grid grid-cols-2 gap-x-6 gap-y-0">${rowsHtml}</div></td></tr>`;
+                const rowsHtml = paymentRows.map(item => `<div class="payment-settlement-line"><span class="payment-settlement-label">기납부</span><span class="payment-settlement-name">${escapeHtml(item.name || '납부')}</span><span class="payment-settlement-amount text-purple-600">-${item.amount.toLocaleString()}원</span></div>`).join('');
+                tbody.innerHTML += `<tr><td colspan="2">${rowsHtml}</td></tr>`;
             }
             const netTuitionBeforePercent = Math.max(0, totalTuition - totalDiscount);
             const percentDiscountInfo = getPercentDiscountInfo(netTuitionBeforePercent);
             const balance = percentDiscountInfo.discountedBase + totalAdjustment - totalPaid;
-            const discountRow = totalDiscount > 0 ? `<div class="flex justify-between text-red-500 font-bold text-lg"><span>총 할인액</span><span>-${totalDiscount.toLocaleString()}원</span></div>` : '';
-            const percentDiscountRow = percentDiscountInfo.amount > 0 ? `<div class="flex justify-between text-rose-500 font-bold text-lg"><span>퍼센트 할인 (${formatDiscountRate(percentDiscountInfo.rate)}%)</span><span>-${percentDiscountInfo.amount.toLocaleString()}원</span></div>` : '';
-            const adjustmentSummary = totalAdjustment !== 0 ? `<div class="flex justify-between ${totalAdjustment > 0 ? 'text-[#004094]' : 'text-red-500'} font-bold text-lg"><span>${totalAdjustment > 0 ? '초과금 조정' : '이월금 조정'}</span><span>${totalAdjustment > 0 ? '+' : ''}${totalAdjustment.toLocaleString()}원</span></div>` : '';
-            const paidSummary = totalPaid > 0 ? `<div class="flex justify-between text-purple-600 font-bold text-lg"><span>기납부 총액</span><span>-${totalPaid.toLocaleString()}원</span></div>` : '';
-            const hasSourceTotal = Number.isFinite(paymentSourceTotal);
-            const sourceDifference = hasSourceTotal ? balance - paymentSourceTotal : 0;
-            const sourceState = !hasSourceTotal ? 'unknown' : (sourceDifference === 0 ? 'match' : 'mismatch');
-            const sourceStatusText = !hasSourceTotal ? '원본 합계 없음' : (sourceDifference === 0 ? '계산 결과와 일치' : `계산 결과와 ${sourceDifference > 0 ? '+' : ''}${sourceDifference.toLocaleString()}원 차이`);
-            const sourceAmountText = hasSourceTotal ? `${paymentSourceTotal.toLocaleString()}원` : '—';
-            const sourceCheckHtml = `<div class="payment-source-check mb-3" data-state="${sourceState}" role="status" aria-live="polite"><div class="flex items-center justify-between gap-3"><div><div class="text-[10px] font-black uppercase tracking-wide">Access 원본 합계</div><div class="mt-0.5 text-xs font-black">${sourceStatusText}</div></div><span class="whitespace-nowrap font-mono text-lg font-black">${sourceAmountText}</span></div></div>`;
-            const summaryHtml = `<div class="mb-5 space-y-2 border-t-2 border-gray-200 pt-3"><div class="flex justify-between text-gray-700 font-bold text-lg"><span>수강료 소계</span><span>${totalTuition.toLocaleString()}원</span></div>${discountRow}${percentDiscountRow}${adjustmentSummary}${paidSummary}</div>${sourceCheckHtml}<div class="flex items-center justify-between rounded-xl bg-gray-50 p-5 shadow-[0_0_0_1px_rgba(31,41,55,0.06)]"><span class="text-xl font-black text-gray-800">미납/차액 합계</span><span class="text-4xl font-black ${balance > 0 ? 'text-red-600' : 'text-blue-600'}">${balance.toLocaleString()}원</span></div>`;
+            const discountRow = totalDiscount > 0 ? `<div class="payment-summary-row text-red-500"><span>총 할인액</span><span>-${totalDiscount.toLocaleString()}원</span></div>` : '';
+            const percentDiscountRow = percentDiscountInfo.amount > 0 ? `<div class="payment-summary-row text-rose-500"><span>퍼센트 할인 (${formatDiscountRate(percentDiscountInfo.rate)}%)</span><span>-${percentDiscountInfo.amount.toLocaleString()}원</span></div>` : '';
+            const adjustmentSummary = totalAdjustment !== 0 ? `<div class="payment-summary-row ${totalAdjustment > 0 ? 'text-[#004094]' : 'text-red-500'}"><span>${totalAdjustment > 0 ? '초과금 조정' : '이월금 조정'}</span><span>${totalAdjustment > 0 ? '+' : ''}${totalAdjustment.toLocaleString()}원</span></div>` : '';
+            const paidSummary = totalPaid > 0 ? `<div class="payment-summary-row text-purple-600"><span>기납부 총액</span><span>-${totalPaid.toLocaleString()}원</span></div>` : '';
+            const summaryHtml = `<div class="payment-summary-list"><div class="payment-summary-row text-gray-700"><span>수강료 소계</span><span>${totalTuition.toLocaleString()}원</span></div>${discountRow}${percentDiscountRow}${adjustmentSummary}${paidSummary}</div><div class="payment-balance-row"><span class="text-lg font-black text-gray-800">미납/차액 합계</span><strong class="${balance > 0 ? 'text-red-600' : 'text-blue-600'}">${balance.toLocaleString()}원</strong></div>`;
             document.getElementById('priceSummaryArea').innerHTML = summaryHtml;
             document.getElementById('priceSummaryArea').classList.remove('hidden');
         }
@@ -3515,6 +3534,12 @@
                 ? Number(data.paymentSourceTotal)
                 : extractPaymentSourceTotal((data.rawInputs || {}).paymentPasteInput || '');
             paymentSkippedRows = parseInt(data.paymentSkippedRows, 10) || 0;
+            const storedPaymentRows = Array.isArray(data.paymentRows) ? data.paymentRows : [];
+            const rawPaymentInput = String((data.rawInputs || {}).paymentPasteInput || '');
+            const storedRowsHaveBasis = storedPaymentRows.some(row => (parseInt(row.unitRate, 10) || 0) > 0 || (parseFloat(row.count) || 0) > 0);
+            const shouldReparseLegacyPayment = !!rawPaymentInput.trim()
+                && storedPaymentRows.length > 0
+                && !storedRowsHaveBasis;
             Object.keys(selectRowDates).forEach(key => delete selectRowDates[key]);
             Object.keys(autoRowExcludedDates).forEach(key => delete autoRowExcludedDates[key]);
 
@@ -3568,19 +3593,23 @@
             }));
             historyData = Array.isArray(data.historyData) ? data.historyData.map(normalizeHistoryRecord) : [];
             aiData = Array.isArray(data.aiData) ? data.aiData : [];
-            (data.paymentRows || []).forEach(appendPaymentGridRow);
-            document.getElementById('paymentGridArea').classList.toggle('hidden', !(data.paymentRows || []).length);
+            if (!shouldReparseLegacyPayment) storedPaymentRows.forEach(appendPaymentGridRow);
             if ((data.rawInputs || {}).ttPasteInput !== undefined) document.getElementById('ttPasteInput').value = data.rawInputs.ttPasteInput || '';
             if ((data.rawInputs || {}).historyPasteInput !== undefined) document.getElementById('historyPasteInput').value = data.rawInputs.historyPasteInput || '';
             if ((data.rawInputs || {}).aiPasteInput !== undefined) document.getElementById('aiPasteInput').value = data.rawInputs.aiPasteInput || '';
-            if ((data.rawInputs || {}).paymentPasteInput !== undefined) document.getElementById('paymentPasteInput').value = data.rawInputs.paymentPasteInput || '';
-            if ((data.paymentRows || []).length) {
+            if ((data.rawInputs || {}).paymentPasteInput !== undefined) document.getElementById('paymentPasteInput').value = rawPaymentInput;
+            if (shouldReparseLegacyPayment) {
+                processPaymentPaste();
+            }
+            const restoredPaymentRowCount = document.querySelectorAll('#paymentGridBody tr').length;
+            document.getElementById('paymentGridArea').classList.toggle('hidden', restoredPaymentRowCount === 0);
+            if (!shouldReparseLegacyPayment && restoredPaymentRowCount) {
                 updatePaymentParseStatus({
-                    added: (data.paymentRows || []).length,
+                    added: restoredPaymentRowCount,
                     skipped: paymentSkippedRows,
                     sourceTotal: paymentSourceTotal
                 });
-            } else {
+            } else if (!restoredPaymentRowCount) {
                 document.getElementById('paymentParseStatus')?.classList.add('hidden');
             }
 
