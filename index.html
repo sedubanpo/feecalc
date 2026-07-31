@@ -166,8 +166,35 @@
         .grid-input { width: 100%; border: none; padding: var(--space-optical-6); outline: none; background: transparent; font-size: 11px; font-family: monospace; }
         .grid-input:focus { background-color: #eff6ff; }
         .grid-select { width: 100%; border: none; padding: var(--space-optical-6); outline: none; background: transparent; cursor: pointer; font-size: 11px; }
-        .grid-btn-del { color: #ef4444; font-weight: bold; cursor: pointer; text-align: center; font-size: 12px; }
-        .grid-btn-del:hover { background-color: #fee2e2; }
+        .grid-btn-del { padding: 0; text-align: center; }
+        .grid-delete-button { width: 40px; height: 40px; color: #9f1239; font-weight: 900; text-align: center; border-radius: var(--radius-control); }
+        .grid-delete-button:hover { background-color: #fee2e2; }
+        .payment-grid-scroll { border-radius: 12px; box-shadow: 0 0 0 1px rgba(31, 41, 55, 0.08), 0 2px 6px rgba(31, 41, 55, 0.04); }
+        #paymentGridTable { min-width: 760px; }
+        #paymentGridTable .grid-input,
+        #paymentGridTable .grid-select,
+        .payment-basis-cell { font-variant-numeric: tabular-nums; }
+        .payment-basis-cell { min-width: 150px; padding: var(--space-optical-6); color: #475569; font-size: 10px; font-weight: 800; line-height: 1.5; text-wrap: pretty; }
+        .payment-parse-status { min-height: 40px; display: flex; align-items: center; gap: var(--space-2); margin-top: var(--space-2); padding: var(--space-2) var(--space-3); border-radius: 10px; background: #f8fafc; color: #475569; font-size: 11px; font-weight: 800; line-height: 1.5; }
+        .payment-parse-status[data-state="success"] { background: #ecfdf5; color: #166534; }
+        .payment-parse-status[data-state="warning"] { background: #fff8dc; color: #84673b; }
+        .payment-subject-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3); }
+        .payment-subject-card { min-width: 0; border-radius: 12px; padding: var(--space-3); color: #334155; }
+        .payment-subject-card.subj-math { background-color: #f4f8ff; box-shadow: inset 3px 0 0 #7da8de, 0 0 0 1px #d9e8ff; }
+        .payment-subject-card.subj-kor { background-color: #ecfdf5; box-shadow: inset 3px 0 0 #7bbf98, 0 0 0 1px #daf4e4; }
+        .payment-subject-card.subj-eng { background-color: #fef2f2; box-shadow: inset 3px 0 0 #d592a3, 0 0 0 1px #fde3e3; }
+        .payment-subject-card.subj-sci { background-color: #ece4ff; box-shadow: inset 3px 0 0 #9b8aca, 0 0 0 1px #d9c9f6; }
+        .payment-subject-card.subj-soc { background-color: #fff8dc; box-shadow: inset 3px 0 0 #cfb075, 0 0 0 1px #faefc9; }
+        .payment-subject-card.subj-default { background-color: #f8fafc; box-shadow: inset 3px 0 0 #8ea9c9, 0 0 0 1px #d2e0f6; }
+        .payment-subject-card .payment-card-items { margin-top: var(--space-2); padding: var(--space-optical-6) var(--space-2); border-radius: 8px; background: rgba(255, 255, 255, 0.72); }
+        .payment-item-basis { color: #475569; font-size: 10px; font-weight: 800; line-height: 1.45; text-wrap: pretty; }
+        .payment-source-check { border-radius: 12px; padding: var(--space-3) var(--space-4); font-variant-numeric: tabular-nums; }
+        .payment-source-check[data-state="match"] { background: #ecfdf5; color: #166534; }
+        .payment-source-check[data-state="mismatch"] { background: #fff8dc; color: #84673b; }
+        .payment-source-check[data-state="unknown"] { background: #f8fafc; color: #64748b; }
+        @media (max-width: 767px) {
+            .payment-subject-grid { grid-template-columns: minmax(0, 1fr); }
+        }
         #workspaceTopBar { position: relative; z-index: 10; }
         #topTabBarSlot { position: relative; padding-top: var(--space-tab-guide); overflow: visible; }
         #tabNavRow { display: flex; flex-wrap: wrap; gap: 0.6rem; align-items: center; }
@@ -504,8 +531,8 @@
                     </div>
 
                     <div id="tab-payment" class="hidden">
-                        <div class="bg-white p-3 rounded border border-purple-200 mb-3"><h4 class="text-xs font-bold text-purple-700 mb-1">💰 Access 데이터 붙여넣기</h4><p class="text-[10px] text-gray-500 mb-2">헤더 포함 전체 행을 복사하세요. (탭/공백 모두 자동 분석)</p><textarea id="paymentPasteInput" class="w-full h-24 text-[10px] p-2 border border-gray-200 rounded focus:outline-none focus:border-purple-500 font-mono resize-none bg-gray-50 whitespace-pre" placeholder="Access 전체 데이터 붙여넣기"></textarea><div class="flex gap-2 mt-2"><button onclick="pastePaymentFromClipboard()" class="flex-1 py-2 bg-gray-600 text-white text-xs font-bold rounded hover:bg-gray-700">클립보드 붙여넣기</button><button onclick="processPaymentPaste()" class="flex-1 py-2 bg-purple-600 text-white text-xs font-bold rounded hover:bg-purple-700">1. 분석하여 아래 표에 넣기</button></div></div>
-                        <div id="paymentGridArea" class="hidden"><h4 class="text-xs font-bold text-gray-600 mb-1 flex justify-between"><span>✏️ 내역 수정 (직접 고치세요)</span><button onclick="renderPaymentReceipt()" class="text-xs bg-blue-600 text-white px-2 py-0.5 rounded hover:bg-blue-700">2. 영수증 갱신</button></h4><div class="overflow-x-auto border border-gray-200 rounded"><table class="grid-editor" id="paymentGridTable"><thead><tr><th style="width: 60px;">구분</th><th>항목명</th><th style="width: 80px;">금액</th><th style="width: 60px;">할인</th><th style="width: 30px;">삭제</th></tr></thead><tbody id="paymentGridBody"></tbody></table></div></div>
+                        <div class="bg-white p-3 rounded border border-purple-200 mb-3"><h4 class="text-xs font-bold text-purple-700 mb-1">💰 Access 데이터 붙여넣기</h4><p class="text-[10px] text-gray-500 mb-2">헤더와 마지막 합계 행까지 함께 붙여넣으세요. 확정된 ■금액만 계산하며 빈 금액 행은 제외합니다.</p><textarea id="paymentPasteInput" class="w-full h-24 text-[10px] p-2 border border-gray-200 rounded focus:outline-none focus:border-purple-500 font-mono resize-none bg-gray-50 whitespace-pre" placeholder="Access 전체 데이터 붙여넣기"></textarea><div class="flex gap-2 mt-2"><button onclick="pastePaymentFromClipboard()" class="flex-1 min-h-10 py-2 bg-gray-600 text-white text-xs font-bold rounded hover:bg-gray-700">클립보드 붙여넣기</button><button onclick="processPaymentPaste()" class="flex-1 min-h-10 py-2 bg-purple-600 text-white text-xs font-bold rounded hover:bg-purple-700">1. 데이터 분석</button></div><div id="paymentParseStatus" class="payment-parse-status hidden" role="status" aria-live="polite"></div></div>
+                        <div id="paymentGridArea" class="hidden"><div class="mb-2 flex items-center justify-between gap-3"><div><h4 class="text-xs font-black text-gray-700">✏️ 계산 내역 확인</h4><p class="mt-0.5 text-[10px] font-bold text-slate-500">금액·할인은 수정할 수 있고, 산출 기준은 Access 원본에서 가져옵니다.</p></div><button onclick="renderPaymentReceipt()" class="min-h-10 shrink-0 rounded-lg bg-blue-700 px-3 text-xs font-black text-white hover:bg-blue-800">2. 안내서 갱신</button></div><div class="payment-grid-scroll overflow-x-auto"><table class="grid-editor" id="paymentGridTable"><thead><tr><th style="width: 66px;">구분</th><th>항목명</th><th style="width: 180px;">산출 기준</th><th style="width: 92px;" class="text-right">금액</th><th style="width: 72px;" class="text-right">할인</th><th style="width: 48px;" class="text-center">삭제</th></tr></thead><tbody id="paymentGridBody"></tbody></table></div></div>
                     </div>
                 </div>
                 <div id="adjustmentArea" class="p-4 border-t bg-white flex items-center justify-between shadow-[0_-5px_15px_rgba(0,0,0,0.05)] relative z-10">
@@ -700,6 +727,8 @@
         const selectRowDates = {};     
         let historyData = [];
         let paymentData = [];
+        let paymentSourceTotal = null;
+        let paymentSkippedRows = 0;
         let aiData = [];
         let ttData = []; 
         let rowCounter = 0;
@@ -716,7 +745,7 @@
         const SUPABASE_TABLE = 'fee_calc_records';
         const FEECALC_ACCESS_CODE_KEY = 'feecalc_access_code';
         const FEECALC_DEFAULT_ACCESS_CODE = 'banpo-fee-2026-secure';
-        const FEECALC_STORAGE_VERSION = 3;
+        const FEECALC_STORAGE_VERSION = 4;
         const PRICE_PRESETS_STORAGE_KEY = 'feecalc_price_presets';
         const AD_TEXT_STORAGE_KEY = 'feecalc_ad_text';
         const GUIDE_MESSAGES_STORAGE_KEY = 'feecalc_guide_messages';
@@ -1685,6 +1714,9 @@
             aiData = [];
             historyData = [];
             paymentData = [];
+            paymentSourceTotal = null;
+            paymentSkippedRows = 0;
+            document.getElementById('paymentParseStatus')?.classList.add('hidden');
             currentLoadedRecordId = '';
             const adjustment = document.getElementById('adjustment');
             const aiAdjustment = document.getElementById('aiAdjustment');
@@ -2046,61 +2078,144 @@
             renderCalendar();
             if (missingTimeCount) alert(`${missingTimeCount}개 반명은 시간 정보가 없어 입력된 수강료를 그대로 가져왔습니다.`);
         }
-        // (나머지 로직 processPaymentPaste, renderPaymentReceipt 등 V47/V53과 동일)
+        function normalizePaymentCell(value) {
+            return String(value ?? '')
+                .replace(/\s+/g, '')
+                .replace(/[★*▶■◆●]/g, '')
+                .trim();
+        }
+        function parsePaymentMoney(value) {
+            const text = String(value ?? '').trim();
+            if (!text) return null;
+            if (!/^-?\d{1,3}(,\d{3})*$/.test(text) && !/^-?\d+$/.test(text)) return null;
+            const amount = parseInt(text.replace(/,/g, ''), 10);
+            return Number.isFinite(amount) ? amount : null;
+        }
+        function splitPaymentRow(line) {
+            return String(line ?? '').includes('\t')
+                ? String(line ?? '').split('\t')
+                : String(line ?? '').trim().split(/\s{2,}/);
+        }
+        function findPaymentColumn(indexMap, keys) {
+            for (const key of keys) {
+                const normalizedKey = normalizePaymentCell(key);
+                if (indexMap[normalizedKey] !== undefined) return indexMap[normalizedKey];
+            }
+            return -1;
+        }
+        function getPaymentCell(row, indexMap, keys) {
+            const index = findPaymentColumn(indexMap, keys);
+            return index >= 0 && index < row.length ? row[index] : '';
+        }
+        function getPaymentMoney(row, indexMap, keys) {
+            for (const key of keys) {
+                const index = findPaymentColumn(indexMap, [key]);
+                if (index < 0 || index >= row.length) continue;
+                const amount = parsePaymentMoney(row[index]);
+                if (amount !== null) return amount;
+            }
+            return null;
+        }
+        function formatPaymentNumber(value) {
+            const amount = parseFloat(value) || 0;
+            if (!amount) return '';
+            return Number.isInteger(amount) ? String(amount) : amount.toFixed(1).replace(/\.0$/, '');
+        }
+        function getPaymentHours(name, explicitHours = 0) {
+            const hours = parseDurationHours(explicitHours);
+            if (hours > 0) return hours;
+            return parseDurationHours(parseSubjectInfo(name || '').timeText);
+        }
+        function formatPaymentBasis(item = {}) {
+            const type = item.type || 'class';
+            if (type === 'payment') return '최종 합계에서 차감';
+            if (type === 'adjustment') return '이월/초과금으로 반영';
+            const unitRate = parseInt(item.unitRate, 10) || 0;
+            const count = parseFloat(item.count) || 0;
+            const hours = getPaymentHours(item.name, item.hours);
+            const priceParts = [];
+            if (unitRate > 0) priceParts.push(`회당 ${unitRate.toLocaleString()}원`);
+            if (count > 0) priceParts.push(`${formatPaymentNumber(count)}회`);
+            const priceText = priceParts.length === 2 ? `${priceParts[0]} × ${priceParts[1]}` : (priceParts[0] || priceParts[1] || '확정 금액 직접 입력');
+            const hourText = hours > 0 ? `1회당 ${formatPaymentNumber(hours)}시간` : '1회당 시간 미기재';
+            return `${priceText} · ${hourText}`;
+        }
+        function updatePaymentGridBasis(row) {
+            if (!row) return;
+            const type = row.querySelector('.grid-select')?.value || row.dataset.type || 'class';
+            const name = row.querySelector('.payment-name')?.value || '';
+            const basis = row.querySelector('.payment-basis-cell');
+            if (basis) {
+                basis.textContent = formatPaymentBasis({
+                    type,
+                    name,
+                    unitRate: row.dataset.unitRate,
+                    count: row.dataset.count,
+                    hours: row.dataset.hours
+                });
+            }
+        }
+        function handlePaymentGridChange(control) {
+            const row = control?.closest?.('tr');
+            updatePaymentGridBasis(row);
+            renderPaymentReceipt();
+        }
+        function updatePaymentParseStatus({ added = 0, skipped = paymentSkippedRows, sourceTotal = paymentSourceTotal } = {}) {
+            const status = document.getElementById('paymentParseStatus');
+            if (!status) return;
+            const hasSourceTotal = Number.isFinite(sourceTotal);
+            const parts = [`${added}개 계산 행 반영`];
+            if (skipped > 0) parts.push(`금액 미산정 ${skipped}개 제외`);
+            parts.push(hasSourceTotal ? `Access 원본 합계 ${sourceTotal.toLocaleString()}원` : 'Access 원본 합계 없음');
+            status.textContent = parts.join(' · ');
+            status.dataset.state = skipped > 0 ? 'warning' : 'success';
+            status.classList.remove('hidden');
+        }
+        function extractPaymentSourceTotal(raw) {
+            const rows = String(raw || '').split('\n').map(splitPaymentRow).filter(row => row.length > 0);
+            const headerIndex = rows.findIndex(row => row.map(normalizePaymentCell).some(cell => ['금액', '정산금', '수업금', '수강료'].includes(cell)));
+            if (headerIndex < 0) return null;
+            const indexMap = {};
+            rows[headerIndex].forEach((header, index) => { indexMap[normalizePaymentCell(header)] = index; });
+            const amountIndex = findPaymentColumn(indexMap, ['정산금', '수업금', '금액', '수강료']);
+            if (amountIndex < 0) return null;
+            let sourceTotal = null;
+            rows.slice(headerIndex + 1).forEach(row => {
+                const identifyingCells = [
+                    getPaymentCell(row, indexMap, ['이름']),
+                    getPaymentCell(row, indexMap, ['항목']),
+                    getPaymentCell(row, indexMap, ['반명']),
+                    getPaymentCell(row, indexMap, ['결제구분']),
+                    getPaymentCell(row, indexMap, ['납부'])
+                ];
+                const amount = parsePaymentMoney(row[amountIndex]);
+                if (!identifyingCells.some(value => String(value || '').trim()) && amount !== null && Math.abs(amount) >= 1000) sourceTotal = amount;
+            });
+            return sourceTotal;
+        }
         function processPaymentPaste() {
             const raw = document.getElementById('paymentPasteInput').value;
             const tbody = document.getElementById('paymentGridBody');
             tbody.innerHTML = '';
             if (!raw.trim()) return;
 
-            const normalize = (s) => String(s ?? '').replace(/\s+/g, '').replace(/[★*]/g, '').trim();
-            const parseMoney = (s) => {
-                const t = String(s ?? '').trim();
-                if (!t) return null;
-                if (!/^-?\d{1,3}(,\d{3})*$/.test(t) && !/^-?\d+$/.test(t)) return null;
-                const n = parseInt(t.replace(/,/g, ''), 10);
-                return isNaN(n) ? null : n;
-            };
-            const parseHours = (s) => {
-                const m = String(s ?? '').match(/(\d+(\.\d+)?)/);
-                return m ? parseFloat(m[1]) : 0;
-            };
-            const splitRow = (line) => line.includes('\t') ? line.split('\t') : String(line ?? '').trim().split(/\s{2,}/);
-            const findCol = (idxMap, keys) => {
-                for (const k of keys) {
-                    const key = normalize(k);
-                    if (idxMap[key] !== undefined) return idxMap[key];
-                }
-                return -1;
-            };
-            const getCell = (row, idxMap, keys) => {
-                const i = findCol(idxMap, keys);
-                return i >= 0 && i < row.length ? row[i] : '';
-            };
-            const getMoney = (row, idxMap, keys) => {
-                for (const k of keys) {
-                    const i = findCol(idxMap, [k]);
-                    if (i < 0 || i >= row.length) continue;
-                    const n = parseMoney(row[i]);
-                    if (n !== null) return n;
-                }
-                return null;
-            };
-
-            const rows = raw.split('\n').map(line => splitRow(line)).filter(r => r.length > 0);
+            const rows = raw.split('\n').map(splitPaymentRow).filter(row => row.length > 0);
             let headerIdx = rows.findIndex(r => {
-                const joined = r.map(normalize).join('|');
-                return ['항목', '금액', '수업금', '정산금', '수강료'].some(k => joined.includes(normalize(k)));
+                const normalizedCells = r.map(normalizePaymentCell);
+                return ['항목', '금액', '수업금', '정산금', '수강료'].some(key => normalizedCells.includes(normalizePaymentCell(key)));
             });
             if (headerIdx < 0) headerIdx = 0;
             const header = rows[headerIdx] || [];
             const idxMap = {};
-            header.forEach((h, i) => { idxMap[normalize(h)] = i; });
+            header.forEach((value, index) => { idxMap[normalizePaymentCell(value)] = index; });
 
             const payKeywords = ['납부', '결제', '카드', '현금', '서울페이', '제로페이', '계좌이체', '이체'];
             const adjustmentKeywords = ['초과금', '이월금'];
             const subjKeywords = ['수학', '영어', '국어', '과학', '사회', '이월', '초과금'];
+            const amountColumnIndex = findPaymentColumn(idxMap, ['정산금', '수업금', '금액', '수강료']);
             let added = 0;
+            paymentSourceTotal = null;
+            paymentSkippedRows = 0;
 
             rows.slice(headerIdx + 1).forEach(cols => {
                 if (!cols || cols.length === 0) return;
@@ -2108,15 +2223,28 @@
                 if (!rowText.trim()) return;
                 if (rowText.includes('요약') || rowText.includes('(새 항목)')) return;
 
-                const itemText = String(getCell(cols, idxMap, ['항목'])).trim();
-                const classText = String(getCell(cols, idxMap, ['반명'])).trim();
-                const studentText = String(getCell(cols, idxMap, ['이름'])).trim();
-                const payTypeText = String(getCell(cols, idxMap, ['결제구분'])).trim();
-                const paidAtText = String(getCell(cols, idxMap, ['납부'])).trim();
-                if (!itemText && !classText && !studentText && !payTypeText && !paidAtText) return;
-                let amountSigned = getMoney(cols, idxMap, ['정산금', '수업금', '금액', '수강료']);
+                const itemText = String(getPaymentCell(cols, idxMap, ['항목'])).trim();
+                const classText = String(getPaymentCell(cols, idxMap, ['반명'])).trim();
+                const studentText = String(getPaymentCell(cols, idxMap, ['이름'])).trim();
+                const payTypeText = String(getPaymentCell(cols, idxMap, ['결제구분'])).trim();
+                const paidAtText = String(getPaymentCell(cols, idxMap, ['납부'])).trim();
+                const hasIdentity = !!(itemText || classText || studentText || payTypeText || paidAtText);
+                const authoritativeAmount = amountColumnIndex >= 0 ? parsePaymentMoney(cols[amountColumnIndex]) : null;
+                if (!hasIdentity) {
+                    if (authoritativeAmount !== null && Math.abs(authoritativeAmount) >= 1000) paymentSourceTotal = authoritativeAmount;
+                    return;
+                }
+
+                const unitRate = Math.abs(getPaymentMoney(cols, idxMap, ['회당', '단가']) || 0);
+                const count = parseFloat(String(getPaymentCell(cols, idxMap, ['횟수', '회수'])).replace(/,/g, '')) || 0;
+                let amountSigned = authoritativeAmount;
+                if (amountColumnIndex >= 0 && (amountSigned === null || amountSigned === 0)) {
+                    if (classText && unitRate > 0) paymentSkippedRows++;
+                    return;
+                }
                 if (amountSigned === null) {
-                    const nums = cols.map(parseMoney).filter(n => n !== null && Math.abs(n) >= 1000);
+                    amountSigned = getPaymentMoney(cols, idxMap, ['정산금', '수업금', '금액', '수강료']);
+                    const nums = cols.map(parsePaymentMoney).filter(n => n !== null && Math.abs(n) >= 1000);
                     if (nums.length > 0) amountSigned = nums[nums.length - 1];
                 }
                 if (amountSigned === null || amountSigned === 0) return;
@@ -2141,22 +2269,20 @@
                 } else {
                     const subj = cols.find(c => subjKeywords.some(k => String(c).includes(k)));
                     name = itemText || classText || subj || '기타 수업';
-                    hours = parseHours(getCell(cols, idxMap, ['시간량', '시간']));
-                    const discountRaw = parseMoney(getCell(cols, idxMap, ['할인']));
+                    hours = getPaymentHours(name, getPaymentCell(cols, idxMap, ['시간량', '시간']));
+                    const discountRaw = parsePaymentMoney(getPaymentCell(cols, idxMap, ['할인']));
                     discount = (discountRaw !== null && Math.abs(discountRaw) >= 1000) ? Math.abs(discountRaw) : 0;
                 }
 
                 if (type === 'adjustment' ? amount === 0 : amount <= 0) return;
-                const tr = document.createElement('tr');
-                tr.innerHTML = `<td><select class="grid-select" onchange="renderPaymentReceipt()"><option value="class" ${type==='class'?'selected':''}>수업</option><option value="adjustment" ${type==='adjustment'?'selected':''}>조정</option><option value="payment" ${type==='payment'?'selected':''}>납부</option></select></td><td><input type="text" class="grid-input" value="${escapeHtml(name)}" oninput="renderPaymentReceipt()" data-hours="${hours}"></td><td><input type="number" class="grid-input text-right" value="${amount}" oninput="renderPaymentReceipt()"></td><td><input type="number" class="grid-input text-right" value="${discount}" oninput="renderPaymentReceipt()"></td><td class="grid-btn-del" onclick="this.closest('tr').remove(); renderPaymentReceipt()">X</td>`;
-                tbody.appendChild(tr);
+                appendPaymentGridRow({ type, name, hours, unitRate, count, amount, discount });
                 added++;
             });
 
             document.getElementById('paymentGridArea').classList.remove('hidden');
             renderPaymentReceipt();
+            updatePaymentParseStatus({ added, skipped: paymentSkippedRows, sourceTotal: paymentSourceTotal });
             if (added === 0) alert('분석 결과가 0건입니다. Access에서 헤더 행(항목/금액/수업금/정산금 포함)까지 함께 복사한 뒤 다시 시도해주세요.');
-            else alert(`분석 완료: ${added}개 행을 표에 반영했습니다.`);
         }
         function renderPaymentReceipt() {
             const gridRows = document.querySelectorAll('#paymentGridBody tr');
@@ -2171,12 +2297,14 @@
             const paymentRows = [];
             const adjustmentRows = [];
             gridRows.forEach(row => {
-                const selectedType = row.querySelector('select').value;
-                const nameInput = row.querySelectorAll('input')[0];
+                const selectedType = row.querySelector('.grid-select')?.value || 'class';
+                const nameInput = row.querySelector('.payment-name');
                 const name = nameInput.value;
-                const hours = parseFloat(nameInput.dataset.hours) || 0;
-                const rawAmount = parseInt(row.querySelectorAll('input')[1].value) || 0;
-                const discount = parseInt(row.querySelectorAll('input')[2].value) || 0;
+                const hours = getPaymentHours(name, row.dataset.hours);
+                const unitRate = parseInt(row.dataset.unitRate, 10) || 0;
+                const count = parseFloat(row.dataset.count) || 0;
+                const rawAmount = parseInt(row.querySelector('.payment-amount')?.value, 10) || 0;
+                const discount = parseInt(row.querySelector('.payment-discount')?.value, 10) || 0;
                 const isAdjustmentName = /초과금|이월금/.test(name);
                 const type = selectedType === 'class' && isAdjustmentName ? 'adjustment' : selectedType;
                 if (type === 'class') {
@@ -2185,10 +2313,11 @@
                     totalDiscount += discount;
                     const info = parseSubjectInfo(name);
                     const groupName = info.mainName || '기타 수업';
-                    if (!subjectGroups.has(groupName)) subjectGroups.set(groupName, { total: 0, items: [] });
+                    if (!subjectGroups.has(groupName)) subjectGroups.set(groupName, { total: 0, sessionCount: 0, items: [] });
                     const group = subjectGroups.get(groupName);
                     group.total += amount;
-                    group.items.push({ info, name, hours, amount, discount });
+                    group.sessionCount += count;
+                    group.items.push({ info, name, hours, unitRate, count, amount, discount });
                 } else if (type === 'payment') {
                     const amount = Math.abs(rawAmount);
                     totalPaid += amount;
@@ -2205,14 +2334,16 @@
             const subjectCards = Array.from(subjectGroups.entries()).map(([subject, group]) => {
                 const itemRows = group.items.map(item => {
                     const typeText = item.info.type || '수업';
-                    const teacherText = item.info.teacher ? ` · ${item.info.teacher}` : '';
-                    const hourText = item.hours > 0 ? `${item.hours}시간` : (item.info.timeText || '');
-                    const discountText = item.discount > 0 ? `<span class="text-rose-500">할인 -${item.discount.toLocaleString()}원</span>` : '';
-                    return `<div class="grid grid-cols-[1fr_auto] gap-3 py-1.5 border-t border-slate-100 first:border-t-0 text-[0.6875rem]"><div class="min-w-0 flex items-center gap-1.5"><span class="shrink-0 rounded px-1.5 py-0.5 ${typeText.includes('1:1') ? 'bg-rose-700 text-white' : 'bg-slate-100 text-slate-600'} font-black">${escapeHtml(typeText)}</span><span class="truncate font-bold text-slate-600">${escapeHtml(`${teacherText.replace(' · ', '')}${hourText ? ` · ${hourText}` : ''}`.replace(/^ · /, '')) || escapeHtml(item.name)}</span>${discountText}</div><span class="font-mono font-black text-slate-800">${item.amount.toLocaleString()}원</span></div>`;
+                    const teacherText = item.info.teacher || item.name;
+                    const basisText = formatPaymentBasis({ type: 'class', ...item });
+                    const discountText = item.discount > 0 ? `<span class="mt-1 inline-flex rounded bg-white px-1.5 py-0.5 text-[9px] font-black text-rose-600 shadow-sm">할인 -${item.discount.toLocaleString()}원</span>` : '';
+                    return `<div class="grid grid-cols-[minmax(0,1fr)_auto] gap-3 border-t border-slate-200/70 py-2 first:border-t-0"><div class="min-w-0"><div class="flex min-w-0 items-center gap-1.5"><span class="shrink-0 rounded px-1.5 py-0.5 ${typeText.includes('1:1') ? 'bg-rose-700 text-white' : 'bg-white text-slate-600 shadow-sm'} text-[9px] font-black">${escapeHtml(typeText)}</span><span class="truncate text-[11px] font-black text-slate-700">${escapeHtml(teacherText)}</span></div><div class="payment-item-basis mt-1">${escapeHtml(basisText)}</div>${discountText}</div><span class="whitespace-nowrap font-mono text-[11px] font-black text-slate-900">${item.amount.toLocaleString()}원</span></div>`;
                 }).join('');
-                return `<section class="border border-slate-200 rounded-lg px-3 py-2.5 bg-white"><div class="flex items-baseline justify-between gap-3 mb-1.5"><div class="flex items-center gap-2 min-w-0"><span class="font-black text-slate-900 text-base">${escapeHtml(subject)}</span><span class="text-[10px] font-bold text-slate-400 whitespace-nowrap">${group.items.length}개 수업</span></div><span class="font-mono text-base font-black text-slate-900 whitespace-nowrap">${group.total.toLocaleString()}원</span></div><div class="px-2.5 py-1 rounded-lg bg-slate-50">${itemRows}</div></section>`;
+                const colorClass = getSubjectColorClass(subject, false, false);
+                const countText = group.sessionCount > 0 ? `${group.items.length}개 항목 · 총 ${formatPaymentNumber(group.sessionCount)}회` : `${group.items.length}개 항목`;
+                return `<section class="payment-subject-card ${colorClass}"><div class="flex items-baseline justify-between gap-3"><div class="flex min-w-0 items-center gap-2"><span class="text-base font-black text-slate-900">${escapeHtml(subject)}</span><span class="whitespace-nowrap text-[10px] font-bold text-slate-600">${countText}</span></div><span class="whitespace-nowrap font-mono text-base font-black text-slate-900">${group.total.toLocaleString()}원</span></div><div class="payment-card-items">${itemRows}</div></section>`;
             });
-            if (subjectCards.length) tbody.innerHTML += `<tr><td colspan="2" class="py-3 px-1"><div class="grid grid-cols-2 gap-3">${subjectCards.join('')}</div></td></tr>`;
+            if (subjectCards.length) tbody.innerHTML += `<tr><td colspan="2" class="px-1 py-3"><div class="payment-subject-grid">${subjectCards.join('')}</div></td></tr>`;
 
             if (adjustmentRows.length) {
                 const rowsHtml = adjustmentRows.map(item => {
@@ -2231,7 +2362,14 @@
             const discountRow = totalDiscount > 0 ? `<div class="flex justify-between text-red-500 font-bold text-lg"><span>총 할인액</span><span>-${totalDiscount.toLocaleString()}원</span></div>` : '';
             const percentDiscountRow = percentDiscountInfo.amount > 0 ? `<div class="flex justify-between text-rose-500 font-bold text-lg"><span>퍼센트 할인 (${formatDiscountRate(percentDiscountInfo.rate)}%)</span><span>-${percentDiscountInfo.amount.toLocaleString()}원</span></div>` : '';
             const adjustmentSummary = totalAdjustment !== 0 ? `<div class="flex justify-between ${totalAdjustment > 0 ? 'text-[#004094]' : 'text-red-500'} font-bold text-lg"><span>${totalAdjustment > 0 ? '초과금 조정' : '이월금 조정'}</span><span>${totalAdjustment > 0 ? '+' : ''}${totalAdjustment.toLocaleString()}원</span></div>` : '';
-            const summaryHtml = `<div class="border-t-2 border-gray-200 pt-3 space-y-2 mb-6"><div class="flex justify-between text-gray-700 font-bold text-lg"><span>수강료 소계</span><span>${totalTuition.toLocaleString()}원</span></div>${discountRow}${percentDiscountRow}${adjustmentSummary}<div class="flex justify-between text-purple-600 font-bold text-lg"><span>기납부 총액</span><span>-${totalPaid.toLocaleString()}원</span></div></div><div class="flex justify-between items-center bg-gray-50 p-5 rounded-xl border border-gray-100"><span class="text-xl font-black text-gray-800">미납/차액 합계</span><span class="text-4xl font-black ${balance > 0 ? 'text-red-600' : 'text-blue-600'}">${balance.toLocaleString()}원</span></div>`;
+            const paidSummary = totalPaid > 0 ? `<div class="flex justify-between text-purple-600 font-bold text-lg"><span>기납부 총액</span><span>-${totalPaid.toLocaleString()}원</span></div>` : '';
+            const hasSourceTotal = Number.isFinite(paymentSourceTotal);
+            const sourceDifference = hasSourceTotal ? balance - paymentSourceTotal : 0;
+            const sourceState = !hasSourceTotal ? 'unknown' : (sourceDifference === 0 ? 'match' : 'mismatch');
+            const sourceStatusText = !hasSourceTotal ? '원본 합계 없음' : (sourceDifference === 0 ? '계산 결과와 일치' : `계산 결과와 ${sourceDifference > 0 ? '+' : ''}${sourceDifference.toLocaleString()}원 차이`);
+            const sourceAmountText = hasSourceTotal ? `${paymentSourceTotal.toLocaleString()}원` : '—';
+            const sourceCheckHtml = `<div class="payment-source-check mb-3" data-state="${sourceState}" role="status" aria-live="polite"><div class="flex items-center justify-between gap-3"><div><div class="text-[10px] font-black uppercase tracking-wide">Access 원본 합계</div><div class="mt-0.5 text-xs font-black">${sourceStatusText}</div></div><span class="whitespace-nowrap font-mono text-lg font-black">${sourceAmountText}</span></div></div>`;
+            const summaryHtml = `<div class="mb-5 space-y-2 border-t-2 border-gray-200 pt-3"><div class="flex justify-between text-gray-700 font-bold text-lg"><span>수강료 소계</span><span>${totalTuition.toLocaleString()}원</span></div>${discountRow}${percentDiscountRow}${adjustmentSummary}${paidSummary}</div>${sourceCheckHtml}<div class="flex items-center justify-between rounded-xl bg-gray-50 p-5 shadow-[0_0_0_1px_rgba(31,41,55,0.06)]"><span class="text-xl font-black text-gray-800">미납/차액 합계</span><span class="text-4xl font-black ${balance > 0 ? 'text-red-600' : 'text-blue-600'}">${balance.toLocaleString()}원</span></div>`;
             document.getElementById('priceSummaryArea').innerHTML = summaryHtml;
             document.getElementById('priceSummaryArea').classList.remove('hidden');
         }
@@ -3269,15 +3407,14 @@
         }
         function collectPaymentRows() {
             return Array.from(document.querySelectorAll('#paymentGridBody tr')).map(row => {
-                const select = row.querySelector('select');
-                const inputs = row.querySelectorAll('input');
-                const nameInput = inputs[0];
                 return {
-                    type: select ? select.value : 'class',
-                    name: nameInput ? nameInput.value : '',
-                    hours: parseFloat(nameInput?.dataset?.hours) || 0,
-                    amount: parseInt(inputs[1]?.value, 10) || 0,
-                    discount: parseInt(inputs[2]?.value, 10) || 0
+                    type: row.querySelector('.grid-select')?.value || 'class',
+                    name: row.querySelector('.payment-name')?.value || '',
+                    hours: parseFloat(row.dataset.hours) || 0,
+                    unitRate: parseInt(row.dataset.unitRate, 10) || 0,
+                    count: parseFloat(row.dataset.count) || 0,
+                    amount: parseInt(row.querySelector('.payment-amount')?.value, 10) || 0,
+                    discount: parseInt(row.querySelector('.payment-discount')?.value, 10) || 0
                 };
             });
         }
@@ -3286,8 +3423,13 @@
             if (!tbody) return;
             const tr = document.createElement('tr');
             const inferredType = (item.type || 'class') === 'class' && /초과금|이월금/.test(item.name || '') ? 'adjustment' : (item.type || 'class');
-            tr.innerHTML = `<td><select class="grid-select" onchange="renderPaymentReceipt()"><option value="class" ${inferredType==='class'?'selected':''}>수업</option><option value="adjustment" ${inferredType==='adjustment'?'selected':''}>조정</option><option value="payment" ${inferredType==='payment'?'selected':''}>납부</option></select></td><td><input type="text" class="grid-input" value="${escapeHtml(item.name || '')}" oninput="renderPaymentReceipt()" data-hours="${item.hours || 0}"></td><td><input type="number" class="grid-input text-right" value="${item.amount || 0}" oninput="renderPaymentReceipt()"></td><td><input type="number" class="grid-input text-right" value="${item.discount || 0}" oninput="renderPaymentReceipt()"></td><td class="grid-btn-del" onclick="this.closest('tr').remove(); renderPaymentReceipt()">X</td>`;
+            tr.dataset.type = inferredType;
+            tr.dataset.hours = parseFloat(item.hours) || 0;
+            tr.dataset.unitRate = parseInt(item.unitRate, 10) || 0;
+            tr.dataset.count = parseFloat(item.count) || 0;
+            tr.innerHTML = `<td><select class="grid-select" aria-label="내역 구분" onchange="handlePaymentGridChange(this)"><option value="class" ${inferredType==='class'?'selected':''}>수업</option><option value="adjustment" ${inferredType==='adjustment'?'selected':''}>조정</option><option value="payment" ${inferredType==='payment'?'selected':''}>납부</option></select></td><td><input type="text" class="grid-input payment-name" aria-label="항목명" value="${escapeHtml(item.name || '')}" oninput="handlePaymentGridChange(this)"></td><td><div class="payment-basis-cell"></div></td><td><input type="number" class="grid-input payment-amount text-right" aria-label="금액" value="${item.amount || 0}" oninput="renderPaymentReceipt()"></td><td><input type="number" class="grid-input payment-discount text-right" aria-label="할인" value="${item.discount || 0}" oninput="renderPaymentReceipt()"></td><td class="grid-btn-del"><button type="button" class="grid-delete-button" aria-label="${escapeHtml(item.name || '내역')} 삭제" onclick="this.closest('tr').remove(); renderPaymentReceipt()">×</button></td>`;
             tbody.appendChild(tr);
+            updatePaymentGridBasis(tr);
         }
         function collectCalculatorState() {
             return {
@@ -3317,6 +3459,8 @@
                 historyData: JSON.parse(JSON.stringify(historyData || [])),
                 aiData: JSON.parse(JSON.stringify(aiData || [])),
                 paymentRows: collectPaymentRows(),
+                paymentSourceTotal: Number.isFinite(paymentSourceTotal) ? paymentSourceTotal : null,
+                paymentSkippedRows,
                 rawInputs: {
                     ttPasteInput: document.getElementById('ttPasteInput')?.value || '',
                     historyPasteInput: document.getElementById('historyPasteInput')?.value || '',
@@ -3365,6 +3509,12 @@
             document.getElementById('firstRegList').innerHTML = '';
             document.getElementById('ttList').innerHTML = '';
             document.getElementById('paymentGridBody').innerHTML = '';
+            paymentSourceTotal = data.paymentSourceTotal !== null
+                && data.paymentSourceTotal !== undefined
+                && Number.isFinite(Number(data.paymentSourceTotal))
+                ? Number(data.paymentSourceTotal)
+                : extractPaymentSourceTotal((data.rawInputs || {}).paymentPasteInput || '');
+            paymentSkippedRows = parseInt(data.paymentSkippedRows, 10) || 0;
             Object.keys(selectRowDates).forEach(key => delete selectRowDates[key]);
             Object.keys(autoRowExcludedDates).forEach(key => delete autoRowExcludedDates[key]);
 
@@ -3424,6 +3574,15 @@
             if ((data.rawInputs || {}).historyPasteInput !== undefined) document.getElementById('historyPasteInput').value = data.rawInputs.historyPasteInput || '';
             if ((data.rawInputs || {}).aiPasteInput !== undefined) document.getElementById('aiPasteInput').value = data.rawInputs.aiPasteInput || '';
             if ((data.rawInputs || {}).paymentPasteInput !== undefined) document.getElementById('paymentPasteInput').value = data.rawInputs.paymentPasteInput || '';
+            if ((data.paymentRows || []).length) {
+                updatePaymentParseStatus({
+                    added: (data.paymentRows || []).length,
+                    skipped: paymentSkippedRows,
+                    sourceTotal: paymentSourceTotal
+                });
+            } else {
+                document.getElementById('paymentParseStatus')?.classList.add('hidden');
+            }
 
             const nextTab = data.currentTab || 'auto';
             switchTab(nextTab);
