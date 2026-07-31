@@ -137,9 +137,17 @@
         .layout-default .receipt-left { flex: 1 1 56%; order: 1; min-width: 0; }
         .layout-default .receipt-right { flex: 0 0 42%; order: 2; display: flex; flex-direction: column; min-width: 0; }
         
-        .layout-history { gap: 1.5rem; flex-direction: column; }
+        .layout-history { gap: 1rem; flex-direction: column; }
         .layout-history .receipt-left { order: 2; width: 100%; }
         .layout-history .receipt-right { order: 1; width: 100%; }
+        .layout-history .receipt-fee-table > thead { display: none; }
+        .layout-history #receiptCalendarArea { margin-bottom: 0; }
+        .layout-history .receipt-cal-cell { min-height: 70px; padding: 2px; }
+        .rc-history-event { min-height: 22px; padding: 2px 4px; gap: 0; box-shadow: none; }
+        .rc-history-event .rc-history-line { display: flex; width: 100%; align-items: baseline; justify-content: center; gap: 3px; min-width: 0; }
+        .rc-history-event .rc-subject-label { flex: 0 1 auto; font-size: 0.61rem; }
+        .rc-history-type { flex: none; color: currentColor; font-size: 0.5rem; font-weight: 900; opacity: 0.78; white-space: nowrap; }
+        .rc-history-event .rc-subject-time { font-size: 0.53rem; line-height: 1.1; }
         .layout-payment { flex-direction: column; gap: 1.5rem; }
         .layout-payment .receipt-left { width: 100%; }
         .layout-payment .receipt-right { display: none; } 
@@ -197,6 +205,10 @@
         .payment-line-basis { width: 34%; color: #64748b; font-size: 9px; font-weight: 800; line-height: 1.4; font-variant-numeric: tabular-nums; }
         .payment-line-amount { width: 19%; color: #111827; font-family: monospace; font-size: 11px; font-weight: 900; text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
         .payment-line-discount { display: block; margin-top: 2px; color: #e11d48; font-size: 8px; font-weight: 900; }
+        .payment-variant-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 8px; }
+        .payment-variant { min-width: 0; padding: 2px 0; }
+        .payment-variant-type { display: block; color: #334155; font-size: 9px; font-weight: 900; line-height: 1.3; }
+        .payment-variant-basis { display: block; overflow: hidden; color: #64748b; font-size: 8px; font-weight: 800; line-height: 1.35; text-overflow: ellipsis; white-space: nowrap; font-variant-numeric: tabular-nums; }
         .payment-settlement-line { display: grid; grid-template-columns: 112px minmax(0, 1fr) auto; align-items: baseline; gap: var(--space-3); border-bottom: 1px solid #e5e7eb; padding: 9px 1px; font-size: 11px; }
         .payment-settlement-label { color: #64748b; font-size: 10px; font-weight: 900; }
         .payment-settlement-name { min-width: 0; overflow: hidden; color: #334155; font-weight: 800; text-overflow: ellipsis; white-space: nowrap; }
@@ -247,14 +259,30 @@
         .record-search { background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%); }
         .editor-body { min-height: 560px; }
         #recordsDock, #controlColumn { min-width: 0; }
-        .history-subject-pill { display: inline-flex; align-items: center; padding: 4px var(--space-optical-10); border-radius: 9999px; font-size: 0.92rem; font-weight: 900; line-height: 1.1; }
-        .history-teacher-pill { display: inline-flex; align-items: center; padding: 4px var(--space-optical-9); border-radius: 9999px; font-size: 0.76rem; font-weight: 800; line-height: 1.1; border: 1px solid transparent; }
-        .history-status-pill { display: inline-flex; align-items: center; padding: 4px var(--space-optical-9); border-radius: 9999px; font-size: 0.72rem; font-weight: 800; line-height: 1.1; }
-        .history-row-detail { color: #64748b; font-size: 0.92rem; font-weight: 700; }
-        .history-row-note { color: #94a3b8; font-size: 0.76rem; font-weight: 700; margin-top: 0.2rem; }
+        .history-line-wrap { padding: 0 0 var(--space-3); }
+        .history-line-table { width: 100%; table-layout: fixed; border-collapse: collapse; color: #334155; }
+        .history-line-table th,
+        .history-line-table td { border-bottom: 1px solid #e5e7eb; padding: 8px 9px; vertical-align: middle; }
+        .history-line-table thead th { background: #f8fafc; color: #64748b; font-size: 10px; font-weight: 900; text-align: left; }
+        .history-line-table thead th:last-child { text-align: right; }
+        .history-line-table tbody tr.group-start > * { border-top: 2px solid #cbd5e1; }
+        .history-line-table tbody tr:first-child > * { border-top: 0; }
+        .history-subject-cell { vertical-align: top !important; background: #f8fafc; color: #1f2937; text-align: left; }
+        .history-subject-name { font-size: 13px; font-weight: 900; line-height: 1.3; }
+        .history-teacher-cell { color: #1f2937; font-size: 11px; font-weight: 900; }
+        .history-variant-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px 10px; }
+        .history-variant { min-width: 0; padding: 1px 0; }
+        .history-variant-head { display: block; min-width: 0; }
+        .history-variant-type { display: block; overflow: hidden; color: #334155; font-size: 9px; font-weight: 900; line-height: 1.35; text-overflow: ellipsis; white-space: nowrap; }
+        .history-variant-count { display: block; color: #64748b; font-size: 9px; font-weight: 800; line-height: 1.35; white-space: nowrap; font-variant-numeric: tabular-nums; }
+        .history-variant-slots { display: block; overflow: hidden; margin-top: 1px; color: #94a3b8; font-size: 8px; font-weight: 800; line-height: 1.35; text-overflow: ellipsis; white-space: nowrap; font-variant-numeric: tabular-nums; }
+        .history-total-amount { color: #111827; font-family: monospace; font-size: 11px; font-weight: 900; text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+        .history-variant-status-cancel { color: #be123c; }
+        .history-variant-status-makeup { color: #b45309; }
+        .history-variant-status-supplement { color: #0e7490; }
         .history-status-cancel { background-color: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
         .history-status-makeup { background-color: #fff7ed; color: #ea580c; border: 1px solid #fed7aa; }
-        .history-status-supplement { background-color: color-mix(in srgb, #0891B2 10%, white); color: #0891B2; border: 1px solid color-mix(in srgb, #0891B2 24%, white); }
+        .history-status-supplement { background-color: #ecfeff; color: #0891b2; border: 1px solid #a5f3fc; }
         .rate-preset-chip { display: inline-flex; align-items: center; justify-content: center; height: 40px; min-height: 40px; padding: 0 8px; border-radius: 9999px; border: 1px solid #dbeafe; background: #eff6ff; color: #004094; font-size: 10px; font-weight: 900; line-height: 1; white-space: nowrap; cursor: pointer; }
         .rate-preset-chip:hover { background: #dbeafe; border-color: #93c5fd; }
         .auto-date-pill { display: inline-flex; align-items: center; justify-content: center; min-width: 28px; height: 26px; padding: 0 8px; border-radius: 9999px; border: 1px solid #bfdbfe; background: #eff6ff; color: #004094; font-size: 11px; font-weight: 900; line-height: 1; cursor: pointer; }
@@ -1367,6 +1395,10 @@
             const durationClass = getCalendarDurationClass(event.durationHours);
             const timeBadge = formatCalendarHourBadge(event.durationHours);
             const subjectInfo = parseSubjectInfo(event.rawName || event.name || '');
+            if (event.historyCompact) {
+                const classes = ['rc-subject', 'rc-history-event', 'text-optical-center', colorClass, durationClass, extraClass].filter(Boolean).join(' ');
+                return `<span class="${classes}"><span class="rc-history-line"><span class="rc-subject-label">${escapeHtml(event.name)}</span><span class="rc-history-type">${escapeHtml(event.typeLabel || '수업')}</span></span><span class="rc-subject-time">${escapeHtml(event.timeLabel || '시간 미기재')}</span></span>`;
+            }
             const isOneOnOne = String(subjectInfo.type || event.rawName || event.name || '').includes('1:1');
             const typeBadge = isOneOnOne ? '<span class="rc-type-badge">1:1</span>' : '';
             const classes = ['rc-subject', 'shadow-sm', 'text-optical-center', colorClass, durationClass, extraClass].filter(Boolean).join(' ');
@@ -1441,6 +1473,12 @@
             const prefix = prefixMap[item.attendanceType] || '';
             const timeText = item.compactTimeRange || formatCompactTimeRange(item.startTime, item.endTime);
             return `${prefix}${info.mainName}${timeText ? ` ${timeText}` : ''}`.trim();
+        }
+        function getHistoryCalendarTypeLabel(item) {
+            const info = parseSubjectInfo(item.subject);
+            const baseType = info.type || '수업';
+            const statusMap = { same_day_cancel: '취소', absence_makeup: '보강', supplementary: '보충' };
+            return statusMap[item.attendanceType] ? `${baseType}·${statusMap[item.attendanceType]}` : baseType;
         }
         function initWorkspaceLayout() {
             const topBar = document.getElementById('workspaceTopBar');
@@ -1532,7 +1570,7 @@
             const isGuide = (tab === 'guide');
             const isFirst = (tab === 'first');
             const adjustmentLabel = document.querySelector('#adjustmentArea label');
-            if (!isPayment) restoreDefaultPriceSummaryArea();
+            restoreDefaultPriceSummaryArea();
             if (adjustmentLabel) adjustmentLabel.innerText = isHistory ? '이월/초과금 조정 (+/-)' : '이월/초과금 (+/-)';
             
             document.getElementById('smartPasteSection').classList.toggle('hidden', isHistory || isPayment || isAi || isTt || isGuide);
@@ -1577,7 +1615,7 @@
             document.getElementById('generatedTextArea').value = isPayment ? "이 모드에서는 자동 생성 문자가 지원되지 않습니다." : "";
             
             if (isHistory) updateHistoryView(); 
-            else if (isPayment) updatePaymentView();
+            else if (isPayment) { updatePaymentView(); renderPaymentReceipt(); }
             else if (isAi) renderAiResult(); 
             else if (isGuide) renderGuideEstimate();
             else if (isFirst) renderFirstRegistrationView();
@@ -2352,22 +2390,26 @@
             });
 
             const subjectRows = Array.from(subjectGroups.entries()).map(([subject, group]) => {
-                const countText = group.sessionCount > 0
-                    ? `${group.items.length}개 · ${formatPaymentNumber(group.sessionCount)}회`
-                    : `${group.items.length}개`;
-                return group.items.map((item, index) => {
-                    const typeText = item.info.type || '수업';
+                const teacherGroups = new Map();
+                group.items.forEach(item => {
                     const teacherText = item.info.teacher || item.name;
-                    const basisText = formatPaymentReceiptBasis(item);
+                    if (!teacherGroups.has(teacherText)) teacherGroups.set(teacherText, { amount: 0, discount: 0, items: [] });
+                    const teacherGroup = teacherGroups.get(teacherText);
+                    teacherGroup.amount += item.amount;
+                    teacherGroup.discount += item.discount;
+                    teacherGroup.items.push(item);
+                });
+                return Array.from(teacherGroups.entries()).map(([teacherText, teacherGroup], index) => {
                     const subjectCell = index === 0
-                        ? `<th scope="rowgroup" rowspan="${group.items.length}" class="payment-subject-cell"><span class="payment-subject-name">${escapeHtml(subject)}</span><span class="payment-subject-meta">${countText}</span></th>`
+                        ? `<th scope="rowgroup" rowspan="${teacherGroups.size}" class="payment-subject-cell"><span class="payment-subject-name">${escapeHtml(subject)}</span></th>`
                         : '';
-                    const discountText = item.discount > 0 ? `<span class="payment-line-discount">할인 -${item.discount.toLocaleString()}원</span>` : '';
-                    return `<tr class="${index === 0 ? 'group-start' : ''}">${subjectCell}<td class="payment-class-cell"><div class="payment-class-line"><span class="payment-class-type">${escapeHtml(typeText)}</span><span class="payment-teacher-name">${escapeHtml(teacherText)}</span></div></td><td class="payment-line-basis">${escapeHtml(basisText)}</td><td class="payment-line-amount">${item.amount.toLocaleString()}원${discountText}</td></tr>`;
+                    const variants = teacherGroup.items.map(item => `<div class="payment-variant"><span class="payment-variant-type">${escapeHtml(item.info.type || '수업')}</span><span class="payment-variant-basis">${escapeHtml(formatPaymentReceiptBasis(item))}</span></div>`).join('');
+                    const discountText = teacherGroup.discount > 0 ? `<span class="payment-line-discount">할인 -${teacherGroup.discount.toLocaleString()}원</span>` : '';
+                    return `<tr class="${index === 0 ? 'group-start' : ''}">${subjectCell}<td class="payment-class-cell"><span class="payment-teacher-name">${escapeHtml(teacherText)}</span></td><td class="payment-line-basis"><div class="payment-variant-grid">${variants}</div></td><td class="payment-line-amount">${teacherGroup.amount.toLocaleString()}원${discountText}</td></tr>`;
                 }).join('');
             }).join('');
             if (subjectRows) {
-                tbody.innerHTML += `<tr><td colspan="2" class="payment-line-wrap"><table class="payment-line-table"><colgroup><col style="width:16%"><col style="width:31%"><col style="width:34%"><col style="width:19%"></colgroup><thead><tr><th scope="col">과목</th><th scope="col">강사·수업</th><th scope="col">산출 기준</th><th scope="col">금액</th></tr></thead><tbody>${subjectRows}</tbody></table></td></tr>`;
+                tbody.innerHTML += `<tr><td colspan="2" class="payment-line-wrap"><table class="payment-line-table"><colgroup><col style="width:15%"><col style="width:20%"><col style="width:43%"><col style="width:22%"></colgroup><thead><tr><th scope="col">과목</th><th scope="col">강사</th><th scope="col">수업 유형·산출 기준</th><th scope="col">금액</th></tr></thead><tbody>${subjectRows}</tbody></table></td></tr>`;
             }
 
             if (adjustmentRows.length) {
@@ -2483,52 +2525,82 @@
             const allMonthHistory = historyData.filter(d => d.year === year && d.month === month);
             const monthHistory = allMonthHistory.filter(d => !d.excludeFromHistory);
             const absenceNoticeCount = allMonthHistory.length - monthHistory.length;
-            const subjectMap = {};
+            const subjectGroups = new Map();
             const summary = { totalAmount: 0, totalHours: 0, totalCount: 0, adjustment };
 
             monthHistory.forEach(item => {
-                const key = buildHistoryRowKey(item);
-                if (!subjectMap[key]) {
-                    subjectMap[key] = {
-                        subject: item.subject,
-                        teacher: item.teacher,
+                const info = parseSubjectInfo(item.subject);
+                const subjectName = info.mainName || '기타 수업';
+                const teacherName = item.teacher || info.teacher || '강사 미기재';
+                if (!subjectGroups.has(subjectName)) subjectGroups.set(subjectName, { teachers: new Map() });
+                const subjectGroup = subjectGroups.get(subjectName);
+                if (!subjectGroup.teachers.has(teacherName)) subjectGroup.teachers.set(teacherName, { totalAmount: 0, variants: new Map() });
+                const teacherGroup = subjectGroup.teachers.get(teacherName);
+                const variantKey = [info.type || '수업', info.timeText || '', item.attendanceType || 'regular'].join('||');
+                if (!teacherGroup.variants.has(variantKey)) {
+                    teacherGroup.variants.set(variantKey, {
+                        type: info.type || '수업',
+                        timeText: info.timeText || '',
+                        attendanceType: item.attendanceType || 'regular',
                         count: 0,
                         totalTime: 0,
                         totalAmount: 0,
-                        isMakeup: item.isMakeup,
-                        attendanceType: item.attendanceType,
-                        compactTimes: []
-                    };
+                        slots: []
+                    });
                 }
-                subjectMap[key].count++;
-                subjectMap[key].totalTime += item.hours;
-                subjectMap[key].totalAmount += item.amount;
-                if (item.compactTimeRange) subjectMap[key].compactTimes.push(item.compactTimeRange);
+                const variant = teacherGroup.variants.get(variantKey);
+                const compactTime = item.compactTimeRange || formatCompactTimeRange(item.startTime, item.endTime);
+                variant.count++;
+                variant.totalTime += item.hours;
+                variant.totalAmount += item.amount;
+                if (compactTime) variant.slots.push(`${item.day}일 ${compactTime}`);
+                teacherGroup.totalAmount += item.amount;
                 summary.totalCount++;
                 summary.totalHours += item.hours;
                 summary.totalAmount += item.amount;
             });
 
-            Object.values(subjectMap).forEach(data => {
-                const info = parseSubjectInfo(data.subject);
-                const colorClass = getSubjectColorClass(data.subject, data.isMakeup, false);
-                const statusMeta = getHistoryStatusMeta(data);
-                const compactTimePreview = Array.from(new Set(data.compactTimes)).slice(0, 3).join(', ');
-                const teacherBadge = data.teacher ? `<span class="history-teacher-pill ${colorClass}">${escapeHtml(data.teacher)}</span>` : '';
-                const statusBadge = statusMeta ? `<span class="${statusMeta.className}">${statusMeta.label}</span>` : '';
-                tbody.innerHTML += `<tr class="border-b border-dashed border-gray-200">
-                    <td class="py-3 pl-1 pr-2 align-top">
-                        <div class="flex items-center flex-wrap gap-2 mb-1">
-                            <span class="history-subject-pill ${colorClass}">${escapeHtml(info.mainName)}</span>
-                            ${teacherBadge}
-                            ${statusBadge}
-                        </div>
-                        <div class="history-row-detail">총 ${data.count}회 (${data.totalTime.toLocaleString()}시간)</div>
-                        <div class="history-row-note">${escapeHtml(compactTimePreview || '시간 정보 없음')}</div>
-                    </td>
-                    <td class="py-3 pr-1 text-right font-mono text-lg font-black text-gray-800 align-top pt-2.5">${data.totalAmount.toLocaleString()}원</td>
-                </tr>`;
-            });
+            const subjectOrder = ['수학', '과학', '영어', '국어', '사탐', '사회'];
+            const historyRows = Array.from(subjectGroups.entries())
+                .sort(([a], [b]) => {
+                    const ai = subjectOrder.indexOf(a);
+                    const bi = subjectOrder.indexOf(b);
+                    return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi) || a.localeCompare(b, 'ko-KR');
+                })
+                .map(([subjectName, subjectGroup]) => {
+                    return Array.from(subjectGroup.teachers.entries()).map(([teacherName, teacherGroup], teacherIndex) => {
+                        const subjectCell = teacherIndex === 0
+                            ? `<th scope="rowgroup" rowspan="${subjectGroup.teachers.size}" class="history-subject-cell"><span class="history-subject-name">${escapeHtml(subjectName)}</span></th>`
+                            : '';
+                        const variants = Array.from(teacherGroup.variants.values()).map(variant => {
+                            const statusLabelMap = {
+                                same_day_cancel: '당일취소',
+                                absence_makeup: '결석보강',
+                                supplementary: '보충'
+                            };
+                            const statusClassMap = {
+                                same_day_cancel: 'history-variant-status-cancel',
+                                absence_makeup: 'history-variant-status-makeup',
+                                supplementary: 'history-variant-status-supplement'
+                            };
+                            const statusLabel = statusLabelMap[variant.attendanceType] || '';
+                            const statusClass = statusClassMap[variant.attendanceType] || '';
+                            const typeText = [
+                                variant.type,
+                                statusLabel,
+                                variant.timeText ? `${variant.timeText}/회` : ''
+                            ].filter(Boolean).join(' · ');
+                            const uniqueSlots = Array.from(new Set(variant.slots));
+                            const preview = uniqueSlots.slice(0, 4).join(', ');
+                            const remaining = uniqueSlots.length > 4 ? ` 외 ${uniqueSlots.length - 4}건` : '';
+                            return `<div class="history-variant"><div class="history-variant-head"><span class="history-variant-type ${statusClass}">${escapeHtml(typeText)}</span><span class="history-variant-count">${formatPaymentNumber(variant.count)}회 · ${formatPaymentNumber(variant.totalTime)}시간</span></div><span class="history-variant-slots">${escapeHtml(preview || '시간 미기재')}${escapeHtml(remaining)}</span></div>`;
+                        }).join('');
+                        return `<tr class="${teacherIndex === 0 ? 'group-start' : ''}">${subjectCell}<td class="history-teacher-cell">${escapeHtml(teacherName)}</td><td><div class="history-variant-grid">${variants}</div></td><td class="history-total-amount">${teacherGroup.totalAmount.toLocaleString()}원</td></tr>`;
+                    }).join('');
+                }).join('');
+            if (historyRows) {
+                tbody.innerHTML = `<tr><td colspan="2" class="history-line-wrap"><table class="history-line-table"><colgroup><col style="width:15%"><col style="width:17%"><col style="width:48%"><col style="width:20%"></colgroup><thead><tr><th scope="col">과목</th><th scope="col">강사</th><th scope="col">수업 내역</th><th scope="col">금액</th></tr></thead><tbody>${historyRows}</tbody></table></td></tr>`;
+            }
 
             const discountInfo = getPercentDiscountInfo(summary.totalAmount);
             const discountRow = discountInfo.amount > 0 ? `<div class="flex justify-between text-rose-500 font-bold text-sm"><span>퍼센트 할인 (${formatDiscountRate(discountInfo.rate)}%)</span><span>-${discountInfo.amount.toLocaleString()}원</span></div>` : '';
@@ -2548,9 +2620,13 @@
 
             renderCommonReceiptCalendar(monthHistory.map(item => ({
                 day: item.day,
-                name: buildHistoryEventLabel(item),
+                name: parseSubjectInfo(item.subject).mainName,
                 rawName: item.subject,
-                isMakeup: item.isMakeup
+                isMakeup: item.isMakeup,
+                historyCompact: true,
+                typeLabel: getHistoryCalendarTypeLabel(item),
+                timeLabel: item.compactTimeRange || formatCompactTimeRange(item.startTime, item.endTime),
+                durationHours: item.hours
             })));
             updateHistoryInfoText(summary, discountInfo);
         }

@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="ko">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>익명 안내서 QA fixture</title>
+    <style>
+        html, body { margin: 0; background: #eef2f7; }
+        iframe { position: fixed; width: 1280px; height: 2200px; border: 0; opacity: 0; pointer-events: none; }
+        #result { display: block; width: 760px; margin: 24px auto; background: white; }
+        #status { padding: 24px; font: 700 14px/1.5 sans-serif; color: #334155; text-align: center; }
+    </style>
+</head>
+<body>
+    <div id="status">익명 검증 화면을 준비하고 있습니다.</div>
+    <img id="result" alt="익명 수강료 계산기 안내서 검증 화면">
+    <iframe id="app" src="../../../../index.html?qa=20260731-3"></iframe>
+    <script>
+        const historyFixture = `연결\t일자\t반명\t관\t출결\tTR\t시작\t종료\t시간\t시간당\t금액\t할인\t참고
+10001\t7/1(수)\t수학-1:1(강사A)-2h\t반포\t출석\t강사A\t오후 2:00\t오후 4:00\t2.0\t100,000\t200,000
+10002\t7/1(수)\t수학-개별(강사A)-3h\t반포\t출석\t강사A\t오후 4:00\t오후 7:00\t3.0\t29,167\t87,500
+10003\t7/2(목)\t과학-1:1(강사B)-1h\t반포\t출석\t강사B\t오후 3:00\t오후 5:00\t2.0\t100,000\t200,000
+10004\t7/3(금)\t영어-개별(강사C)-2h\t반포\t출석\t강사C\t오후 6:00\t오후 8:00\t2.0\t31,250\t62,500
+10005\t7/4(토)\t국어-1:1(강사D)-2h\t반포\t출석\t강사D\t오후 7:00\t오후 9:00\t2.0\t110,000\t220,000
+10006\t7/8(수)\t수학-1:1(강사A)-2h\t반포\t출석\t강사A\t오후 2:00\t오후 4:00\t2.0\t100,000\t200,000
+10007\t7/8(수)\t수학-개별(강사A)-3h\t반포\t출석\t강사A\t오후 4:00\t오후 7:00\t3.0\t29,167\t87,500
+10008\t7/9(목)\t과학-1:1(강사B)-1h\t반포\t출석\t강사B\t오후 3:00\t오후 5:00\t2.0\t100,000\t200,000
+10009\t7/10(금)\t영어-개별(강사C)-2h\t반포\t출석\t강사C\t오후 6:00\t오후 8:00\t2.0\t31,250\t62,500
+10010\t7/11(토)\t국어-1:1(강사D)-2h\t반포\t출석\t강사D\t오후 7:00\t오후 9:00\t2.0\t110,000\t220,000
+10011\t7/15(수)\t수학-1:1(강사A)-2h\t반포\t당일취소\t강사A\t오후 2:00\t오후 4:00\t2.0\t100,000\t200,000
+10012\t7/15(수)\t수학-개별(강사A)-3h\t반포\t출석\t강사A\t오후 4:00\t오후 7:00\t3.0\t29,167\t87,500
+10013\t7/16(목)\t과학-1:1(강사B)-1h\t반포\t결석보강\t강사B\t오후 3:00\t오후 5:00\t2.0\t100,000\t200,000
+10014\t7/17(금)\t영어-개별(강사C)-2h\t반포\t출석\t강사C\t오후 6:00\t오후 8:00\t2.0\t31,250\t62,500
+10015\t7/18(토)\t국어-1:1(강사D)-2h\t반포\t출석\t강사D\t오후 7:00\t오후 9:00\t2.0\t110,000\t220,000
+10016\t7/22(수)\t수학-개별(강사A)-2h\t반포\t보충\t강사A\t오후 5:00\t오후 7:00\t2.0\t31,250\t0
+10017\t7/23(목)\t과학-1:1(강사B)-1h\t반포\t결석예고\t강사B\t오후 3:00\t오후 5:00\t0\t100,000\t0`;
+
+        const paymentFixture = `납입기한\t이름\t항목\t반명\t▶회당\t▶횟수\t■금액\t할인\t할인사유
+26-07-01(수)\t/테스트학생\t\t수학-1:1(강사A)-2h\t100,000\t4\t400,000
+26-07-01(수)\t/테스트학생\t\t수학-개별(강사A)-3h\t87,500\t2\t175,000
+26-07-01(수)\t/테스트학생\t\t수학-개별(강사A)-2h\t62,500\t2\t125,000
+26-07-01(수)\t/테스트학생\t\t과학-1:1(강사B)-1h\t100,000\t3\t300,000
+26-07-01(수)\t/테스트학생\t\t과학-개별(강사B)-3h\t87,500\t1\t87,500
+26-07-01(수)\t/테스트학생\t\t영어-개별(강사C)-2h\t62,500\t2\t125,000
+26-07-01(수)\t/테스트학생\t납부금액\t현장결제-카드\t-500,000\t\t-500,000
+26-07-01(수)\t/테스트학생\t초과금\t\t50,000\t\t50,000
+\t\t\t\t\t\t762,500`;
+
+        const frame = document.getElementById('app');
+        frame.addEventListener('load', () => {
+            window.setTimeout(async () => {
+                const win = frame.contentWindow;
+                const doc = frame.contentDocument;
+                win.alert = () => {};
+                doc.getElementById('studentName').value = '테스트학생';
+                doc.getElementById('targetYear').value = 2026;
+                doc.getElementById('targetMonth').value = 7;
+                if (location.hash === '#payment') {
+                    win.switchTab('payment');
+                    doc.getElementById('paymentPasteInput').value = paymentFixture;
+                    win.processPaymentPaste();
+                } else {
+                    win.switchTab('history');
+                    doc.getElementById('historyPasteInput').value = historyFixture;
+                    win.processHistoryPaste();
+                }
+                await new Promise(resolve => window.setTimeout(resolve, 300));
+                const canvas = await win.html2canvas(doc.getElementById('captureArea'), {
+                    scale: 1,
+                    backgroundColor: '#ffffff',
+                    useCORS: true,
+                    logging: false
+                });
+                document.getElementById('result').src = canvas.toDataURL('image/png');
+                document.getElementById('status').remove();
+                frame.style.display = 'none';
+                window.scrollTo(0, 0);
+            }, 1200);
+        });
+    </script>
+</body>
+</html>
