@@ -73,12 +73,13 @@
         .mode-timetable .tt-day { background-color: #fff7ed !important; color: #ea580c !important; font-weight: bold; border: 1px solid #fed7aa; }
 
         .receipt-cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; background-color: #e5e7eb; border: 1px solid #e5e7eb; }
-        .receipt-cal-cell { background-color: white; min-height: 65px; height: auto; padding: var(--space-optical-2); display: flex; flex-direction: column; align-items: center; justify-content: flex-start; }
+        .receipt-cal-cell { background-color: white; min-height: 58px; height: auto; padding: var(--space-optical-2); display: flex; flex-direction: column; align-items: center; justify-content: flex-start; }
         .rc-date { font-size: 0.75rem; font-weight: bold; color: #9ca3af; margin-bottom: var(--space-optical-2); line-height: 1; width: 100%; text-align: center; }
-        .rc-subject { width: 100%; text-align: center; padding: var(--space-optical-3) var(--space-1); border-radius: 6px; margin-bottom: var(--space-optical-2); font-weight: 800; line-height: 1.1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; overflow: hidden; min-height: 26px; }
+        .rc-subject { width: 100%; text-align: center; padding: var(--space-optical-2) var(--space-optical-3); border-radius: 6px; margin-bottom: 1px; font-weight: 800; line-height: 1.1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0; overflow: hidden; min-height: 22px; }
+        .rc-subject-main { display: flex; width: 100%; min-width: 0; align-items: center; justify-content: center; gap: var(--space-optical-2); line-height: 1.15; }
         .rc-subject-label { display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.68rem; font-weight: 900; }
         .rc-subject-time { display: block; margin-left: 0; font-size: 0.58rem; font-weight: 900; letter-spacing: -0.01em; opacity: 0.95; white-space: nowrap; }
-        .rc-type-badge { display: inline-flex; align-items: center; justify-content: center; height: 13px; min-width: 20px; padding: 0 var(--space-optical-3); border-radius: 999px; font-size: 0.5rem; font-weight: 1000; line-height: 1; background-color: #be123c; color: white; box-shadow: 0 1px 2px rgba(15, 23, 42, 0.12); }
+        .rc-type-badge { display: inline-flex; flex: none; align-items: center; justify-content: center; min-width: 18px; padding: 1px var(--space-optical-3); border-radius: 999px; font-size: 0.46rem; font-weight: 1000; line-height: 1.15; background-color: #be123c; color: white; box-shadow: 0 1px 2px rgba(15, 23, 42, 0.12); }
         
         .subj-default { background-color: #eaf2ff; color: #486581; }
         .subj-math { background-color: #d9e8ff; color: #355c9a; }
@@ -102,7 +103,7 @@
         .teacher-badge { background-color: #f3f4f6; color: #4b5563; border: 1px solid #d1d5db; }
         .time-badge { background-color: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; }
         .makeup-badge { background-color: #fff7ed; color: #ea580c; border: 1px solid #fed7aa; }
-        .rc-subject { line-height: 1.25; padding: var(--space-optical-2) var(--space-optical-3); }
+        .rc-subject { line-height: 1.2; }
         .rc-duration-strong { filter: saturate(1.04) brightness(0.98); }
         .rc-duration-strong.subj-kor { background-color: #bfe9cf; color: #2c6a4b; }
         .rc-duration-strong.subj-math { background-color: #bfd7fb; color: #35548f; }
@@ -119,11 +120,14 @@
         .rc-duration-max.subj-default { background-color: #8ea9c9; color: #ffffff; }
 
         /* html2canvas 캡처 전용 보정 */
-        .capture-mode .badge-base,
+        .capture-mode .badge-base { display: inline-block !important; height: auto !important; min-height: 0 !important; padding: 4px 8px 3px !important; line-height: 1.25 !important; vertical-align: middle !important; transform: none !important; }
         .capture-mode #dateBadge > span,
-        .capture-mode .text-optical-center,
-        .capture-mode .rc-subject { line-height: 1.25 !important; padding-top: 0 !important; transform: none !important; }
-        .capture-mode .rc-subject { display: flex !important; align-items: center !important; justify-content: center !important; min-height: 16px !important; }
+        .capture-mode .text-optical-center { line-height: 1.3 !important; padding: 1px 0 2px !important; transform: none !important; }
+        .capture-mode .rc-subject { display: flex !important; align-items: center !important; justify-content: center !important; min-height: 22px !important; padding: 2px 3px !important; line-height: 1.2 !important; transform: none !important; }
+        .capture-mode .rc-type-badge { display: inline-block !important; min-width: 18px !important; padding: 1px 3px 2px !important; line-height: 1.2 !important; vertical-align: middle !important; }
+        .capture-mode .rc-subject-label,
+        .capture-mode .rc-subject-time { line-height: 1.2 !important; padding-bottom: 1px !important; }
+        .capture-mode .receipt-shadow,
         .capture-mode .shadow-inner { box-shadow: none !important; }
         .capture-mode .backdrop-blur-sm { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
 
@@ -133,9 +137,9 @@
         .receipt-content { position: relative; z-index: 10; display: flex; width: 100%; gap: 1.5rem; }
         
         /* [V54] 레이아웃 리디자인: 시간표 탭 전용 스타일 */
-        .layout-default { flex-direction: row; }
-        .layout-default .receipt-left { flex: 1 1 56%; order: 1; min-width: 0; }
-        .layout-default .receipt-right { flex: 0 0 42%; order: 2; display: flex; flex-direction: column; min-width: 0; }
+        .layout-default { flex-direction: row; gap: 1rem; }
+        .layout-default .receipt-left { flex: 1 1 50%; order: 1; min-width: 0; }
+        .layout-default .receipt-right { flex: 0 0 48%; order: 2; display: flex; flex-direction: column; min-width: 0; }
         
         .layout-history { gap: 1rem; flex-direction: column; }
         .layout-history .receipt-left { order: 2; width: 100%; }
@@ -647,7 +651,7 @@
             </div>
 
             <div class="w-full mb-6">
-                <button onclick="downloadImage()" class="w-full py-3 bg-[#004094] text-white font-bold rounded-xl shadow-xl hover:bg-blue-900 transition flex justify-center items-center gap-2 mb-4 transform hover:-translate-y-1 text-base"><span class="text-optical-center">📸 이미지 저장</span></button>
+                <button onclick="downloadImage()" class="image-save-button w-full min-h-11 px-4 py-3 bg-[#004094] text-white font-bold rounded-xl shadow-xl hover:bg-blue-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#004094] focus-visible:ring-offset-2 active:scale-[0.96] transition-transform flex justify-center items-center gap-2 mb-4 text-base"><span aria-hidden="true" class="leading-none">📸</span><span class="leading-[1.3] pb-px">이미지 저장</span></button>
                 <div class="bg-gray-100 border border-gray-300 rounded-xl p-4">
                     <div class="flex justify-between items-center mb-2"><div class="text-xs font-bold text-gray-700">💬 안내 문자 (자동생성)</div><button onclick="copyGeneratedText()" class="text-[10px] bg-gray-600 text-white px-2 py-1 rounded hover:bg-gray-800">복사하기</button></div>
                     <div id="messageControlArea" class="grid grid-cols-2 gap-2 mb-2">
@@ -1391,18 +1395,19 @@
             return '';
         }
         function renderCalendarEventPill(event, extraClass = '') {
-            const colorClass = getSubjectColorClass(event.rawName || event.name, event.isMakeup, event.isPredicted);
             const durationClass = getCalendarDurationClass(event.durationHours);
             const timeBadge = formatCalendarHourBadge(event.durationHours);
             const subjectInfo = parseSubjectInfo(event.rawName || event.name || '');
+            const isOneOnOne = String(subjectInfo.type || event.rawName || event.name || '').includes('1:1');
+            const colorSource = isOneOnOne ? subjectInfo.mainName : (event.rawName || event.name);
+            const colorClass = getSubjectColorClass(colorSource, event.isMakeup, event.isPredicted);
             if (event.historyCompact) {
                 const classes = ['rc-subject', 'rc-history-event', 'text-optical-center', colorClass, durationClass, extraClass].filter(Boolean).join(' ');
                 return `<span class="${classes}"><span class="rc-history-line"><span class="rc-subject-label">${escapeHtml(event.name)}</span><span class="rc-history-type">${escapeHtml(event.typeLabel || '수업')}</span></span><span class="rc-subject-time">${escapeHtml(event.timeLabel || '시간 미기재')}</span></span>`;
             }
-            const isOneOnOne = String(subjectInfo.type || event.rawName || event.name || '').includes('1:1');
             const typeBadge = isOneOnOne ? '<span class="rc-type-badge">1:1</span>' : '';
             const classes = ['rc-subject', 'shadow-sm', 'text-optical-center', colorClass, durationClass, extraClass].filter(Boolean).join(' ');
-            return `<span class="${classes}"><span class="rc-subject-label">${escapeHtml(event.name)}</span>${typeBadge}${timeBadge ? `<span class="rc-subject-time">${timeBadge}</span>` : ''}</span>`;
+            return `<span class="${classes}"><span class="rc-subject-main"><span class="rc-subject-label">${escapeHtml(event.name)}</span>${typeBadge}</span>${timeBadge ? `<span class="rc-subject-time">${timeBadge}</span>` : ''}</span>`;
         }
         function parseAccessTime(tStr) { if(!tStr) return ''; const isPM = tStr.includes('오후'); let [h, m] = tStr.replace('오전', '').replace('오후', '').trim().split(':'); h = parseInt(h); if(isPM && h !== 12) h += 12; if(!isPM && h === 12) h = 0; return `${h}:${m}`; }
         function formatCompactTimePart(timeText) {
@@ -3039,14 +3044,15 @@
         async function downloadImage() {
             let previousWidth = '';
             let previousMaxWidth = '';
+            const captureWidth = 1120;
             try {
                 const target = document.getElementById('captureArea');
                 const captureStudentName = currentTab === 'guide' ? getGuideEstimateStudentLabel() : (document.getElementById('studentName').value || '학생명');
                 document.getElementById('dispName').textContent = captureStudentName;
                 previousWidth = target.style.width;
                 previousMaxWidth = target.style.maxWidth;
-                target.style.width = '1000px';
-                target.style.maxWidth = '1000px';
+                target.style.width = `${captureWidth}px`;
+                target.style.maxWidth = `${captureWidth}px`;
                 if (document.fonts && document.fonts.ready) await document.fonts.ready;
                 await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
                 const canvas = await html2canvas(target, {
@@ -3055,6 +3061,8 @@
                     backgroundColor: '#fff',
                     onclone: (doc) => {
                         doc.body.classList.add('capture-mode');
+                        const clonedTarget = doc.getElementById('captureArea');
+                        if (clonedTarget) clonedTarget.style.backgroundColor = '#ffffff';
                         const clonedName = doc.getElementById('dispName');
                         if (clonedName) clonedName.textContent = captureStudentName;
                     }

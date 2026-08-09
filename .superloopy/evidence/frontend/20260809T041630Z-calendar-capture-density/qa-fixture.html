@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="ko">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>고밀도 캘린더·이미지 저장 QA</title>
+    <style>
+        html, body { margin: 0; background: #eef2f7; }
+        iframe { position: fixed; width: 1280px; height: 2400px; border: 0; opacity: 0; pointer-events: none; }
+        #result { display: block; width: 1120px; max-width: calc(100vw - 32px); height: auto; margin: 16px auto; background: white; }
+        #status { padding: 24px; font: 700 14px/1.5 sans-serif; color: #334155; text-align: center; }
+    </style>
+</head>
+<body>
+    <div id="status">익명 고밀도 안내서를 준비하고 있습니다.</div>
+    <img id="result" alt="익명 고밀도 수강료 안내서 검증 화면">
+    <iframe id="app" src="../../../../index.html?qa=20260809-calendar-capture"></iframe>
+    <script>
+        const captureScale = new URLSearchParams(location.search).has('preview') ? 1 : 2;
+        const lessons = [
+            ['수학-1:1(강사A)-2h', 180000, 5],
+            ['수학-개별(강사A)-3h', 84375, 6],
+            ['수학-개별(강사B)-2h', 56250, 8],
+            ['국어-1:1(강사C)-2h', 180000, 5],
+            ['국어-개별(강사C)-2h', 56250, 5],
+            ['영어-1:1(강사D)-2h', 180000, 6],
+            ['영어-개별(강사D)-2h', 56250, 8]
+        ];
+        const busyDays = [1, 3, 4, 5, 8, 10, 11, 12, 15, 17, 18, 19, 22, 24, 25, 26, 29, 31];
+        const frame = document.getElementById('app');
+        frame.addEventListener('load', () => {
+            window.setTimeout(async () => {
+                const win = frame.contentWindow;
+                const doc = frame.contentDocument;
+                win.alert = () => {};
+                doc.getElementById('studentName').value = '테스트학생';
+                doc.getElementById('targetYear').value = 2026;
+                doc.getElementById('targetMonth').value = 8;
+                doc.getElementById('dispName').textContent = '테스트학생';
+                doc.getElementById('dispDate').textContent = '2026년 8월분';
+
+                const rows = lessons.map(([rawName, rate, count]) => {
+                    const info = win.parseSubjectInfo(rawName);
+                    return `<tr class="border-b border-dashed border-gray-200 last:border-0"><td class="py-2 pl-1 pr-2 align-top no-wrap-cell"><div class="flex items-center flex-wrap gap-y-1 mb-0.5"><span class="font-extrabold text-gray-800 text-base mr-1">${info.mainName}</span><span class="time-badge badge-base text-optical-center mr-1">${info.timeText}</span>${win.buildSubjectBadges(info)}</div><div class="text-xs text-gray-500 pl-0.5">월 ${count}회 × ${rate.toLocaleString()}원(회당)</div></td><td class="py-2 pr-1 text-right font-mono text-base font-black text-gray-800 align-top pt-1.5">${(rate * count).toLocaleString()}원</td></tr>`;
+                }).join('');
+                doc.getElementById('receiptBody').innerHTML = rows;
+
+                const events = [];
+                busyDays.forEach((day, dayIndex) => {
+                    const count = day % 4 === 0 ? 4 : (day % 3 === 0 ? 3 : 2);
+                    for (let i = 0; i < count; i++) {
+                        const rawName = lessons[(dayIndex + i) % lessons.length][0];
+                        events.push({
+                            day,
+                            name: win.parseSubjectInfo(rawName).mainName,
+                            rawName,
+                            durationHours: win.parseDurationHours(win.parseSubjectInfo(rawName).timeText)
+                        });
+                    }
+                });
+                win.renderCommonReceiptCalendar(events);
+                await new Promise(resolve => window.setTimeout(resolve, 300));
+                const cells = [...doc.querySelectorAll('#receiptMiniCalGrid .receipt-cal-cell')];
+                document.body.dataset.metrics = JSON.stringify({
+                    eventCount: doc.querySelectorAll('#receiptMiniCalGrid .rc-subject').length,
+                    oneOnOneCount: doc.querySelectorAll('#receiptMiniCalGrid .rc-type-badge').length,
+                    maxCellHeight: Math.max(...cells.map(cell => Math.round(cell.getBoundingClientRect().height))),
+                    calendarWidth: Math.round(doc.getElementById('receiptMiniCalGrid').getBoundingClientRect().width),
+                    receiptRightWidth: Math.round(doc.querySelector('.receipt-right').getBoundingClientRect().width),
+                    overflowCount: cells.filter(cell => cell.scrollHeight > cell.clientHeight).length
+                });
+
+                if (location.hash === '#raw') {
+                    document.getElementById('status').remove();
+                    frame.style.position = 'static';
+                    frame.style.display = 'block';
+                    frame.style.opacity = '1';
+                    frame.style.width = '1280px';
+                    frame.style.height = '2200px';
+                    return;
+                }
+
+                const target = doc.getElementById('captureArea');
+                target.style.width = '1120px';
+                target.style.maxWidth = '1120px';
+                await new Promise(resolve => win.requestAnimationFrame(() => win.requestAnimationFrame(resolve)));
+                const captureCells = [...doc.querySelectorAll('#receiptMiniCalGrid .receipt-cal-cell')];
+                document.body.dataset.captureMetrics = JSON.stringify({
+                    maxCellHeight: Math.max(...captureCells.map(cell => Math.round(cell.getBoundingClientRect().height))),
+                    calendarWidth: Math.round(doc.getElementById('receiptMiniCalGrid').getBoundingClientRect().width),
+                    receiptRightWidth: Math.round(doc.querySelector('.receipt-right').getBoundingClientRect().width),
+                    overflowCount: captureCells.filter(cell => cell.scrollHeight > cell.clientHeight).length
+                });
+                const canvas = await win.html2canvas(target, {
+                    scale: captureScale,
+                    backgroundColor: '#ffffff',
+                    useCORS: true,
+                    logging: false,
+                    onclone: clonedDoc => {
+                        clonedDoc.body.classList.add('capture-mode');
+                        const clonedTarget = clonedDoc.getElementById('captureArea');
+                        if (clonedTarget) clonedTarget.style.backgroundColor = '#ffffff';
+                    }
+                });
+                document.getElementById('result').src = canvas.toDataURL('image/png');
+                document.getElementById('status').remove();
+                frame.style.display = 'none';
+                window.scrollTo(0, 0);
+            }, 1200);
+        });
+    </script>
+</body>
+</html>
