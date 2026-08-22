@@ -511,6 +511,30 @@
                 <div class="editor-body p-4 bg-gray-50 h-[540px] overflow-y-auto custom-scroll">
                     <div id="tab-auto" class="hidden"><div id="autoList" class="space-y-3"></div><button onclick="addAutoRow()" class="mt-4 w-full py-3 border-2 border-dashed border-gray-300 text-gray-400 text-xs font-bold rounded hover:border-[#004094] hover:text-[#004094]">+ 과목 추가</button></div>
                     <div id="tab-select" class="hidden">
+                        <div class="mb-3 rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+                            <div class="flex items-start justify-between gap-3">
+                                <div>
+                                    <h4 class="text-xs font-black text-slate-800">날짜 일괄 조정</h4>
+                                    <p class="mt-1 text-[10px] font-bold leading-4 text-slate-500">납부 기준일 이후 수업을 한 번에 제외하거나, 달력에서 제외일을 직접 고를 수 있습니다.</p>
+                                </div>
+                                <div class="inline-flex shrink-0 rounded-lg bg-slate-100 p-1" role="group" aria-label="선택형 달력 동작">
+                                    <button type="button" id="selectModeRowButton" onclick="setSelectCalendarMode('row')" class="rounded-md px-2.5 py-1.5 text-[10px] font-black">과목 날짜</button>
+                                    <button type="button" id="selectModeExcludeButton" onclick="setSelectCalendarMode('exclude')" class="rounded-md px-2.5 py-1.5 text-[10px] font-black">전체 제외</button>
+                                </div>
+                            </div>
+                            <div class="mt-3 grid grid-cols-[minmax(0,1fr)_auto] gap-2">
+                                <label class="relative block">
+                                    <span class="sr-only">납부 기준일</span>
+                                    <input id="selectCutoffDay" type="number" min="1" max="31" value="15" class="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 pr-9 text-right text-sm font-black tabular-nums text-slate-800 focus:border-[#004094] focus:outline-none" onkeydown="if(event.key==='Enter') applySelectCutoff()">
+                                    <span class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-bold text-slate-400">일까지</span>
+                                </label>
+                                <button type="button" onclick="applySelectCutoff()" class="h-10 rounded-lg bg-[#004094] px-4 text-[11px] font-black text-white hover:bg-blue-800">선택일까지 계산</button>
+                            </div>
+                            <div class="mt-2 flex items-center justify-between gap-3">
+                                <span id="selectExclusionSummary" class="text-[10px] font-bold text-slate-500">전체 제외일 없음</span>
+                                <button type="button" onclick="clearSelectGlobalExclusions()" class="min-h-9 rounded-lg px-2.5 text-[10px] font-black text-slate-500 hover:bg-slate-100 hover:text-slate-800">전체 제외 해제</button>
+                            </div>
+                        </div>
                         <div class="mb-3 bg-white p-3 rounded-xl border border-blue-100 shadow-sm">
                             <div class="flex items-center justify-between gap-3 mb-2">
                                 <h4 class="text-xs font-black text-[#004094]">요일고정 반명 가져오기</h4>
@@ -564,10 +588,7 @@
                         <div class="bg-white p-3 rounded border border-indigo-200 mb-3">
                             <h4 class="text-xs font-bold text-indigo-700 mb-2">🤖 진행된 수업 데이터 (패턴 분석용)</h4>
                             <textarea id="aiPasteInput" class="w-full h-24 text-[10px] p-2 border border-gray-200 rounded focus:outline-none focus:border-indigo-500 font-mono resize-none bg-gray-50 whitespace-pre" placeholder="Access 데이터 붙여넣기"></textarea>
-                            <div class="flex gap-2 mt-2">
-                                <div class="flex-1"><label class="block text-[10px] font-bold text-gray-500 mb-0.5">이월/초과금</label><input type="number" id="aiAdjustment" class="w-full p-2 border border-indigo-200 rounded text-right text-xs" placeholder="0" oninput="renderAiResult()"></div>
-                                <button onclick="processAiPrediction()" class="flex-[2] bg-indigo-600 text-white text-xs font-bold rounded hover:bg-indigo-700">패턴 분석 및 남은 수업 예측</button>
-                            </div>
+                            <button onclick="processAiPrediction()" class="mt-2 min-h-10 w-full rounded bg-indigo-600 text-xs font-bold text-white hover:bg-indigo-700">패턴 분석 및 남은 수업 예측</button>
                         </div>
                         <div id="aiResultArea" class="hidden space-y-2"><h4 class="text-xs font-bold text-gray-600">📊 분석 결과</h4><div id="aiList" class="space-y-2"></div></div>
                     </div>
@@ -577,9 +598,16 @@
                         <div id="paymentGridArea" class="hidden"><div class="mb-2 flex items-center justify-between gap-3"><div><h4 class="text-xs font-black text-gray-700">✏️ 계산 내역 확인</h4><p class="mt-0.5 text-[10px] font-bold text-slate-500">금액·할인은 수정할 수 있고, 산출 기준은 Access 원본에서 가져옵니다.</p></div><button onclick="renderPaymentReceipt()" class="min-h-10 shrink-0 rounded-lg bg-blue-700 px-3 text-xs font-black text-white hover:bg-blue-800">2. 안내서 갱신</button></div><div class="payment-grid-scroll overflow-x-auto"><table class="grid-editor" id="paymentGridTable"><thead><tr><th style="width: 66px;">구분</th><th>항목명</th><th style="width: 180px;">산출 기준</th><th style="width: 92px;" class="text-right">금액</th><th style="width: 72px;" class="text-right">할인</th><th style="width: 48px;" class="text-center">삭제</th></tr></thead><tbody id="paymentGridBody"></tbody></table></div></div>
                     </div>
                 </div>
-                <div id="adjustmentArea" class="p-4 border-t bg-white flex items-center justify-between shadow-[0_-5px_15px_rgba(0,0,0,0.05)] relative z-10">
-                    <label for="adjustment" class="text-xs font-bold text-gray-600">이월/초과금 (+/-)</label>
-                    <input type="number" id="adjustment" value="0" class="w-32 p-2 border border-gray-300 rounded text-right text-sm font-bold" oninput="handleAdjustmentInput()">
+                <div id="adjustmentArea" class="relative z-10 border-t bg-white p-4 shadow-[0_-5px_15px_rgba(0,0,0,0.05)]">
+                    <div class="flex items-start justify-between gap-3">
+                        <div>
+                            <h3 class="text-xs font-black text-slate-800">이월·초과금 내역</h3>
+                            <p class="mt-1 text-[10px] font-bold leading-4 text-slate-500">이월금은 음수(-), 초과금은 양수(+)로 입력하세요.</p>
+                        </div>
+                        <button type="button" onclick="addAdjustmentItem()" class="min-h-9 shrink-0 rounded-lg border border-slate-200 px-3 text-[10px] font-black text-slate-600 hover:border-[#004094] hover:text-[#004094]">+ 항목 추가</button>
+                    </div>
+                    <div id="adjustmentList" class="mt-3 space-y-2"></div>
+                    <input type="hidden" id="adjustment" value="0">
                 </div>
             </div>
         </div>
@@ -767,6 +795,9 @@
         const autoRowExcludedDates = {};
         let activeSelectRowId = null;  
         const selectRowDates = {};     
+        let selectCalendarMode = 'row';
+        let selectCutoffExcludedDates = new Set();
+        let adjustmentItemCounter = 0;
         let historyData = [];
         let paymentData = [];
         let paymentSourceTotal = null;
@@ -787,7 +818,7 @@
         const SUPABASE_TABLE = 'fee_calc_records';
         const FEECALC_ACCESS_CODE_KEY = 'feecalc_access_code';
         const FEECALC_DEFAULT_ACCESS_CODE = 'banpo-fee-2026-secure';
-        const FEECALC_STORAGE_VERSION = 5;
+        const FEECALC_STORAGE_VERSION = 6;
         const PRICE_PRESETS_STORAGE_KEY = 'feecalc_price_presets';
         const AD_TEXT_STORAGE_KEY = 'feecalc_ad_text';
         const GUIDE_MESSAGES_STORAGE_KEY = 'feecalc_guide_messages';
@@ -832,6 +863,7 @@
             hydratePricePresets();
             hydrateAdText();
             hydrateGuideMessages();
+            setAdjustmentItems([]);
             addAutoRow();
             addGuideEstimateRow();
             addFirstRegRow();
@@ -1271,6 +1303,83 @@
             `).join('');
             return combined.total;
         }
+        function normalizeAdjustmentItems(items = [], legacyAmount = 0) {
+            const normalized = (Array.isArray(items) ? items : []).map((item, index) => ({
+                label: String(item?.label || item?.name || `조정 ${index + 1}`).trim() || `조정 ${index + 1}`,
+                amount: Number(item?.amount) || 0
+            }));
+            if (!normalized.length && Number(legacyAmount)) normalized.push({ label: '이월/초과금 조정', amount: Number(legacyAmount) || 0 });
+            return normalized;
+        }
+        function collectAdjustmentItems(includeBlank = false) {
+            return Array.from(document.querySelectorAll('#adjustmentList .adjustment-item')).map((row, index) => ({
+                label: (row.querySelector('.adjustment-label')?.value || '').trim() || `조정 ${index + 1}`,
+                amount: Number(row.querySelector('.adjustment-amount')?.value) || 0
+            })).filter(item => includeBlank || item.amount !== 0);
+        }
+        function getAdjustmentTotal(items = collectAdjustmentItems()) {
+            return items.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+        }
+        function formatSignedAmount(amount = 0) {
+            const value = Number(amount) || 0;
+            return `${value > 0 ? '+' : ''}${value.toLocaleString()}원`;
+        }
+        function syncLegacyAdjustmentInput() {
+            const input = document.getElementById('adjustment');
+            if (input) input.value = String(getAdjustmentTotal());
+        }
+        function addAdjustmentItem(label = '', amount = '', options = {}) {
+            const list = document.getElementById('adjustmentList');
+            if (!list) return;
+            const id = `adjustment-${++adjustmentItemCounter}`;
+            const safeAmount = amount === '' || amount === null || amount === undefined ? '' : Number(amount) || 0;
+            list.insertAdjacentHTML('beforeend', `
+                <div id="${id}" class="adjustment-item grid grid-cols-[minmax(0,1fr)_128px_40px] items-center gap-2">
+                    <input type="text" class="adjustment-label h-10 min-w-0 rounded-lg border border-slate-200 px-3 text-xs font-bold text-slate-700 focus:border-[#004094] focus:outline-none" value="${escapeHtml(label)}" placeholder="예: 8월 이월금" oninput="handleAdjustmentInput()">
+                    <input type="number" class="adjustment-amount h-10 w-full rounded-lg border border-slate-200 px-3 text-right text-sm font-black tabular-nums text-slate-800 focus:border-[#004094] focus:outline-none" value="${safeAmount}" placeholder="-325000" oninput="handleAdjustmentInput()">
+                    <button type="button" aria-label="이월·초과금 항목 삭제" onclick="removeAdjustmentItem('${id}')" class="h-10 w-10 rounded-lg text-lg font-bold text-slate-300 hover:bg-red-50 hover:text-red-500">×</button>
+                </div>`);
+            if (!options.silent) handleAdjustmentInput();
+        }
+        function removeAdjustmentItem(id) {
+            document.getElementById(id)?.remove();
+            handleAdjustmentInput();
+        }
+        function setAdjustmentItems(items = [], legacyAmount = 0) {
+            const list = document.getElementById('adjustmentList');
+            if (!list) return;
+            list.innerHTML = '';
+            normalizeAdjustmentItems(items, legacyAmount).forEach(item => addAdjustmentItem(item.label, item.amount, { silent: true }));
+            syncLegacyAdjustmentInput();
+        }
+        function buildAdjustmentMessageLines(items = collectAdjustmentItems()) {
+            const normalized = normalizeAdjustmentItems(items);
+            if (!normalized.length) return ['이월·초과금 조정은 없습니다.'];
+            return normalized.map(item => `${item.label}: ${formatSignedAmount(item.amount)}`);
+        }
+        function buildAdjustmentSummaryRowsHtml(items = collectAdjustmentItems(), extraItems = []) {
+            const rows = [...normalizeAdjustmentItems(items), ...normalizeAdjustmentItems(extraItems)];
+            if (!rows.length) return '<div class="flex justify-between text-slate-400 font-bold text-sm"><span>이월·초과금 조정</span><span>0원</span></div>';
+            return rows.map(item => `<div class="flex justify-between gap-4 ${getAdjustmentTextClass(item.amount)} font-bold text-sm"><span class="min-w-0 truncate">${escapeHtml(item.label)}</span><span class="shrink-0 font-mono tabular-nums">${formatSignedAmount(item.amount)}</span></div>`).join('');
+        }
+        function renderAdjustmentSummary(items = collectAdjustmentItems(), options = {}) {
+            const row = document.getElementById('dispAdjRow');
+            if (!row) return;
+            const normalized = normalizeAdjustmentItems(items);
+            const total = getAdjustmentTotal(normalized) + (Number(options.extraAmount) || 0);
+            const rows = [...normalized];
+            if (Number(options.extraAmount)) rows.push({ label: options.extraLabel || '학생별 이월·초과금', amount: Number(options.extraAmount) });
+            if (!rows.length) rows.push({ label: '이월·초과금 조정', amount: 0 });
+            row.className = 'space-y-1';
+            row.innerHTML = rows.map((item, index) => `
+                <div class="flex justify-between gap-4 text-sm font-bold ${getAdjustmentTextClass(item.amount)}">
+                    <span class="min-w-0 truncate">${escapeHtml(item.label)}</span>
+                    <span class="shrink-0 font-mono tabular-nums" ${rows.length === 1 ? 'id="dispAdj"' : ''}>${formatSignedAmount(item.amount)}</span>
+                </div>`).join('') + (rows.length > 1 ? `
+                <div class="mt-1 flex justify-between gap-4 border-t border-dashed border-slate-200 pt-1.5 text-sm font-black ${getAdjustmentTextClass(total)}">
+                    <span>조정 합계</span><span id="dispAdj" class="shrink-0 font-mono tabular-nums">${formatSignedAmount(total)}</span>
+                </div>` : '');
+        }
         function buildCombinedInfoMessage(primaryName, primaryAmount, month, adjustment = 0, options = {}) {
             const templateType = document.getElementById('messageTemplateType')?.value || 'general';
             const combined = buildCombinedStudentTotals(primaryName, primaryAmount);
@@ -1285,8 +1394,7 @@
                 lines.push(`${item.name} 학생 ${month}월 수강료는 ${item.amount.toLocaleString()} 원 입니다.`);
             });
             if (combined.rows.length > 1) lines.push('', `총 납부 금액은 ${combined.total.toLocaleString()} 원입니다.`);
-            if (adjustment !== 0 && !options.hideAdjustment) lines.push(`이전 달의 이월/초과금은 ${adjustment.toLocaleString()} 원입니다.`);
-            else if (!options.hideAdjustment && combined.rows.length === 1) lines.push(`이전 달의 이월/초과금은 ${adjustment.toLocaleString()} 원입니다.`);
+            if (!options.hideAdjustment) lines.push('', ...buildAdjustmentMessageLines(options.adjustmentItems));
             if (templateType === 'first') lines.push('', buildFirstRegistrationGuideText());
             lines.push('', buildPaymentGuideText());
             if (options.footer) lines.push('', options.footer);
@@ -1574,12 +1682,10 @@
             const isTt = (tab === 'timetable');
             const isGuide = (tab === 'guide');
             const isFirst = (tab === 'first');
-            const adjustmentLabel = document.querySelector('#adjustmentArea label');
             restoreDefaultPriceSummaryArea();
-            if (adjustmentLabel) adjustmentLabel.innerText = isHistory ? '이월/초과금 조정 (+/-)' : '이월/초과금 (+/-)';
             
             document.getElementById('smartPasteSection').classList.toggle('hidden', isHistory || isPayment || isAi || isTt || isGuide);
-            document.getElementById('adjustmentArea').classList.toggle('hidden', isPayment || isAi || isGuide);
+            document.getElementById('adjustmentArea').classList.toggle('hidden', isPayment);
             document.getElementById('priceSummaryArea').classList.toggle('hidden', false);
             
             const contentDiv = document.getElementById('receiptContent');
@@ -1680,12 +1786,12 @@
             const discountLine = getDiscountMessageLine(discountInfo);
             if (collectSiblingRows().length) {
                 document.getElementById('generatedTextArea').value = buildCombinedInfoMessage(name, primaryTotal, month, adjustment, {
-                    footer: discountLine
+                    footer: discountLine,
+                    adjustmentItems: collectAdjustmentItems()
                 });
                 return;
             }
             const templateType = document.getElementById('messageTemplateType')?.value || 'general';
-            const adjStr = adjustment !== 0 ? adjustment.toLocaleString() : '0';
             const totalStr = primaryTotal.toLocaleString();
             const lines = [
                 '※전체 재원생 수강료 안내※',
@@ -1693,7 +1799,8 @@
                 '수강료 안내 드립니다.',
                 '',
                 `${name} 학생 ${month}월 수업 수강료는 ${totalStr} 원 입니다.`,
-                `이전 달의 이월/초과금은 ${adjStr} 원입니다.`
+                '',
+                ...buildAdjustmentMessageLines()
             ];
             if (templateType === 'first') {
                 lines.push('', buildFirstRegistrationGuideText());
@@ -1709,9 +1816,7 @@
             const month = document.getElementById('targetMonth').value;
             const finalTotal = discountInfo.discountedBase + summary.adjustment;
             const discountLine = getDiscountMessageLine(discountInfo);
-            const adjustmentLine = summary.adjustment === 0
-                ? '현재 이월/초과금 조정은 없습니다.'
-                : `이월/초과금 조정 ${summary.adjustment > 0 ? '+' : ''}${summary.adjustment.toLocaleString()}원이 함께 반영되어 있습니다.`;
+            const adjustmentLine = buildAdjustmentMessageLines().join('\n');
             const text = `안녕하세요. 에스에듀 반포관입니다.\n\n${name} 학생의 ${month}월 수업 이력을 안내드립니다.\n${todayText} 기준 현재까지 입력된 수업은 총 ${summary.totalCount}회 (${summary.totalHours.toLocaleString()}시간)이며,\n누적 수업 금액은 ${summary.totalAmount.toLocaleString()}원입니다.${discountLine ? `\n${discountLine}` : ''}\n${adjustmentLine}\n따라서 현재까지 반영 금액은 ${finalTotal.toLocaleString()}원입니다.\n\n확인 부탁드리며, 수정이 필요한 내용이 있으시면 편하게 말씀해주세요.\n감사합니다.`;
             document.getElementById('generatedTextArea').value = text;
         }
@@ -1720,6 +1825,7 @@
             refreshGeneratedTextByCurrentMode();
         }
         function handleAdjustmentInput() {
+            syncLegacyAdjustmentInput();
             if (currentTab === 'history') { updateHistoryView(); return; }
             if (currentTab === 'payment') { updatePaymentView(); return; }
             if (currentTab === 'ai') { renderAiResult(); return; }
@@ -1732,7 +1838,7 @@
         function pastePaymentFromClipboard() { if (!navigator.clipboard || !navigator.clipboard.readText) { alert('브라우저에서 클립보드 읽기를 지원하지 않습니다. 직접 붙여넣기 해주세요.'); return; } navigator.clipboard.readText().then(text => { document.getElementById('paymentPasteInput').value = text; }).catch(() => alert('클립보드 읽기에 실패했습니다. 직접 붙여넣기 해주세요.')); }
         function extractTeacherName(text) { const parenthesisMatch = text.match(/\(([^)]+)\)/); if (parenthesisMatch) return parenthesisMatch[1]; const parts = text.split('-'); for(let p of parts) if(p.trim().toUpperCase().endsWith('T')) return p.trim(); return ''; }
         function processSmartPaste() { const rawText = document.getElementById('smartPasteInput').value; if (!rawText.trim()) return; const lines = rawText.split('\n'); lines.forEach(line => { line = line.trim(); if (!line) return; let detectedTime = 0; let cleanName = line; const timeMatch = line.match(/-(\d+(\.\d+)?)h$/i) || line.match(/(\d+(\.\d+)?)h$/i); if (timeMatch) detectedTime = parseFloat(timeMatch[1]); if (currentTab === 'manual') addManualRow(cleanName, detectedTime); else if (currentTab === 'select') addSelectRow(cleanName); else if (currentTab === 'first') addFirstRegRow(cleanName, 1, detectedTime || 3); else addAutoRow(cleanName); }); document.getElementById('smartPasteInput').value = ''; alert(`${lines.length}개의 과목이 추가되었습니다.`); updateAll(); }
-        function resetAndUpdate() { excludedDates.clear(); for (const key in selectRowDates) { selectRowDates[key].clear(); } for (const key in autoRowExcludedDates) { autoRowExcludedDates[key].clear(); } if(currentTab === 'history') updateHistoryView(); else if(currentTab === 'payment') updatePaymentView(); else if(currentTab === 'ai') renderAiResult(); else if(currentTab === 'guide') renderGuideEstimate(); else if(currentTab === 'first') renderFirstRegistrationView(); else if(currentTab === 'timetable') updateTimetableView(); else updateDateContext(); }
+        function resetAndUpdate() { excludedDates.clear(); selectCutoffExcludedDates.clear(); for (const key in selectRowDates) { selectRowDates[key].clear(); } for (const key in autoRowExcludedDates) { autoRowExcludedDates[key].clear(); } if(currentTab === 'history') updateHistoryView(); else if(currentTab === 'payment') updatePaymentView(); else if(currentTab === 'ai') renderAiResult(); else if(currentTab === 'guide') renderGuideEstimate(); else if(currentTab === 'first') renderFirstRegistrationView(); else if(currentTab === 'timetable') updateTimetableView(); else updateDateContext(); }
         function updateDateContext() { if(currentTab === 'history' || currentTab === 'payment' || currentTab === 'ai' || currentTab === 'guide' || currentTab === 'first' || currentTab === 'timetable') return; renderCalendar(); recalcAllAutoCounts(); updateAll(); }
         function setTargetToCurrentMonth() {
             const now = new Date();
@@ -1760,6 +1866,7 @@
             } = options;
             if (clearAutoExclusions) {
                 excludedDates.clear();
+                selectCutoffExcludedDates.clear();
                 Object.keys(autoRowExcludedDates).forEach(key => { autoRowExcludedDates[key] = new Set(); });
             }
             if (clearSelectedDates) Object.keys(selectRowDates).forEach(key => { selectRowDates[key] = new Set(); });
@@ -1771,12 +1878,9 @@
             paymentSkippedRows = 0;
             document.getElementById('paymentParseStatus')?.classList.add('hidden');
             currentLoadedRecordId = '';
-            const adjustment = document.getElementById('adjustment');
-            const aiAdjustment = document.getElementById('aiAdjustment');
             const discountRate = document.getElementById('discountRate');
             const memo = document.getElementById('recordMemoInput');
-            if (clearAdjustments && adjustment) adjustment.value = 0;
-            if (clearAdjustments && aiAdjustment) aiAdjustment.value = 0;
+            if (clearAdjustments) setAdjustmentItems([]);
             if (clearAdjustments && discountRate) discountRate.value = 0;
             if (clearMemo && memo) memo.value = '';
             ['smartPasteInput', 'ttPasteInput', 'historyPasteInput', 'aiPasteInput', 'paymentPasteInput'].forEach(id => {
@@ -1912,7 +2016,7 @@
             recalcRow(rowId, 'auto');
             updateAll();
         }
-        function recalcRow(rowIdSuffix, type) { const year = parseInt(document.getElementById('targetYear').value); const month = parseInt(document.getElementById('targetMonth').value); const row = document.getElementById(type === 'auto' ? `arow-${rowIdSuffix}` : `srow-${rowIdSuffix}`); if (!row) return; let count = 0; if (type === 'auto') { const selectedDays = []; const rowExcluded = getAutoRowExcludedDates(rowIdSuffix); row.querySelectorAll('.day-chk:checked').forEach(c => selectedDays.push(parseInt(c.value))); const date = new Date(year, month - 1, 1); while (date.getMonth() === month - 1) { if (selectedDays.includes(date.getDay()) && !excludedDates.has(date.getDate()) && !rowExcluded.has(date.getDate())) count++; date.setDate(date.getDate() + 1); } renderAutoRowDatePills(rowIdSuffix); } else { count = selectRowDates[rowIdSuffix] ? selectRowDates[rowIdSuffix].size : 0; } const cntInput = row.querySelector('.sub-count'); if(cntInput) cntInput.value = count; }
+        function recalcRow(rowIdSuffix, type) { const year = parseInt(document.getElementById('targetYear').value); const month = parseInt(document.getElementById('targetMonth').value); const row = document.getElementById(type === 'auto' ? `arow-${rowIdSuffix}` : `srow-${rowIdSuffix}`); if (!row) return; let count = 0; if (type === 'auto') { const selectedDays = []; const rowExcluded = getAutoRowExcludedDates(rowIdSuffix); row.querySelectorAll('.day-chk:checked').forEach(c => selectedDays.push(parseInt(c.value))); const date = new Date(year, month - 1, 1); while (date.getMonth() === month - 1) { if (selectedDays.includes(date.getDay()) && !excludedDates.has(date.getDate()) && !rowExcluded.has(date.getDate())) count++; date.setDate(date.getDate() + 1); } renderAutoRowDatePills(rowIdSuffix); } else { count = selectRowDates[rowIdSuffix] ? Array.from(selectRowDates[rowIdSuffix]).filter(day => !excludedDates.has(day)).length : 0; } const cntInput = row.querySelector('.sub-count'); if(cntInput) cntInput.value = count; }
         function recalcAllAutoCounts() { document.querySelectorAll('.auto-row').forEach(row => recalcRow(row.id.replace('arow-', ''), 'auto')); document.querySelectorAll('.select-row').forEach(row => recalcRow(row.id.replace('srow-', ''), 'select')); }
         function renderPlainReceiptCalendar() {
             const year = parseInt(document.getElementById('targetYear').value);
@@ -1991,11 +2095,7 @@
             document.getElementById('dispDate').innerText = `${year}년 ${month}월분`;
             const adjInput = document.getElementById('adjustment');
             const adj = adjInput ? (parseFloat(adjInput.value) || 0) : 0;
-            const adjEl = document.getElementById('dispAdj');
-            if(adjEl) {
-                adjEl.innerText = (adj > 0 ? '+' : '') + adj.toLocaleString() + '원';
-                adjEl.className = adj === 0 ? "text-gray-600 font-bold" : (adj > 0 ? "text-red-600 font-bold" : "text-[#004094] font-bold");
-            }
+            renderAdjustmentSummary();
             if (currentTab === 'auto' && !options.skipAutoSort && !isEditingAutoRowInput()) sortAutoRowsBySubjectTime();
             const tbody = document.getElementById('receiptBody');
             tbody.innerHTML = '';
@@ -2047,7 +2147,9 @@
                         } else if(currentTab === 'select') {
                             const rowId = row.id.replace('srow-', '');
                             if(selectRowDates[rowId]) {
-                                selectRowDates[rowId].forEach(d => allEvents.push({day: d, name: info.mainName, rawName: rawName, durationHours}));
+                                selectRowDates[rowId].forEach(d => {
+                                    if (!excludedDates.has(d)) allEvents.push({day: d, name: info.mainName, rawName: rawName, durationHours});
+                                });
                             }
                         }
                     }
@@ -2615,7 +2717,7 @@
                 <div class="flex justify-between text-gray-700 font-bold text-sm"><span>수업 누계</span><span>${summary.totalAmount.toLocaleString()}원</span></div>
                 ${discountRow}
                 ${absenceNoticeCount ? `<div class="flex justify-between gap-3 text-slate-400 font-bold text-[11px]"><span>결석예고 제외</span><span>${absenceNoticeCount}건 (수업·금액 미반영)</span></div>` : ''}
-                <div class="flex justify-between ${adjustment === 0 ? 'text-gray-400' : 'text-red-500'} font-bold text-sm"><span>이월/초과금 조정</span><span>${adjustment > 0 ? '+' : ''}${adjustment.toLocaleString()}원</span></div>
+                ${buildAdjustmentSummaryRowsHtml()}
             </div>
             <div class="flex justify-between items-center bg-gray-50 p-4 rounded-xl border border-gray-100">
                 <span class="text-base font-black text-gray-800">현재까지 발생 금액</span>
@@ -2722,15 +2824,12 @@
                 if(data.predictedCount > 0) detailText += ` <span class="text-indigo-600 font-bold">(예측 ${data.predictedCount}회 포함)</span>`;
                 tbody.innerHTML += `<tr class="border-b border-dashed border-gray-200"><td class="py-3 pl-1 pr-2 align-top"><div class="flex items-center flex-wrap gap-y-1 mb-1"><span class="font-extrabold text-gray-800 text-lg mr-1">${escapeHtml(info.mainName)}</span>${timeDisplay}${badges}</div><div class="text-sm text-gray-500 pl-0.5">${detailText}</div></td><td class="py-3 pr-1 text-right font-mono text-lg font-black text-gray-800 align-top pt-2.5">${data.amount.toLocaleString()}원</td></tr>`;
             }
-            const adj = parseInt(document.getElementById('aiAdjustment').value) || 0;
+            const adj = getAdjustmentTotal();
             const discountInfo = getPercentDiscountInfo(totalAmount);
             const finalTotal = discountInfo.discountedBase + adj;
             document.getElementById('dispSubtotal').innerText = totalAmount.toLocaleString() + '원';
             updateDiscountSummaryRow(discountInfo);
-            const adjRow = document.getElementById('dispAdjRow');
-            if(adjRow) {
-                adjRow.innerHTML = `<span>이월/초과금 조정</span><span class="${adj===0?'text-gray-300':'text-red-500'}">${(adj>0?'+':'')+adj.toLocaleString()}원</span>`;
-            }
+            renderAdjustmentSummary();
             document.getElementById('dispTotal').innerText = finalTotal.toLocaleString() + '원';
             renderCommonReceiptCalendar(aiData.map(d => ({ day: d.day, name: parseSubjectInfo(d.name).mainName, rawName: d.name, isPredicted: d.type === 'predicted', durationHours: parseDurationHours(parseSubjectInfo(d.name).timeText) })));
             updateInfoText(totalAmount, adj);
@@ -2794,7 +2893,7 @@
             if (collectSiblingRows().length) {
                 return buildCombinedInfoMessage(getGuideEstimateStudentLabel(rows), summary.total, month, 0, {
                     intro: `${month}월 수강료는 최근 수업 참석 현황을 바탕으로 추산한 대략 금액입니다.`,
-                    hideAdjustment: true,
+                    adjustmentItems: collectAdjustmentItems(),
                     footer: [discountLine, '정확한 금액은 실제 수업 진행 내역에 따라 조정될 수 있습니다.'].filter(Boolean).join('\n')
                 });
             }
@@ -2811,6 +2910,7 @@
                 const adjustmentText = formatCarryoverAdjustment(item.adjustment);
                 lines.push(`${name} 학생: 추산 수강료 ${item.baseAmount.toLocaleString()}원, ${adjustmentText}, 안내 금액 ${item.total.toLocaleString()}원`);
             });
+            lines.push('', ...buildAdjustmentMessageLines());
             if (discountLine) lines.push(discountLine);
             lines.push('', `총 안내 금액은 ${summary.total.toLocaleString()}원입니다.`);
             if (templateType === 'first') lines.push('', buildFirstRegistrationGuideText());
@@ -2864,8 +2964,10 @@
             }
             const discountInfo = getPercentDiscountInfo(summary.base);
             summary.discountInfo = discountInfo;
-            summary.total = discountInfo.discountedBase + summary.adjustment;
+            const commonAdjustment = getAdjustmentTotal();
+            summary.total = discountInfo.discountedBase + summary.adjustment + commonAdjustment;
             updateDiscountSummaryRow(discountInfo);
+            renderAdjustmentSummary(collectAdjustmentItems(), { extraAmount: summary.adjustment, extraLabel: '학생별 이월·초과금' });
             const displayTotal = renderSiblingSummary(label, summary.total);
             document.getElementById('dispTotal').innerText = displayTotal.toLocaleString() + '원';
             if (isReceiptCalendarDetailsHidden()) renderPlainReceiptCalendar();
@@ -2973,7 +3075,7 @@
             if (combined.rows.length > 1) lines.push('', `총 납부 금액은 ${combined.total.toLocaleString()} 원입니다.`);
             const discountLine = getDiscountMessageLine(discountInfo);
             if (discountLine) lines.push(discountLine);
-            if (adjustment !== 0) lines.push(`이월/초과금 조정 ${adjustment > 0 ? '+' : ''}${adjustment.toLocaleString()} 원이 함께 반영되어 있습니다.`);
+            lines.push('', ...buildAdjustmentMessageLines());
             lines.push('', '월말 정산 작업을 통해 실제 진행 수업 기준의 초과금 또는 이월금을 다음 달 수강료에 반영합니다.');
             lines.push('', buildPaymentGuideText(), '', '감사합니다.');
             return lines.join('\n');
@@ -3012,11 +3114,7 @@
                 ? receiptRows.sort((a, b) => compareSubjectTimeMeta(a.sortMeta, b.sortMeta)).map(item => item.html).join('')
                 : `<tr><td colspan="2" class="py-8 text-center text-sm font-bold text-slate-400">첫 등록 수업을 입력해주세요.</td></tr>`;
             document.getElementById('dispSubtotal').innerText = subtotal.toLocaleString() + '원';
-            const adjEl = document.getElementById('dispAdj');
-            if (adjEl) {
-                adjEl.innerText = (adj > 0 ? '+' : '') + adj.toLocaleString() + '원';
-                adjEl.className = adj === 0 ? "text-gray-600 font-bold" : (adj > 0 ? "text-red-600 font-bold" : "text-[#004094] font-bold");
-            }
+            renderAdjustmentSummary();
             const discountInfo = getPercentDiscountInfo(subtotal);
             updateDiscountSummaryRow(discountInfo);
             const primaryTotal = discountInfo.discountedBase + adj;
@@ -3096,6 +3194,47 @@
             updateTimetableView();
         }
 
+        function setSelectCalendarMode(mode = 'row') {
+            selectCalendarMode = mode === 'exclude' ? 'exclude' : 'row';
+            updateSelectModeButtons();
+            renderCalendar();
+        }
+        function updateSelectModeButtons() {
+            const rowButton = document.getElementById('selectModeRowButton');
+            const excludeButton = document.getElementById('selectModeExcludeButton');
+            const activeClass = 'bg-white text-[#004094] shadow-sm';
+            const idleClass = 'text-slate-500 hover:text-slate-800';
+            if (rowButton) rowButton.className = `rounded-md px-2.5 py-1.5 text-[10px] font-black ${selectCalendarMode === 'row' ? activeClass : idleClass}`;
+            if (excludeButton) excludeButton.className = `rounded-md px-2.5 py-1.5 text-[10px] font-black ${selectCalendarMode === 'exclude' ? activeClass : idleClass}`;
+        }
+        function updateSelectExclusionSummary() {
+            const summary = document.getElementById('selectExclusionSummary');
+            if (!summary) return;
+            const days = Array.from(excludedDates).sort((a, b) => a - b);
+            summary.innerText = days.length ? `전체 제외 ${days.length}일 · ${days.join(', ')}일` : '전체 제외일 없음';
+        }
+        function applySelectCutoff() {
+            const year = parseInt(document.getElementById('targetYear').value, 10);
+            const month = parseInt(document.getElementById('targetMonth').value, 10);
+            const lastDate = new Date(year, month, 0).getDate();
+            const input = document.getElementById('selectCutoffDay');
+            const cutoff = Math.min(lastDate, Math.max(1, parseInt(input?.value, 10) || lastDate));
+            if (input) input.value = String(cutoff);
+            selectCutoffExcludedDates.forEach(day => excludedDates.delete(day));
+            selectCutoffExcludedDates.clear();
+            for (let day = cutoff + 1; day <= lastDate; day++) {
+                excludedDates.add(day);
+                selectCutoffExcludedDates.add(day);
+            }
+            setSelectCalendarMode('exclude');
+            updateDateContext();
+        }
+        function clearSelectGlobalExclusions() {
+            excludedDates.clear();
+            selectCutoffExcludedDates.clear();
+            updateDateContext();
+        }
+
         function toggleDateExclusion(day) {
             if (currentTab === 'timetable') {
                 if (activeTtRowIndex !== null && ttData[activeTtRowIndex]) {
@@ -3111,7 +3250,17 @@
                 return;
             }
             if (currentTab === 'auto') { if(excludedDates.has(day)) excludedDates.delete(day); else excludedDates.add(day); }
-            else if (currentTab === 'select') { if (activeSelectRowId && selectRowDates[activeSelectRowId]) { const rowDates = selectRowDates[activeSelectRowId]; if(rowDates.has(day)) rowDates.delete(day); else rowDates.add(day); } else { alert("먼저 과목을 클릭해서 선택하세요!"); return; } }
+            else if (currentTab === 'select') {
+                if (selectCalendarMode === 'exclude') {
+                    if (excludedDates.has(day)) {
+                        excludedDates.delete(day);
+                        selectCutoffExcludedDates.delete(day);
+                    } else excludedDates.add(day);
+                } else if (activeSelectRowId && selectRowDates[activeSelectRowId]) {
+                    const rowDates = selectRowDates[activeSelectRowId];
+                    if(rowDates.has(day)) rowDates.delete(day); else rowDates.add(day);
+                } else { alert("먼저 과목을 클릭해서 선택하세요!"); return; }
+            }
             updateDateContext();
         }
 
@@ -3122,7 +3271,7 @@
             const calDiv = document.getElementById('calendarGrid');
             document.getElementById('calTitle').innerText = `${month}월 설정`;
             calDiv.className = "grid grid-cols-7 text-center text-xs font-medium calendar-grid text-gray-400";
-            document.getElementById('calBadge').innerText = currentTab === 'auto' ? "휴강 제외" : (currentTab === 'select' ? "날짜 선택" : (currentTab === 'timetable' ? "과목추가/날짜제외" : "미사용"));
+            document.getElementById('calBadge').innerText = currentTab === 'auto' ? "휴강 제외" : (currentTab === 'select' ? (selectCalendarMode === 'exclude' ? "전체 제외일 선택" : "과목 날짜 선택") : (currentTab === 'timetable' ? "과목추가/날짜제외" : "미사용"));
             if(currentTab === 'auto') calDiv.classList.add('mode-auto');
             if(currentTab === 'select') calDiv.classList.add('mode-select');
             if(currentTab === 'timetable') calDiv.classList.add('mode-timetable');
@@ -3133,6 +3282,10 @@
             const ttManualByDay = new Set();
             ttData.forEach(t => (t.manualDates||[]).forEach(d => ttManualByDay.add(parseInt(d))));
             const activeWeekdays = new Set();
+            if (currentTab === 'select') {
+                updateSelectModeButtons();
+                updateSelectExclusionSummary();
+            }
             if (currentTab === 'auto') document.querySelectorAll('#autoList .auto-row').forEach(row => row.querySelectorAll('.day-chk:checked').forEach(c => activeWeekdays.add(parseInt(c.value))));
             for(let i=0; i<firstDay; i++) calDiv.innerHTML += `<div></div>`;
             for(let i=1; i<=lastDate; i++) {
@@ -3197,8 +3350,7 @@
             const finalTotal = discountInfo.discountedBase + adj;
             document.getElementById('dispSubtotal').innerText = totalAmount.toLocaleString() + '원';
             updateDiscountSummaryRow(discountInfo);
-            const adjRow = document.getElementById('dispAdjRow');
-            if(adjRow) adjRow.innerHTML = `<span>이월/초과금 조정</span><span class="${adj===0?'text-gray-300':'text-red-500'}">${(adj>0?'+':'')+adj.toLocaleString()}원</span>`;
+            renderAdjustmentSummary();
             document.getElementById('dispTotal').innerText = finalTotal.toLocaleString() + '원';
             renderTtCalendar(calendarEvents);
             renderCalendar();
@@ -3542,9 +3694,9 @@
                 targetYear: parseInt(document.getElementById('targetYear').value, 10) || new Date().getFullYear(),
                 targetMonth: parseInt(document.getElementById('targetMonth').value, 10) || (new Date().getMonth() + 1),
                 adjustment: parseInt(document.getElementById('adjustment').value, 10) || 0,
+                adjustmentItems: collectAdjustmentItems(true),
                 discountRate: getDiscountRate(),
                 hideReceiptCalendarDetails: isReceiptCalendarDetailsHidden(),
-                aiAdjustment: parseInt(document.getElementById('aiAdjustment')?.value, 10) || 0,
                 recordMemo: getCurrentRecordMemo(),
                 siblingMode: isSiblingModeEnabled(),
                 siblingRows: collectSiblingRows(true).map(item => ({ name: item.name, amount: item.amount })),
@@ -3553,6 +3705,8 @@
                     adText: adNotices.join('\n'),
                     guideMessages: normalizeGuideMessages(guideMessages),
                     excludedDates: Array.from(excludedDates).map(n => parseInt(n, 10)).filter(n => !isNaN(n)),
+                    selectCutoffDay: parseInt(document.getElementById('selectCutoffDay')?.value, 10) || null,
+                    selectCutoffExcludedDates: Array.from(selectCutoffExcludedDates).map(n => parseInt(n, 10)).filter(n => !isNaN(n)),
                 autoRows: collectCoreRows('#autoList .auto-row', row => { const id = row.id.replace('arow-', ''); return { name: row.querySelector('.sub-name').value || '', hours: getBillableDuration(row, row.querySelector('.sub-name').value || '', 0), rateMode: getRowRateMode(row, 'perClass'), rate: parseInt(row.querySelector('.sub-rate').value, 10) || 0, days: Array.from(row.querySelectorAll('.day-chk:checked')).map(c => parseInt(c.value, 10)), excludedDates: Array.from(autoRowExcludedDates[id] || []).map(n => parseInt(n, 10)).filter(n => !isNaN(n)) }; }),
                 selectRows: collectCoreRows('#selectList .select-row', row => { const id = row.id.replace('srow-', ''); return { name: row.querySelector('.sub-name').value || '', hours: getBillableDuration(row, row.querySelector('.sub-name').value || '', 0), rateMode: getRowRateMode(row, 'perClass'), rate: parseInt(row.querySelector('.sub-rate').value, 10) || 0, dates: Array.from(selectRowDates[id] || []).map(n => parseInt(n, 10)) }; }),
                 manualRows: collectCoreRows('#manualList .manual-row', row => ({ name: row.querySelector('.sub-name').value || '', time: parseFloat(row.querySelector('.sub-time').value) || 0, count: parseFloat(row.querySelector('.sub-count').value) || 0, rateMode: getRowRateMode(row, 'perHour'), rate: parseInt(row.querySelector('.sub-rate').value, 10) || 0 })),
@@ -3577,7 +3731,7 @@
             document.getElementById('studentName').value = data.studentName || '';
             document.getElementById('targetYear').value = data.targetYear || new Date().getFullYear();
             document.getElementById('targetMonth').value = data.targetMonth || (new Date().getMonth() + 1);
-            document.getElementById('adjustment').value = data.adjustment || 0;
+            setAdjustmentItems(data.adjustmentItems, data.adjustment || data.aiAdjustment || 0);
             const discountRateInput = document.getElementById('discountRate');
             if (discountRateInput) discountRateInput.value = data.discountRate ?? data.discountPercent ?? 0;
             const hideCalendarInput = document.getElementById('hideReceiptCalendarDetails');
@@ -3585,7 +3739,6 @@
             const memoInput = document.getElementById('recordMemoInput');
             if (memoInput) memoInput.value = data.recordMemo || data.memo || '';
             setSiblingState(!!data.siblingMode, data.siblingRows || []);
-            if (document.getElementById('aiAdjustment')) document.getElementById('aiAdjustment').value = data.aiAdjustment || 0;
             if (Array.isArray(data.pricePresets)) {
                 pricePresets = normalizePricePresets(data.pricePresets);
                 persistPricePresets();
@@ -3602,6 +3755,12 @@
                     renderGuideMessages();
                 }
                 excludedDates = new Set((data.excludedDates || []).map(n => parseInt(n, 10)).filter(n => !isNaN(n)));
+                const cutoffInput = document.getElementById('selectCutoffDay');
+                if (cutoffInput && data.selectCutoffDay) cutoffInput.value = data.selectCutoffDay;
+                selectCutoffExcludedDates = new Set((data.selectCutoffExcludedDates || []).map(n => parseInt(n, 10)).filter(n => !isNaN(n)));
+                if (!selectCutoffExcludedDates.size && data.selectCutoffDay) {
+                    selectCutoffExcludedDates = new Set(Array.from(excludedDates).filter(day => day > parseInt(data.selectCutoffDay, 10)));
+                }
             rowCounter = 0;
             activeSelectRowId = null;
             activeTtRowIndex = null;
