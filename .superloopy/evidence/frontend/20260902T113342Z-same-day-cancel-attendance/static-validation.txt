@@ -1,0 +1,6 @@
+PASS inline JavaScript compiled: 1 script
+PASS git diff --check
+PASS browser console errors: 0
+PASS history conversion: 당일취소 -> 출석, calendar status converted, 125,000원 unchanged
+PASS AI conversion: 5 rows -> 10 rows when enabled, canceled day included
+PASS payment conversion: receipt label converted, editor source and 62,500원 preserved

@@ -581,20 +581,21 @@
                     </div>
 
                     <div id="tab-history" class="hidden">
-                        <div class="bg-white p-3 rounded border border-green-200 mb-3"><h4 class="text-xs font-bold text-green-700 mb-1">📋 Access 이력 데이터</h4><p class="text-[10px] leading-4 text-slate-500 mb-2">당일취소·결석보강은 과금, 보충은 0원으로 반영합니다. 결석예고는 수업·금액·달력에서 제외합니다.</p><textarea id="historyPasteInput" class="w-full h-32 text-[10px] p-2 border border-gray-200 rounded focus:outline-none focus:border-green-500 font-mono resize-none bg-gray-50 whitespace-pre" placeholder="Access에서 복사한 데이터를 붙여넣으세요."></textarea><button onclick="processHistoryPaste()" class="w-full mt-2 py-2 bg-green-600 text-white text-xs font-bold rounded hover:bg-green-700">이력 분석</button></div>
+                        <div class="bg-white p-3 rounded border border-green-200 mb-3"><h4 class="text-xs font-bold text-green-700 mb-1">📋 Access 이력 데이터</h4><p class="text-[10px] leading-4 text-slate-500 mb-2">당일취소·결석보강은 과금, 보충은 0원으로 반영합니다. 결석예고는 수업·금액·달력에서 제외합니다.</p><textarea id="historyPasteInput" class="w-full h-32 text-[10px] p-2 border border-gray-200 rounded focus:outline-none focus:border-green-500 font-mono resize-none bg-gray-50 whitespace-pre" placeholder="Access에서 복사한 데이터를 붙여넣으세요."></textarea><label class="mt-2 flex min-h-10 cursor-pointer items-start gap-2.5 rounded-lg bg-emerald-50 px-3 py-2.5"><input id="historySameDayCancelAsAttendance" type="checkbox" class="mt-0.5 h-4 w-4 shrink-0 accent-emerald-600" onchange="handleSameDayCancelOptionChange('history')"><span><span class="block text-[11px] font-black text-emerald-800">당일취소를 출석으로 표시</span><span class="mt-0.5 block text-[10px] leading-4 text-emerald-700/80">금액은 유지하고 집계·캘린더·내역서의 상태를 출석으로 통일합니다.</span></span></label><button onclick="processHistoryPaste()" class="w-full mt-2 py-2 bg-green-600 text-white text-xs font-bold rounded hover:bg-green-700">이력 분석</button></div>
                     </div>
                     
                     <div id="tab-ai" class="hidden">
                         <div class="bg-white p-3 rounded border border-indigo-200 mb-3">
                             <h4 class="text-xs font-bold text-indigo-700 mb-2">🤖 진행된 수업 데이터 (패턴 분석용)</h4>
                             <textarea id="aiPasteInput" class="w-full h-24 text-[10px] p-2 border border-gray-200 rounded focus:outline-none focus:border-indigo-500 font-mono resize-none bg-gray-50 whitespace-pre" placeholder="Access 데이터 붙여넣기"></textarea>
+                            <label class="mt-2 flex min-h-10 cursor-pointer items-start gap-2.5 rounded-lg bg-indigo-50 px-3 py-2.5"><input id="aiSameDayCancelAsAttendance" type="checkbox" class="mt-0.5 h-4 w-4 shrink-0 accent-indigo-600" onchange="handleSameDayCancelOptionChange('ai')"><span><span class="block text-[11px] font-black text-indigo-800">당일취소를 출석으로 분석</span><span class="mt-0.5 block text-[10px] leading-4 text-indigo-700/80">당일취소 건도 출석 수업으로 포함해 남은 일정을 예측합니다.</span></span></label>
                             <button onclick="processAiPrediction()" class="mt-2 min-h-10 w-full rounded bg-indigo-600 text-xs font-bold text-white hover:bg-indigo-700">패턴 분석 및 남은 수업 예측</button>
                         </div>
                         <div id="aiResultArea" class="hidden space-y-2"><h4 class="text-xs font-bold text-gray-600">📊 분석 결과</h4><div id="aiList" class="space-y-2"></div></div>
                     </div>
 
                     <div id="tab-payment" class="hidden">
-                        <div class="bg-white p-3 rounded border border-purple-200 mb-3"><h4 class="text-xs font-bold text-purple-700 mb-1">💰 Access 데이터 붙여넣기</h4><p class="text-[10px] text-gray-500 mb-2">헤더와 마지막 합계 행까지 함께 붙여넣으세요. 확정된 ■금액만 계산하며 빈 금액 행은 제외합니다.</p><textarea id="paymentPasteInput" class="w-full h-24 text-[10px] p-2 border border-gray-200 rounded focus:outline-none focus:border-purple-500 font-mono resize-none bg-gray-50 whitespace-pre" placeholder="Access 전체 데이터 붙여넣기"></textarea><div class="flex gap-2 mt-2"><button onclick="pastePaymentFromClipboard()" class="flex-1 min-h-10 py-2 bg-gray-600 text-white text-xs font-bold rounded hover:bg-gray-700">클립보드 붙여넣기</button><button onclick="processPaymentPaste()" class="flex-1 min-h-10 py-2 bg-purple-600 text-white text-xs font-bold rounded hover:bg-purple-700">1. 데이터 분석</button></div><div id="paymentParseStatus" class="payment-parse-status hidden" role="status" aria-live="polite"></div></div>
+                        <div class="bg-white p-3 rounded border border-purple-200 mb-3"><h4 class="text-xs font-bold text-purple-700 mb-1">💰 Access 데이터 붙여넣기</h4><p class="text-[10px] text-gray-500 mb-2">헤더와 마지막 합계 행까지 함께 붙여넣으세요. 확정된 ■금액만 계산하며 빈 금액 행은 제외합니다.</p><textarea id="paymentPasteInput" class="w-full h-24 text-[10px] p-2 border border-gray-200 rounded focus:outline-none focus:border-purple-500 font-mono resize-none bg-gray-50 whitespace-pre" placeholder="Access 전체 데이터 붙여넣기"></textarea><label class="mt-2 flex min-h-10 cursor-pointer items-start gap-2.5 rounded-lg bg-fuchsia-50 px-3 py-2.5"><input id="paymentSameDayCancelAsAttendance" type="checkbox" class="mt-0.5 h-4 w-4 shrink-0 accent-fuchsia-600" onchange="handleSameDayCancelOptionChange('payment')"><span><span class="block text-[11px] font-black text-fuchsia-800">당일취소를 출석으로 표시</span><span class="mt-0.5 block text-[10px] leading-4 text-fuchsia-700/80">편집 원본과 금액은 유지하고 안내서의 당일취소·당취 표기를 출석으로 바꿉니다.</span></span></label><div class="flex gap-2 mt-2"><button onclick="pastePaymentFromClipboard()" class="flex-1 min-h-10 py-2 bg-gray-600 text-white text-xs font-bold rounded hover:bg-gray-700">클립보드 붙여넣기</button><button onclick="processPaymentPaste()" class="flex-1 min-h-10 py-2 bg-purple-600 text-white text-xs font-bold rounded hover:bg-purple-700">1. 데이터 분석</button></div><div id="paymentParseStatus" class="payment-parse-status hidden" role="status" aria-live="polite"></div></div>
                         <div id="paymentGridArea" class="hidden"><div class="mb-2 flex items-center justify-between gap-3"><div><h4 class="text-xs font-black text-gray-700">✏️ 계산 내역 확인</h4><p class="mt-0.5 text-[10px] font-bold text-slate-500">금액·할인은 수정할 수 있고, 산출 기준은 Access 원본에서 가져옵니다.</p></div><button onclick="renderPaymentReceipt()" class="min-h-10 shrink-0 rounded-lg bg-blue-700 px-3 text-xs font-black text-white hover:bg-blue-800">2. 안내서 갱신</button></div><div class="payment-grid-scroll overflow-x-auto"><table class="grid-editor" id="paymentGridTable"><thead><tr><th style="width: 66px;">구분</th><th>항목명</th><th style="width: 180px;">산출 기준</th><th style="width: 92px;" class="text-right">금액</th><th style="width: 72px;" class="text-right">할인</th><th style="width: 48px;" class="text-center">삭제</th></tr></thead><tbody id="paymentGridBody"></tbody></table></div></div>
                     </div>
                 </div>
@@ -818,7 +819,7 @@
         const SUPABASE_TABLE = 'fee_calc_records';
         const FEECALC_ACCESS_CODE_KEY = 'feecalc_access_code';
         const FEECALC_DEFAULT_ACCESS_CODE = 'banpo-fee-2026-secure';
-        const FEECALC_STORAGE_VERSION = 6;
+        const FEECALC_STORAGE_VERSION = 7;
         const PRICE_PRESETS_STORAGE_KEY = 'feecalc_price_presets';
         const AD_TEXT_STORAGE_KEY = 'feecalc_ad_text';
         const GUIDE_MESSAGES_STORAGE_KEY = 'feecalc_guide_messages';
@@ -1534,10 +1535,39 @@
         function classifyHistoryAttendance(attend, subject) {
             const statusText = `${attend || ''} ${subject || ''}`.replace(/\s/g, '');
             if (statusText.includes('결석예고')) return 'absence_notice';
-            if (statusText.includes('당일취소')) return 'same_day_cancel';
+            if (isSameDayCancellationText(statusText)) return 'same_day_cancel';
             if (statusText.includes('보충')) return 'supplementary';
             if (statusText.includes('결석보강') || statusText.includes('보강') || statusText.includes('변경')) return 'absence_makeup';
             return 'regular';
+        }
+        function isSameDayCancellationText(value) {
+            return /당일\s*취소|당취/.test(String(value || ''));
+        }
+        function isSameDayCancelAsAttendanceEnabled(mode) {
+            const input = document.getElementById(`${mode}SameDayCancelAsAttendance`);
+            return !!input?.checked;
+        }
+        function normalizeSameDayCancelLabel(value, mode) {
+            const text = String(value || '');
+            if (!isSameDayCancelAsAttendanceEnabled(mode)) return text;
+            return text.replace(/당일\s*취소|당취/g, '출석');
+        }
+        function getEffectiveHistoryAttendanceType(item) {
+            if (item?.attendanceType === 'same_day_cancel' && isSameDayCancelAsAttendanceEnabled('history')) return 'attendance';
+            return item?.attendanceType || 'regular';
+        }
+        function handleSameDayCancelOptionChange(mode) {
+            if (mode === 'history') {
+                updateHistoryView();
+                return;
+            }
+            if (mode === 'ai') {
+                const raw = document.getElementById('aiPasteInput')?.value || '';
+                if (raw.trim()) processAiPrediction();
+                else renderAiResult();
+                return;
+            }
+            if (mode === 'payment') renderPaymentReceipt();
         }
         function getAccessScheduledHours(start, end) {
             const toMinutes = value => {
@@ -1572,26 +1602,29 @@
             };
         }
         function getHistoryStatusMeta(item) {
-            if (item.attendanceType === 'same_day_cancel') return { label: '당일취소 · 과금', className: 'history-status-pill history-status-cancel' };
-            if (item.attendanceType === 'absence_makeup') return { label: '결석보강 · 과금', className: 'history-status-pill history-status-makeup' };
-            if (item.attendanceType === 'supplementary') return { label: '보충 · 0원', className: 'history-status-pill history-status-supplement' };
+            const attendanceType = getEffectiveHistoryAttendanceType(item);
+            if (attendanceType === 'attendance') return { label: '출석 · 과금', className: 'history-status-pill' };
+            if (attendanceType === 'same_day_cancel') return { label: '당일취소 · 과금', className: 'history-status-pill history-status-cancel' };
+            if (attendanceType === 'absence_makeup') return { label: '결석보강 · 과금', className: 'history-status-pill history-status-makeup' };
+            if (attendanceType === 'supplementary') return { label: '보충 · 0원', className: 'history-status-pill history-status-supplement' };
             return null;
         }
         function buildHistoryRowKey(item) {
-            return [item.subject, item.teacher, item.attendanceType || 'regular'].join('||');
+            return [item.subject, item.teacher, getEffectiveHistoryAttendanceType(item)].join('||');
         }
         function buildHistoryEventLabel(item) {
             const info = parseSubjectInfo(item.subject);
-            const prefixMap = { same_day_cancel: '[취소]', absence_makeup: '[결석보강]', supplementary: '[보충]' };
-            const prefix = prefixMap[item.attendanceType] || '';
+            const prefixMap = { attendance: '[출석]', same_day_cancel: '[취소]', absence_makeup: '[결석보강]', supplementary: '[보충]' };
+            const prefix = prefixMap[getEffectiveHistoryAttendanceType(item)] || '';
             const timeText = item.compactTimeRange || formatCompactTimeRange(item.startTime, item.endTime);
             return `${prefix}${info.mainName}${timeText ? ` ${timeText}` : ''}`.trim();
         }
         function getHistoryCalendarTypeLabel(item) {
             const info = parseSubjectInfo(item.subject);
             const baseType = info.type || '수업';
-            const statusMap = { same_day_cancel: '취소', absence_makeup: '보강', supplementary: '보충' };
-            return statusMap[item.attendanceType] ? `${baseType}·${statusMap[item.attendanceType]}` : baseType;
+            const statusMap = { attendance: '출석', same_day_cancel: '취소', absence_makeup: '보강', supplementary: '보충' };
+            const attendanceType = getEffectiveHistoryAttendanceType(item);
+            return statusMap[attendanceType] ? `${baseType}·${statusMap[attendanceType]}` : baseType;
         }
         function initWorkspaceLayout() {
             const topBar = document.getElementById('workspaceTopBar');
@@ -2464,7 +2497,7 @@
             gridRows.forEach(row => {
                 const selectedType = row.querySelector('.grid-select')?.value || 'class';
                 const nameInput = row.querySelector('.payment-name');
-                const name = nameInput.value;
+                const name = normalizeSameDayCancelLabel(nameInput.value, 'payment');
                 const hours = getPaymentHours(name, row.dataset.hours);
                 const unitRate = parseInt(row.dataset.unitRate, 10) || 0;
                 const count = parseFloat(row.dataset.count) || 0;
@@ -2637,18 +2670,19 @@
 
             monthHistory.forEach(item => {
                 const info = parseSubjectInfo(item.subject);
+                const effectiveAttendanceType = getEffectiveHistoryAttendanceType(item);
                 const subjectName = info.mainName || '기타 수업';
                 const teacherName = item.teacher || info.teacher || '강사 미기재';
                 if (!subjectGroups.has(subjectName)) subjectGroups.set(subjectName, { teachers: new Map() });
                 const subjectGroup = subjectGroups.get(subjectName);
                 if (!subjectGroup.teachers.has(teacherName)) subjectGroup.teachers.set(teacherName, { totalAmount: 0, variants: new Map() });
                 const teacherGroup = subjectGroup.teachers.get(teacherName);
-                const variantKey = [info.type || '수업', info.timeText || '', item.attendanceType || 'regular'].join('||');
+                const variantKey = [info.type || '수업', info.timeText || '', effectiveAttendanceType].join('||');
                 if (!teacherGroup.variants.has(variantKey)) {
                     teacherGroup.variants.set(variantKey, {
                         type: info.type || '수업',
                         timeText: info.timeText || '',
-                        attendanceType: item.attendanceType || 'regular',
+                        attendanceType: effectiveAttendanceType,
                         count: 0,
                         totalTime: 0,
                         totalAmount: 0,
@@ -2681,6 +2715,7 @@
                             : '';
                         const variants = Array.from(teacherGroup.variants.values()).map(variant => {
                             const statusLabelMap = {
+                                attendance: '출석',
                                 same_day_cancel: '당일취소',
                                 absence_makeup: '결석보강',
                                 supplementary: '보충'
@@ -2752,7 +2787,9 @@
                 const dateMatch = line.match(/(\d+)\/(\d+)/);
                 if (!dateMatch) return;
                 const attendance = String(cols[4] || '').trim();
-                if (/취소|결석/.test(attendance)) return;
+                const sameDayCancellation = isSameDayCancellationText(attendance);
+                const includeSameDayCancellation = sameDayCancellation && isSameDayCancelAsAttendanceEnabled('ai');
+                if (/결석/.test(attendance) || ((/취소/.test(attendance) || sameDayCancellation) && !includeSameDayCancellation)) return;
                 const numbers = cols.map(c => parseInt(c.replace(/,/g, ''), 10)).filter(n => !isNaN(n));
                 const amountObj = numbers
                     .map((val, idx) => ({ val, hasComma: cols[idx].includes(','), isId: idx === 0 && /^\d{5,6}$/.test(cols[idx].trim()) }))
@@ -3697,6 +3734,11 @@
                 adjustmentItems: collectAdjustmentItems(true),
                 discountRate: getDiscountRate(),
                 hideReceiptCalendarDetails: isReceiptCalendarDetailsHidden(),
+                sameDayCancelAsAttendance: {
+                    history: isSameDayCancelAsAttendanceEnabled('history'),
+                    ai: isSameDayCancelAsAttendanceEnabled('ai'),
+                    payment: isSameDayCancelAsAttendanceEnabled('payment')
+                },
                 recordMemo: getCurrentRecordMemo(),
                 siblingMode: isSiblingModeEnabled(),
                 siblingRows: collectSiblingRows(true).map(item => ({ name: item.name, amount: item.amount })),
@@ -3736,6 +3778,11 @@
             if (discountRateInput) discountRateInput.value = data.discountRate ?? data.discountPercent ?? 0;
             const hideCalendarInput = document.getElementById('hideReceiptCalendarDetails');
             if (hideCalendarInput) hideCalendarInput.checked = !!data.hideReceiptCalendarDetails;
+            const sameDayCancelOptions = data.sameDayCancelAsAttendance || {};
+            ['history', 'ai', 'payment'].forEach(mode => {
+                const input = document.getElementById(`${mode}SameDayCancelAsAttendance`);
+                if (input) input.checked = !!sameDayCancelOptions[mode];
+            });
             const memoInput = document.getElementById('recordMemoInput');
             if (memoInput) memoInput.value = data.recordMemo || data.memo || '';
             setSiblingState(!!data.siblingMode, data.siblingRows || []);
