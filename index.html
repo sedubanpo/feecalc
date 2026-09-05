@@ -37,6 +37,7 @@
             --radius-control: 8px;
             --motion-duration: 160ms;
             --motion-easing: cubic-bezier(0.2, 0, 0, 1);
+            --line-height-capture: 1.6;
         }
         body { font-family: 'Noto Sans KR', sans-serif; -webkit-font-smoothing: antialiased; }
         button { transition-property: background-color, border-color, color, box-shadow, transform; transition-duration: var(--motion-duration); transition-timing-function: var(--motion-easing); }
@@ -130,6 +131,16 @@
         .capture-mode .receipt-shadow,
         .capture-mode .shadow-inner { box-shadow: none !important; }
         .capture-mode .backdrop-blur-sm { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
+        .capture-mode .rc-date { flex-shrink: 0; line-height: var(--line-height-capture); padding-bottom: var(--space-optical-2); }
+        .capture-mode .rc-subject { flex-shrink: 0; overflow: visible; }
+        .capture-mode .rc-subject-label,
+        .capture-mode .rc-subject-time,
+        .capture-mode .rc-history-type { overflow: visible; line-height: var(--line-height-capture) !important; padding-bottom: var(--space-optical-2) !important; }
+        .capture-mode .history-variant-type,
+        .capture-mode .history-variant-count,
+        .capture-mode .history-variant-slots,
+        .capture-mode .payment-variant-type,
+        .capture-mode .payment-variant-basis { overflow: visible; white-space: normal; overflow-wrap: anywhere; line-height: var(--line-height-capture); padding-bottom: var(--space-optical-2); }
 
         #captureArea { position: relative; overflow: hidden; background-color: white; width: 100%; max-width: 100%; min-width: 0; padding: 2.5rem !important; }
         .watermark-img { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 40%; opacity: 0.05; pointer-events: none; z-index: 0; }
@@ -485,7 +496,7 @@
                 <div class="mb-3">
                     <input id="serverRecordSearch" type="search" placeholder="이름으로 검색" class="record-search w-full p-2.5 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:border-sky-400 focus:outline-none" oninput="handleServerRecordSearchInput()">
                 </div>
-                <div id="serverRecordStatus" class="text-[11px] bg-slate-50 text-slate-600 border border-slate-200 rounded-lg px-3 py-2 mb-3">
+                <div id="serverRecordStatus" role="status" aria-live="polite" class="text-[11px] bg-slate-50 text-slate-600 border border-slate-200 rounded-lg px-3 py-2 mb-3">
                     서버 연결 전입니다.
                 </div>
                 <div id="serverRecordList" class="space-y-3 max-h-[720px] overflow-y-auto custom-scroll pr-1">
@@ -814,6 +825,10 @@
         let memoWidgetTimer = null;
         let memoWidgetToken = 0;
         let serverRecordSearchTimer = null;
+        let serverSearchSequence = 0;
+        let serverLoadSequence = 0;
+        let serverSavePending = false;
+        let imageSavePending = false;
         const SUPABASE_URL = 'https://jtdhvkotlvznedqixsvv.supabase.co';
         const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_hPySjz_ia6iMRfp_WnsaqQ_DmYnpdhs';
         const SUPABASE_TABLE = 'fee_calc_records';
@@ -986,9 +1001,9 @@
             return parseDurationHours(parseSubjectInfo(rawName).timeText) || fallback;
         }
         function calculateRateTotal(count, hours, rate, mode) {
-            const safeCount = Number.isFinite(Number(count)) ? Number(count) : 0;
-            const safeHours = Number.isFinite(Number(hours)) ? Number(hours) : 0;
-            const safeRate = Number.isFinite(Number(rate)) ? Number(rate) : 0;
+            const safeCount = Number.isFinite(Number(count)) ? Math.max(0, Number(count)) : 0;
+            const safeHours = Number.isFinite(Number(hours)) ? Math.max(0, Number(hours)) : 0;
+            const safeRate = Number.isFinite(Number(rate)) ? Math.max(0, Number(rate)) : 0;
             const multiplier = normalizeRateMode(mode) === 'perHour' ? safeCount * safeHours : safeCount;
             return Math.round(multiplier * safeRate);
         }
@@ -1483,7 +1498,7 @@
         }
         function isEditingAutoRowInput() {
             const active = document.activeElement;
-            return !!(active && active.closest?.('#autoList') && active.matches?.('input.sub-name, input.sub-rate'));
+            return !!(active && active.closest?.('#autoList') && active.matches?.('input, select'));
         }
         function handleAutoRowEditComplete() {
             setTimeout(() => {
@@ -1518,7 +1533,14 @@
             const classes = ['rc-subject', 'shadow-sm', 'text-optical-center', colorClass, durationClass, extraClass].filter(Boolean).join(' ');
             return `<span class="${classes}"><span class="rc-subject-main"><span class="rc-subject-label">${escapeHtml(event.name)}</span>${typeBadge}</span>${timeBadge ? `<span class="rc-subject-time">${timeBadge}</span>` : ''}</span>`;
         }
-        function parseAccessTime(tStr) { if(!tStr) return ''; const isPM = tStr.includes('오후'); let [h, m] = tStr.replace('오전', '').replace('오후', '').trim().split(':'); h = parseInt(h); if(isPM && h !== 12) h += 12; if(!isPM && h === 12) h = 0; return `${h}:${m}`; }
+        function parseAccessTime(tStr) {
+            const match = String(tStr || '').trim().match(/^(?:(오전|오후)\s*)?(\d{1,2}):(\d{2})(?::\d{2})?$/);
+            if (!match) return '';
+            let hour = Number(match[2]);
+            if (Number(match[3]) > 59 || hour > 23 || (match[1] && (hour < 1 || hour > 12))) return '';
+            if (match[1]) hour = hour % 12 + (match[1] === '오후' ? 12 : 0);
+            return `${hour}:${match[3]}`;
+        }
         function formatCompactTimePart(timeText) {
             if (!timeText) return '';
             const [hourText, minuteText = '00'] = String(timeText).split(':');
@@ -1571,24 +1593,27 @@
         }
         function getAccessScheduledHours(start, end) {
             const toMinutes = value => {
+                if (!/^\d{1,2}:\d{2}$/.test(String(value || ''))) return null;
                 const [hour, minute = '0'] = String(value || '').split(':').map(Number);
                 return Number.isFinite(hour) && Number.isFinite(minute) ? hour * 60 + minute : null;
             };
             const from = toMinutes(start);
             let to = toMinutes(end);
             if (from === null || to === null) return 0;
-            if (to <= from) to += 24 * 60;
+            if (to < from) to += 24 * 60;
             return (to - from) / 60;
         }
         function getHistoryCharge(status, amount, hourlyRate, hours, start, end) {
             if (status === 'absence_notice' || status === 'supplementary') return 0;
-            if (amount > 0) return amount;
+            // A confirmed zero is a free lesson, not a missing price.
+            if (Number.isFinite(amount)) return amount;
             const billedHours = hours > 0 ? hours : getAccessScheduledHours(start, end);
             return hourlyRate > 0 && billedHours > 0 ? Math.round(hourlyRate * billedHours) : 0;
         }
         function normalizeHistoryRecord(item) {
             const attendanceType = item.attendanceType || classifyHistoryAttendance(item.attend, item.subject);
-            const originalAmount = Number.isFinite(item.originalAmount) ? item.originalAmount : (parseInt(item.amount, 10) || 0);
+            const originalAmount = Object.prototype.hasOwnProperty.call(item, 'originalAmount')
+                ? parsePaymentMoney(item.originalAmount) : parsePaymentMoney(item.amount);
             const hourlyRate = parseInt(item.hourlyRate, 10) || 0;
             return {
                 ...item,
@@ -1654,6 +1679,7 @@
                 bubble.style.left = `${clampedCenter}px`;
             });
         }
+        window.addEventListener('resize', () => positionTabHelpBubble(currentTab));
         function restoreDefaultPriceSummaryArea() {
             const area = document.getElementById('priceSummaryArea');
             if (!area) return;
@@ -1867,11 +1893,17 @@
             if (currentTab === 'timetable') { updateTimetableView(); return; }
             updateAll();
         }
-        function copyGeneratedText() { const copyText = document.getElementById("generatedTextArea"); copyText.select(); copyText.setSelectionRange(0, 99999); navigator.clipboard.writeText(copyText.value).then(() => alert("텍스트가 복사되었습니다.")); }
+        async function copyGeneratedText() {
+            const copyText = document.getElementById('generatedTextArea');
+            copyText.select();
+            copyText.setSelectionRange(0, copyText.value.length);
+            try { await navigator.clipboard.writeText(copyText.value); alert('텍스트가 복사되었습니다.'); }
+            catch { alert('자동 복사를 사용할 수 없습니다. 선택된 문자를 Ctrl+C 또는 ⌘C로 복사해 주세요.'); }
+        }
         function pastePaymentFromClipboard() { if (!navigator.clipboard || !navigator.clipboard.readText) { alert('브라우저에서 클립보드 읽기를 지원하지 않습니다. 직접 붙여넣기 해주세요.'); return; } navigator.clipboard.readText().then(text => { document.getElementById('paymentPasteInput').value = text; }).catch(() => alert('클립보드 읽기에 실패했습니다. 직접 붙여넣기 해주세요.')); }
         function extractTeacherName(text) { const parenthesisMatch = text.match(/\(([^)]+)\)/); if (parenthesisMatch) return parenthesisMatch[1]; const parts = text.split('-'); for(let p of parts) if(p.trim().toUpperCase().endsWith('T')) return p.trim(); return ''; }
         function processSmartPaste() { const rawText = document.getElementById('smartPasteInput').value; if (!rawText.trim()) return; const lines = rawText.split('\n'); lines.forEach(line => { line = line.trim(); if (!line) return; let detectedTime = 0; let cleanName = line; const timeMatch = line.match(/-(\d+(\.\d+)?)h$/i) || line.match(/(\d+(\.\d+)?)h$/i); if (timeMatch) detectedTime = parseFloat(timeMatch[1]); if (currentTab === 'manual') addManualRow(cleanName, detectedTime); else if (currentTab === 'select') addSelectRow(cleanName); else if (currentTab === 'first') addFirstRegRow(cleanName, 1, detectedTime || 3); else addAutoRow(cleanName); }); document.getElementById('smartPasteInput').value = ''; alert(`${lines.length}개의 과목이 추가되었습니다.`); updateAll(); }
-        function resetAndUpdate() { excludedDates.clear(); selectCutoffExcludedDates.clear(); for (const key in selectRowDates) { selectRowDates[key].clear(); } for (const key in autoRowExcludedDates) { autoRowExcludedDates[key].clear(); } if(currentTab === 'history') updateHistoryView(); else if(currentTab === 'payment') updatePaymentView(); else if(currentTab === 'ai') renderAiResult(); else if(currentTab === 'guide') renderGuideEstimate(); else if(currentTab === 'first') renderFirstRegistrationView(); else if(currentTab === 'timetable') updateTimetableView(); else updateDateContext(); }
+        function resetAndUpdate() { excludedDates.clear(); selectCutoffExcludedDates.clear(); for (const key in selectRowDates) { selectRowDates[key].clear(); } for (const key in autoRowExcludedDates) { autoRowExcludedDates[key].clear(); } if(currentTab === 'history') updateHistoryView(); else if(currentTab === 'payment') { updatePaymentView(); renderPaymentReceipt(); } else if(currentTab === 'ai') renderAiResult(); else if(currentTab === 'guide') renderGuideEstimate(); else if(currentTab === 'first') renderFirstRegistrationView(); else if(currentTab === 'timetable') updateTimetableView(); else updateDateContext(); }
         function updateDateContext() { if(currentTab === 'history' || currentTab === 'payment' || currentTab === 'ai' || currentTab === 'guide' || currentTab === 'first' || currentTab === 'timetable') return; renderCalendar(); recalcAllAutoCounts(); updateAll(); }
         function setTargetToCurrentMonth() {
             const now = new Date();
@@ -1938,7 +1970,9 @@
             ttData = [];
         }
         function resetCalculatorForNewStart() {
+            if (serverSavePending) { alert('저장이 끝난 후 새 계산을 시작해 주세요.'); return; }
             if (!window.confirm('현재 입력 중인 계산 내용을 비우고 새 계산을 시작할까요?')) return;
+            serverLoadSequence++;
             document.getElementById('studentName').value = '';
             clearMonthlyState();
             clearAllCalculatorRows();
@@ -1969,6 +2003,8 @@
             prepareNextMonthCalculation(options);
         }
         function prepareNextMonthCalculation(options = {}) {
+            if (serverSavePending) { alert('저장이 끝난 후 다음 달 계산을 시작해 주세요.'); return; }
+            serverLoadSequence++;
             const {
                 clearSelectedDates = true,
                 clearManualCounts = true,
@@ -2083,14 +2119,16 @@
                 acc[event.day].push(event);
                 return acc;
             }, {});
-            for(let i=0; i<firstDay; i++) calDiv.innerHTML += `<div class="receipt-cal-cell bg-gray-50/50"></div>`;
+            const cells = [];
+            for(let i=0; i<firstDay; i++) cells.push(`<div class="receipt-cal-cell bg-gray-50/50"></div>`);
             for(let i=1; i<=lastDate; i++) {
                 const dayEvents = eventMap[i] || [];
                 let html = `<div class="receipt-cal-cell"><div class="rc-date ${dayEvents.length > 0 ? 'rc-active-date' : ''}">${i}</div>`;
                 dayEvents.forEach(e => { html += renderCalendarEventPill(e); });
                 html += `</div>`;
-                calDiv.innerHTML += html;
+                cells.push(html);
             }
+            calDiv.innerHTML = cells.join('');
         }
         
         // [시간표 처리]
@@ -2109,14 +2147,16 @@
             calDiv.innerHTML = '';
             const firstDay = new Date(year, month - 1, 1).getDay();
             const lastDate = new Date(year, month, 0).getDate();
-            for(let i=0; i<firstDay; i++) calDiv.innerHTML += `<div class="receipt-cal-cell bg-gray-50/50"></div>`;
+            const cells = [];
+            for(let i=0; i<firstDay; i++) cells.push(`<div class="receipt-cal-cell bg-gray-50/50"></div>`);
             for(let i=1; i<=lastDate; i++) {
                 const dayEvents = events.filter(e => e.day === i);
                 let html = `<div class="receipt-cal-cell"><div class="rc-date ${dayEvents.length > 0 ? 'rc-active-date' : ''}">${i}</div>`;
                 dayEvents.forEach(e => { html += renderCalendarEventPill(e, e.isTt ? 'tt-day' : ''); });
                 html += `</div>`;
-                calDiv.innerHTML += html;
+                cells.push(html);
             }
+            calDiv.innerHTML = cells.join('');
         }
 
         function updateAll(options = {}) {
@@ -2394,8 +2434,10 @@
         function processPaymentPaste() {
             const raw = document.getElementById('paymentPasteInput').value;
             const tbody = document.getElementById('paymentGridBody');
-            tbody.innerHTML = '';
-            if (!raw.trim()) return;
+            if (!raw.trim()) {
+                alert('Access 데이터를 붙여넣어 주세요. 기존 내역은 유지됩니다.');
+                return;
+            }
 
             const rows = raw.split('\n').map(splitPaymentRow).filter(row => row.length > 0);
             let headerIdx = rows.findIndex(r => {
@@ -2411,6 +2453,14 @@
             const adjustmentKeywords = ['초과금', '이월금'];
             const subjKeywords = ['수학', '영어', '국어', '과학', '사회', '이월', '초과금'];
             const amountColumnIndex = findPaymentColumn(idxMap, ['정산금', '수업금', '금액', '수강료']);
+            if (amountColumnIndex < 0) {
+                alert('금액 열을 찾을 수 없습니다. 헤더와 함께 붙여넣어 주세요. 기존 내역은 유지됩니다.');
+                return;
+            }
+            const previousRows = collectPaymentRows();
+            const previousSourceTotal = paymentSourceTotal;
+            const previousSkippedRows = paymentSkippedRows;
+            tbody.innerHTML = '';
             let added = 0;
             paymentSourceTotal = null;
             paymentSkippedRows = 0;
@@ -2447,8 +2497,8 @@
                 }
                 if (amountSigned === null || amountSigned === 0) return;
 
-                const isPaymentRow = payKeywords.some(k => itemText.includes(k) || payTypeText.includes(k) || rowText.includes(k)) || !!paidAtText || amountSigned < 0;
-                const isAdjustmentRow = !isPaymentRow && adjustmentKeywords.some(k => itemText.includes(k) || classText.includes(k));
+                const isAdjustmentRow = adjustmentKeywords.some(k => itemText.includes(k) || classText.includes(k));
+                const isPaymentRow = !isAdjustmentRow && (payKeywords.some(k => itemText.includes(k) || payTypeText.includes(k) || classText.includes(k)) || !!paidAtText || amountSigned < 0);
                 let type = 'class';
                 let name = '기타 수업';
                 let amount = Math.abs(amountSigned);
@@ -2466,10 +2516,10 @@
                     if (name.includes('초과금') && amount < 0) amount *= -1;
                 } else {
                     const subj = cols.find(c => subjKeywords.some(k => String(c).includes(k)));
-                    name = itemText || classText || subj || '기타 수업';
+                    name = classText || itemText || subj || '기타 수업';
                     hours = getPaymentHours(name, getPaymentCell(cols, idxMap, ['시간량', '시간']));
                     const discountRaw = parsePaymentMoney(getPaymentCell(cols, idxMap, ['할인']));
-                    discount = (discountRaw !== null && Math.abs(discountRaw) >= 1000) ? Math.abs(discountRaw) : 0;
+                    discount = discountRaw !== null ? Math.abs(discountRaw) : 0;
                 }
 
                 if (type === 'adjustment' ? amount === 0 : amount <= 0) return;
@@ -2477,6 +2527,13 @@
                 added++;
             });
 
+            if (added === 0 && previousRows.length) {
+                previousRows.forEach(appendPaymentGridRow);
+                paymentSourceTotal = previousSourceTotal;
+                paymentSkippedRows = previousSkippedRows;
+                alert('확정 금액을 찾지 못해 기존 내역을 유지했습니다. 원본의 금액 열을 확인해 주세요.');
+                return;
+            }
             document.getElementById('paymentGridArea').classList.remove('hidden');
             renderPaymentReceipt();
             updatePaymentParseStatus({ added, skipped: paymentSkippedRows, sourceTotal: paymentSourceTotal });
@@ -2502,7 +2559,7 @@
                 const unitRate = parseInt(row.dataset.unitRate, 10) || 0;
                 const count = parseFloat(row.dataset.count) || 0;
                 const rawAmount = parseInt(row.querySelector('.payment-amount')?.value, 10) || 0;
-                const discount = parseInt(row.querySelector('.payment-discount')?.value, 10) || 0;
+                const discount = Math.max(0, Math.min(Math.abs(rawAmount), parseInt(row.querySelector('.payment-discount')?.value, 10) || 0));
                 const isAdjustmentName = /초과금|이월금/.test(name);
                 const type = selectedType === 'class' && isAdjustmentName ? 'adjustment' : selectedType;
                 if (type === 'class') {
@@ -2570,7 +2627,7 @@
             const percentDiscountRow = percentDiscountInfo.amount > 0 ? `<div class="payment-summary-row text-rose-500"><span>퍼센트 할인 (${formatDiscountRate(percentDiscountInfo.rate)}%)</span><span>-${percentDiscountInfo.amount.toLocaleString()}원</span></div>` : '';
             const adjustmentSummary = totalAdjustment !== 0 ? `<div class="payment-summary-row ${totalAdjustment > 0 ? 'text-[#004094]' : 'text-red-500'}"><span>${totalAdjustment > 0 ? '초과금 조정' : '이월금 조정'}</span><span>${totalAdjustment > 0 ? '+' : ''}${totalAdjustment.toLocaleString()}원</span></div>` : '';
             const paidSummary = totalPaid > 0 ? `<div class="payment-summary-row text-purple-600"><span>기납부 총액</span><span>-${totalPaid.toLocaleString()}원</span></div>` : '';
-            const summaryHtml = `<div class="payment-summary-list"><div class="payment-summary-row text-gray-700"><span>수강료 소계</span><span>${totalTuition.toLocaleString()}원</span></div>${discountRow}${percentDiscountRow}${adjustmentSummary}${paidSummary}</div><div class="payment-balance-row"><span class="text-lg font-black text-gray-800">미납/차액 합계</span><strong class="${balance > 0 ? 'text-red-600' : 'text-blue-600'}">${balance.toLocaleString()}원</strong></div>`;
+            const summaryHtml = `<div class="payment-summary-list"><div class="payment-summary-row text-gray-700"><span>수강료 소계</span><span>${totalTuition.toLocaleString()}원</span></div>${discountRow}${percentDiscountRow}${adjustmentSummary}${paidSummary}</div><div class="payment-balance-row"><span class="text-lg font-black text-gray-800">미납/차액 합계</span><strong id="dispTotal" class="${balance > 0 ? 'text-red-600' : 'text-blue-600'}">${balance.toLocaleString()}원</strong></div>`;
             document.getElementById('priceSummaryArea').innerHTML = summaryHtml;
             document.getElementById('priceSummaryArea').classList.remove('hidden');
         }
@@ -2578,7 +2635,7 @@
         function processHistoryPaste() {
             const raw = document.getElementById('historyPasteInput').value;
             const lines = raw.split('\n');
-            historyData = [];
+            const nextHistoryData = [];
             const year = parseInt(document.getElementById('targetYear').value);
             lines.forEach(line => {
                 const cols = line.split('\t');
@@ -2587,19 +2644,20 @@
                 if (!dateMatch) return;
                 const month = parseInt(dateMatch[1]);
                 const day = parseInt(dateMatch[2]);
+                if (month < 1 || month > 12 || day < 1 || day > new Date(year, month, 0).getDate()) return;
                 const subjRaw = String(cols[2] || '').trim();
                 const attend = String(cols[4] || '').trim();
                 const teacher = String(cols[5] || '').trim();
                 const start = parseAccessTime(cols[6]);
                 const end = parseAccessTime(cols[7]);
                 const hours = parseFloat(cols[8]) || 0;
-                const originalAmount = parseInt(String(cols[10] || '0').replace(/,/g, ''), 10) || 0;
+                const originalAmount = parsePaymentMoney(cols[10]);
                 const hourlyRate = parseInt(String(cols[9] || '0').replace(/,/g, ''), 10) || 0;
                 const attendanceType = classifyHistoryAttendance(attend, subjRaw);
                 const isCancelled = attendanceType === 'same_day_cancel';
                 const isMakeup = attendanceType === 'absence_makeup' || attendanceType === 'supplementary';
                 const amount = getHistoryCharge(attendanceType, originalAmount, hourlyRate, hours, start, end);
-                historyData.push({
+                nextHistoryData.push({
                     year,
                     month,
                     day,
@@ -2620,6 +2678,11 @@
                     isCancelled
                 });
             });
+            if (!nextHistoryData.length) {
+                alert('분석할 수 있는 이력이 없습니다. Access의 일자·반명·금액 열을 포함해 붙여넣어 주세요. 기존 내역은 유지됩니다.');
+                return;
+            }
+            historyData = nextHistoryData;
             if (historyData.length > 0) {
                 document.getElementById('targetMonth').value = historyData[0].month;
                 const absenceNoticeCount = historyData.filter(item => item.excludeFromHistory).length;
@@ -2756,7 +2819,7 @@
             </div>
             <div class="flex justify-between items-center bg-gray-50 p-4 rounded-xl border border-gray-100">
                 <span class="text-base font-black text-gray-800">현재까지 발생 금액</span>
-                <span class="text-3xl font-black text-green-600">${finalTotal.toLocaleString()}원</span>
+                <span id="dispTotal" class="text-3xl font-black text-green-600">${finalTotal.toLocaleString()}원</span>
             </div>`;
             summaryArea.classList.remove('hidden');
 
@@ -2778,40 +2841,42 @@
             const lines = raw.split('\n');
             const year = parseInt(document.getElementById('targetYear').value);
             const month = parseInt(document.getElementById('targetMonth').value);
-            const subjectKeywords = ['수학', '영어', '국어', '과학', '사회', '사탐', '세지', '한지', '사문', '윤사', '생윤', '한국사', '세계사', '동사', '경제', '정법', '법정', '지리', '물리', '화학', '생명', '지학'];
             const parsedData = [];
+            let observedThroughDay = 0;
 
             lines.forEach(line => {
                 const cols = line.split('\t');
-                if (cols.length < 5) return;
-                const dateMatch = line.match(/(\d+)\/(\d+)/);
+                if (cols.length < 11) return;
+                const dateMatch = String(cols[1] || '').match(/^(\d+)\/(\d+)/);
                 if (!dateMatch) return;
+                const day = Number(dateMatch[2]);
+                if (Number(dateMatch[1]) !== month || day < 1 || day > new Date(year, month, 0).getDate()) return;
+                observedThroughDay = Math.max(observedThroughDay, day);
                 const attendance = String(cols[4] || '').trim();
                 const sameDayCancellation = isSameDayCancellationText(attendance);
                 const includeSameDayCancellation = sameDayCancellation && isSameDayCancelAsAttendanceEnabled('ai');
                 if (/결석/.test(attendance) || ((/취소/.test(attendance) || sameDayCancellation) && !includeSameDayCancellation)) return;
-                const numbers = cols.map(c => parseInt(c.replace(/,/g, ''), 10)).filter(n => !isNaN(n));
-                const amountObj = numbers
-                    .map((val, idx) => ({ val, hasComma: cols[idx].includes(','), isId: idx === 0 && /^\d{5,6}$/.test(cols[idx].trim()) }))
-                    .filter(n => !n.isId)
-                    .sort((a, b) => (b.hasComma - a.hasComma) || (b.val - a.val))[0];
-                const amount = amountObj ? amountObj.val : 0;
-                if (amount <= 0 || line.includes('납부') || line.includes('결제')) return;
+                // Access history schema: rate is column 9, confirmed amount is column 10.
+                const amount = parsePaymentMoney(cols[10]);
+                if (amount === null || amount <= 0 || /보충/.test(attendance)) return;
 
                 const rawClassName = String(cols[2] || '').trim();
-                const subjectCell = subjectKeywords.some(keyword => rawClassName.includes(keyword))
-                    ? rawClassName
-                    : cols.find(cell => subjectKeywords.some(keyword => String(cell).includes(keyword)));
                 parsedData.push({
-                    name: subjectCell || rawClassName || '기타 수업',
+                    name: rawClassName || '기타 수업',
                     amount,
-                    day: parseInt(dateMatch[2], 10),
+                    day,
+                    year,
+                    month,
                     type: 'existing'
                 });
             });
 
-            const patterns = {};
-            let maxDay = 0;
+            if (!observedThroughDay) {
+                alert('선택한 월의 Access 이력이 없습니다. 연도·월과 붙여넣은 데이터를 확인해 주세요. 기존 예측은 유지됩니다.');
+                return;
+            }
+            const patterns = Object.create(null);
+            let maxDay = observedThroughDay;
             parsedData.forEach(item => {
                 const key = item.name;
                 if (!patterns[key]) patterns[key] = { days: new Set(), price: item.amount };
@@ -2824,7 +2889,7 @@
             for (let day = maxDay + 1; day <= lastDate; day++) {
                 const weekday = new Date(year, month - 1, day).getDay();
                 Object.entries(patterns).forEach(([name, pattern]) => {
-                    if (pattern.days.has(weekday)) predictedData.push({ name, amount: pattern.price, day, type: 'predicted' });
+                    if (pattern.days.has(weekday)) predictedData.push({ name, amount: pattern.price, day, year, month, type: 'predicted' });
                 });
             }
             aiData = [...parsedData, ...predictedData].sort((a, b) => a.day - b.day || a.name.localeCompare(b.name, 'ko-KR'));
@@ -2832,9 +2897,15 @@
         }
         function renderAiResult() {
             if (currentTab !== 'ai') return;
+            const year = Number(document.getElementById('targetYear').value);
+            const month = Number(document.getElementById('targetMonth').value);
+            document.getElementById('dispName').textContent = document.getElementById('studentName').value || '학생명';
+            document.getElementById('dispDate').textContent = `${year}년 ${month}월분`;
+            const visibleAiData = aiData.filter(d => (!d.year || d.year === year) && (!d.month || d.month === month));
             const listArea = document.getElementById('aiList');
             listArea.innerHTML = '';
             aiData.forEach((d, idx) => {
+                if (!visibleAiData.includes(d)) return;
                 const isPred = d.type === 'predicted';
                 const div = document.createElement('div');
                 div.className = `flex items-center justify-between p-2 rounded text-xs ${isPred ? 'bg-indigo-50 border border-indigo-100' : 'bg-white border border-gray-200'}`;
@@ -2844,9 +2915,9 @@
             document.getElementById('aiResultArea').classList.remove('hidden');
             const tbody = document.getElementById('receiptBody');
             tbody.innerHTML = '';
-            const subjectMap = {};
+            const subjectMap = Object.create(null);
             let totalAmount = 0;
-            aiData.forEach(d => {
+            visibleAiData.forEach(d => {
                 if (!subjectMap[d.name]) subjectMap[d.name] = { count: 0, amount: 0, predictedCount: 0 };
                 subjectMap[d.name].count++;
                 subjectMap[d.name].amount += d.amount;
@@ -2868,7 +2939,7 @@
             updateDiscountSummaryRow(discountInfo);
             renderAdjustmentSummary();
             document.getElementById('dispTotal').innerText = finalTotal.toLocaleString() + '원';
-            renderCommonReceiptCalendar(aiData.map(d => ({ day: d.day, name: parseSubjectInfo(d.name).mainName, rawName: d.name, isPredicted: d.type === 'predicted', durationHours: parseDurationHours(parseSubjectInfo(d.name).timeText) })));
+            renderCommonReceiptCalendar(visibleAiData.map(d => ({ day: d.day, name: parseSubjectInfo(d.name).mainName, rawName: d.name, isPredicted: d.type === 'predicted', durationHours: parseDurationHours(parseSubjectInfo(d.name).timeText) })));
             updateInfoText(totalAmount, adj);
         }
 
@@ -3177,12 +3248,18 @@
         function removeEl(id) { const el = document.getElementById(id); if(!el) return; if (id.startsWith('srow-')) { const key = id.replace('srow-', ''); delete selectRowDates[key]; if (activeSelectRowId === key) activeSelectRowId = null; } if (id.startsWith('arow-')) { const key = id.replace('arow-', ''); delete autoRowExcludedDates[key]; } el.remove(); updateAll(); renderCalendar(); }
         function updatePaymentView() { if (currentTab !== 'payment') return; const m = parseInt(document.getElementById('targetMonth').value) || 0; document.getElementById('calTitle').innerText = `${m}월 납부/차액`; document.getElementById('calBadge').innerText = '수정 모드'; document.getElementById('calendarGrid').innerHTML = ''; }
         async function downloadImage() {
+            if (imageSavePending) return;
+            imageSavePending = true;
+            const saveButton = document.querySelector('[onclick="downloadImage()"]');
+            if (saveButton) { saveButton.disabled = true; saveButton.setAttribute('aria-busy', 'true'); }
             let previousWidth = '';
             let previousMaxWidth = '';
+            let downloadUrl = '';
             const captureWidth = 1120;
             try {
                 const target = document.getElementById('captureArea');
                 const captureStudentName = currentTab === 'guide' ? getGuideEstimateStudentLabel() : (document.getElementById('studentName').value || '학생명');
+                const captureDate = `${document.getElementById('targetYear').value}-${document.getElementById('targetMonth').value}`;
                 document.getElementById('dispName').textContent = captureStudentName;
                 previousWidth = target.style.width;
                 previousMaxWidth = target.style.maxWidth;
@@ -3204,12 +3281,17 @@
                 });
                 const a = document.createElement('a');
                 const name = captureStudentName.replace(/[^\w가-힣-]/g, '_');
-                a.download = `${name}_${document.getElementById('targetYear').value}-${document.getElementById('targetMonth').value}.png`;
-                a.href = canvas.toDataURL('image/png');
+                a.download = `${name}_${captureDate}.png`;
+                const blob = await new Promise((resolve, reject) => canvas.toBlob(value => value ? resolve(value) : reject(new Error('PNG 생성 실패')), 'image/png'));
+                downloadUrl = URL.createObjectURL(blob);
+                a.href = downloadUrl;
                 a.click();
             } catch (e) {
                 alert('이미지 저장 중 오류가 발생했습니다.');
             } finally {
+                imageSavePending = false;
+                if (saveButton) { saveButton.disabled = false; saveButton.removeAttribute('aria-busy'); }
+                if (downloadUrl) setTimeout(() => URL.revokeObjectURL(downloadUrl), 1000);
                 const target = document.getElementById('captureArea');
                 if (target) {
                     target.style.width = previousWidth;
@@ -3333,6 +3415,16 @@
                 else if(currentTab === 'timetable' && (ttWeekdays.has(new Date(year, month-1, i).getDay()) || ttManualByDay.has(i))) div.className = "tt-day";
                 else if (currentTab === 'select' && activeSelectRowId && selectRowDates[activeSelectRowId] && selectRowDates[activeSelectRowId].has(i)) div.className = "selected-day";
                 div.onclick = () => toggleDateExclusion(i);
+                div.setAttribute('role', 'button');
+                div.tabIndex = 0;
+                div.setAttribute('aria-label', `${month}월 ${i}일${excludedDates.has(i) ? ', 제외됨' : ''}`);
+                div.setAttribute('aria-pressed', String(excludedDates.has(i) || div.classList.contains('selected-day')));
+                div.onkeydown = event => {
+                    if (event.key !== 'Enter' && event.key !== ' ') return;
+                    event.preventDefault();
+                    toggleDateExclusion(i);
+                    calDiv.querySelectorAll('[role="button"]')[i - 1]?.focus();
+                };
                 calDiv.appendChild(div);
             }
         }
@@ -3365,7 +3457,7 @@
                     if(date.getDay() === dayIdx && !excludedDates.has(date.getDate())) daySet.add(date.getDate());
                     date.setDate(date.getDate() + 1);
                 }
-                (item.manualDates || []).forEach(d => { if (d>=1 && d<=31 && !excludedDates.has(d)) daySet.add(d); });
+                (item.manualDates || []).forEach(d => { if (Number.isInteger(d) && d>=1 && d<=new Date(year, month, 0).getDate() && !excludedDates.has(d)) daySet.add(d); });
                 const count = daySet.size;
                 daySet.forEach(d => calendarEvents.push({ day: d, name: info.mainName, rawName: subject, isTt: true, durationHours: duration }));
                 if (count > 0) {
@@ -3769,6 +3861,31 @@
             };
         }
         function applyCalculatorState(data = {}) {
+            if (!data || typeof data !== 'object' || Array.isArray(data)) throw new Error('올바른 계산기 저장 데이터가 아닙니다.');
+            if (data.currentTab && !['auto','select','manual','guide','first','timetable','history','ai','payment'].includes(data.currentTab)) throw new Error('지원하지 않는 계산 모드입니다.');
+            for (const key of ['autoRows','selectRows','manualRows','guideRows','firstRows','ttRows','historyData','aiData','paymentRows']) {
+                if (data[key] !== undefined && (!Array.isArray(data[key]) || data[key].some(row => !row || typeof row !== 'object' || Array.isArray(row)))) throw new Error(`${key}: 저장 데이터 형식을 확인해 주세요.`);
+            }
+            // Validate before clearing the current working copy; numeric fields are
+            // also interpolated into controls and must never contain markup.
+            data = { ...data };
+            for (const key of ['autoRows','selectRows','manualRows','guideRows','firstRows','ttRows','historyData','aiData','paymentRows']) {
+                if (!data[key]) continue;
+                data[key] = data[key].map(row => {
+                    const copy = { ...row };
+                    for (const field of ['rate','hours','time','count','amount','discount','unitRate','baseAmount','adjustment','duration','price','start','day','month','year','hourlyRate','originalAmount']) {
+                        if (copy[field] === undefined || copy[field] === null || copy[field] === '') continue;
+                        if (!Number.isFinite(Number(copy[field]))) throw new Error(`${key}.${field}: 숫자를 확인해 주세요.`);
+                        copy[field] = Number(copy[field]);
+                    }
+                    for (const field of ['dates','days','manualDates','excludedDates','weekdays']) {
+                        if (copy[field] === undefined) continue;
+                        if (!Array.isArray(copy[field]) || copy[field].some(value => !Number.isInteger(Number(value)))) throw new Error(`${key}.${field}: 날짜를 확인해 주세요.`);
+                        copy[field] = copy[field].map(Number);
+                    }
+                    return copy;
+                });
+            }
             restoreDefaultPriceSummaryArea();
             document.getElementById('studentName').value = data.studentName || '';
             document.getElementById('targetYear').value = data.targetYear || new Date().getFullYear();
@@ -3826,10 +3943,6 @@
             paymentSkippedRows = parseInt(data.paymentSkippedRows, 10) || 0;
             const storedPaymentRows = Array.isArray(data.paymentRows) ? data.paymentRows : [];
             const rawPaymentInput = String((data.rawInputs || {}).paymentPasteInput || '');
-            const storedRowsHaveBasis = storedPaymentRows.some(row => (parseInt(row.unitRate, 10) || 0) > 0 || (parseFloat(row.count) || 0) > 0);
-            const shouldReparseLegacyPayment = !!rawPaymentInput.trim()
-                && storedPaymentRows.length > 0
-                && !storedRowsHaveBasis;
             Object.keys(selectRowDates).forEach(key => delete selectRowDates[key]);
             Object.keys(autoRowExcludedDates).forEach(key => delete autoRowExcludedDates[key]);
 
@@ -3882,18 +3995,16 @@
                 manualDates: Array.from(item.manualDates || []).map(n => parseInt(n, 10)).filter(n => !isNaN(n))
             }));
             historyData = Array.isArray(data.historyData) ? data.historyData.map(normalizeHistoryRecord) : [];
-            aiData = Array.isArray(data.aiData) ? data.aiData : [];
-            if (!shouldReparseLegacyPayment) storedPaymentRows.forEach(appendPaymentGridRow);
-            if ((data.rawInputs || {}).ttPasteInput !== undefined) document.getElementById('ttPasteInput').value = data.rawInputs.ttPasteInput || '';
-            if ((data.rawInputs || {}).historyPasteInput !== undefined) document.getElementById('historyPasteInput').value = data.rawInputs.historyPasteInput || '';
-            if ((data.rawInputs || {}).aiPasteInput !== undefined) document.getElementById('aiPasteInput').value = data.rawInputs.aiPasteInput || '';
-            if ((data.rawInputs || {}).paymentPasteInput !== undefined) document.getElementById('paymentPasteInput').value = rawPaymentInput;
-            if (shouldReparseLegacyPayment) {
-                processPaymentPaste();
-            }
+            aiData = Array.isArray(data.aiData) ? data.aiData.map(item => ({ ...item, year: item.year || data.targetYear, month: item.month || data.targetMonth })) : [];
+            // Preserve deliberate edits in old saved grids instead of reparsing raw input.
+            storedPaymentRows.forEach(appendPaymentGridRow);
+            document.getElementById('ttPasteInput').value = (data.rawInputs || {}).ttPasteInput || '';
+            document.getElementById('historyPasteInput').value = (data.rawInputs || {}).historyPasteInput || '';
+            document.getElementById('aiPasteInput').value = (data.rawInputs || {}).aiPasteInput || '';
+            document.getElementById('paymentPasteInput').value = rawPaymentInput;
             const restoredPaymentRowCount = document.querySelectorAll('#paymentGridBody tr').length;
             document.getElementById('paymentGridArea').classList.toggle('hidden', restoredPaymentRowCount === 0);
-            if (!shouldReparseLegacyPayment && restoredPaymentRowCount) {
+            if (restoredPaymentRowCount) {
                 updatePaymentParseStatus({
                     added: restoredPaymentRowCount,
                     skipped: paymentSkippedRows,
@@ -3925,6 +4036,7 @@
             scheduleStudentMemoWidgetRefresh(0);
         }
         async function saveServerRecord(mode = 'insert') {
+            if (serverSavePending) return;
             if (!isServerConfigured()) {
                 setServerRecordStatus('index.html 상단의 SUPABASE_URL과 SUPABASE_PUBLISHABLE_KEY를 넣어야 서버 저장이 동작합니다.', 'warning');
                 return;
@@ -3935,6 +4047,10 @@
                 return;
             }
             const payload = collectCalculatorState();
+            const totalText = document.getElementById('dispTotal')?.innerText || '0원';
+            const savedRecordId = currentLoadedRecordId;
+            serverSavePending = true;
+            document.querySelectorAll('[onclick^="saveServerRecord("]').forEach(button => { button.disabled = true; button.setAttribute('aria-busy', 'true'); });
             try {
                 setServerRecordStatus(shouldUpdate ? '현재 저장본을 덮어쓰는 중입니다.' : 'Supabase에 새 기록을 저장 중입니다.', 'info');
                 const client = getSupabaseClient();
@@ -3946,11 +4062,11 @@
                     p_target_year: payload.targetYear || null,
                     p_target_month: payload.targetMonth || null,
                     p_current_tab: payload.currentTab || 'auto',
-                    p_total_text: document.getElementById('dispTotal')?.innerText || '0원',
+                    p_total_text: totalText,
                     p_payload: payload
                 };
                 const { data, error } = shouldUpdate
-                    ? await client.rpc('feecalc_update_record', { p_record_id: currentLoadedRecordId, ...params })
+                    ? await client.rpc('feecalc_update_record', { p_record_id: savedRecordId, ...params })
                     : await client.rpc('feecalc_save_record', params);
                 if (error) throw error;
                 const mapped = mapRecordRow(Array.isArray(data) ? (data[0] || {}) : (data || {}));
@@ -3970,9 +4086,14 @@
                 } else {
                     setServerRecordStatus(message || '서버 저장 중 오류가 발생했습니다.', 'error');
                 }
+            } finally {
+                serverSavePending = false;
+                document.querySelectorAll('[onclick^="saveServerRecord("]').forEach(button => { button.disabled = false; button.removeAttribute('aria-busy'); });
+                updateServerSaveModeUi();
             }
         }
         async function refreshServerRecordList(silent = false) {
+            const sequence = ++serverSearchSequence;
             if (!isServerConfigured()) {
                 serverRecordHistory = [];
                 renderServerRecordList();
@@ -3985,6 +4106,7 @@
                 const client = getSupabaseClient();
                 const accessCode = requireServerAccessCode();
                 const result = await fetchServerRecordRows(client, accessCode, keyword);
+                if (sequence !== serverSearchSequence || keyword !== String(document.getElementById('serverRecordSearch')?.value || '').trim()) return;
                 serverRecordHistory = (result.rows || []).map(mapRecordRow);
                 renderServerRecordList();
                 scheduleStudentMemoWidgetRefresh(0);
@@ -3994,13 +4116,16 @@
                     setServerRecordStatus(keyword ? `"${keyword}" 검색 결과 ${serverRecordHistory.length}건을 불러왔습니다.` : `저장 기록 ${serverRecordHistory.length}건을 불러왔습니다.`, 'success');
                 }
             } catch (error) {
-                serverRecordHistory = [];
-                renderServerRecordList();
-                scheduleStudentMemoWidgetRefresh(0);
+                if (sequence !== serverSearchSequence) return;
                 setServerRecordStatus(error.message || '저장 기록을 불러오지 못했습니다.', 'error');
             }
         }
         async function loadServerRecord(recordId, options = {}) {
+            if (serverSavePending) {
+                setServerRecordStatus('저장이 끝난 후 다른 기록을 열어 주세요.', 'warning');
+                return;
+            }
+            const sequence = ++serverLoadSequence;
             if (!recordId) return;
             if (!isServerConfigured()) {
                 setServerRecordStatus('recordId가 있지만 Supabase 연결 정보가 설정되지 않아 기록을 불러올 수 없습니다.', 'warning');
@@ -4014,6 +4139,7 @@
                     p_access_code: accessCode,
                     p_record_id: recordId
                 });
+                if (sequence !== serverLoadSequence) return;
                 if (error) throw error;
                 const record = mapRecordRow(Array.isArray(data) ? (data[0] || {}) : (data || {}));
                 if (!record.payload) throw new Error('저장된 데이터 본문이 비어 있습니다.');
@@ -4025,6 +4151,7 @@
                 setServerRecordStatus(`불러오기 완료: ${formatSavedAt(record.savedAt)} 저장본을 열었습니다.`, 'success');
                 if (!options.silent) alert('저장된 수강료 데이터를 불러왔습니다.');
             } catch (error) {
+                if (sequence !== serverLoadSequence) return;
                 setServerRecordStatus(error.message || '저장된 기록을 불러오지 못했습니다.', 'error');
             }
         }
