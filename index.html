@@ -4165,7 +4165,8 @@
             staffAuthReady = state === 'ready' && !switchedAccount;
             serverSearchSequence++; serverLoadSequence++; memoWidgetToken++;
             clearTimeout(serverRecordSearchTimer);
-            serverRecordHistory = []; currentLoadedRecordId = '';
+            serverRecordHistory = [];
+            if (!user || switchedAccount) currentLoadedRecordId = '';
             Object.keys(memoPayloadCache).forEach(key => delete memoPayloadCache[key]);
             renderServerRecordList(); renderStudentMemoWidget('', []);
             if (switchedAccount) {
@@ -4189,7 +4190,7 @@
                 if (calculatorEditVersion && !confirm('링크의 저장 기록을 열면 현재 입력 내용이 바뀝니다. 저장 기록을 열까요?')) return;
                 await loadServerRecord(recordId, {silent: true});
                 recordLinkOpened = currentLoadedRecordId === recordId;
-            } else if (!recordId && calculatorEditVersion === 0) {
+            } else if (!recordId && !currentLoadedRecordId && calculatorEditVersion === 0) {
                 const restored = await hydrateSharedSettingsFromServerConfig();
                 if (!restored && epoch === staffAuthEpoch && calculatorEditVersion === 0) await hydrateSharedSettingsFromLatestServerRecord();
             }

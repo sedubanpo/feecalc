@@ -110,7 +110,7 @@ test('different UID resets auth and reloads before history can initialize; same 
     await context.handleStaffAuthState({state:'error',user:{uid:'a'},message:'retry'});
     assert.equal(reloads,0); assert.equal(nodes.get('staffLoginForm').hidden,false);
     await context.handleStaffAuthState({state:'pending',user:{uid:'b'}});
-    assert.equal(reloads,1); assert.equal(resets,1); assert.equal(context.staffAuthReady,false);
+    assert.equal(reloads,1); assert.equal(resets,1); assert.equal(context.staffAuthReady,false); assert.equal(context.currentLoadedRecordId,'');
     assert.equal(context.serverRecordHistory.length,0); assert.deepEqual(context.memoPayloadCache,{});
 });
 test('delayed deletion does not mutate records of the next auth generation', async () => {
@@ -128,4 +128,23 @@ test('delayed record load cannot apply data after auth invalidates load sequence
     vm.createContext(context);vm.runInContext(inlineFunction('loadServerRecord'),context);
     const pending = context.loadServerRecord('r');context.serverLoadSequence++;resolve({data:{payload:{studentName:'private'}}});await pending;
     assert.equal(applied,0);assert.deepEqual(context.memoPayloadCache,{});
+});
+test('same UID denial/pending/ready retains loaded identity and settings; signed out clears identity', async () => {
+    let settingsReads=0;
+    const nodes = new Map();
+    const context = {accountSwitchPending:false,staffAuthEpoch:1, previousStaffUid:'a',staffAuthReady:true,
+        serverSearchSequence:0,serverLoadSequence:0,memoWidgetToken:0,serverRecordSearchTimer:null,
+        serverRecordHistory:[],currentLoadedRecordId:'loaded-record',memoPayloadCache:{},supabaseClient:{},
+        calculatorEditVersion:0,recordLinkOpened:false,URLSearchParams,window:{location:{search:''}},
+        clearTimeout(){},renderServerRecordList(){},renderStudentMemoWidget(){},setServerRecordStatus(){},
+        refreshServerRecordList:async()=>{},hydrateSharedSettingsFromServerConfig:async()=>{settingsReads++;return true;},
+        document:{getElementById:id=>{if(!nodes.has(id))nodes.set(id,{});return nodes.get(id);}},location:{reload(){}}};
+    vm.createContext(context);vm.runInContext(inlineFunction('handleStaffAuthState'),context);
+    for (const state of ['denied','pending','ready']) {
+        await context.handleStaffAuthState({state,user:{uid:'a'},actor:{uid:'a',name:'직원'}});
+        assert.equal(context.currentLoadedRecordId,'loaded-record');
+        assert.equal(context.staffAuthReady,state==='ready');
+    }
+    assert.equal(settingsReads,0);
+    await context.handleStaffAuthState({state:'signedOut',user:null});assert.equal(context.currentLoadedRecordId,'');
 });
