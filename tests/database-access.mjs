@@ -23,7 +23,7 @@ try {
     $$;
     grant usage on schema auth, public to anon, authenticated, service_role;
     grant execute on function auth.role() to anon, authenticated, service_role;`);
-  const oldSchema = execFileSync('git', ['show', 'HEAD:supabase/schema.sql'], {encoding:'utf8'});
+  const oldSchema = execFileSync('git', ['show', 'a0e936a1692cade52351783a6c5f76472849d112:supabase/schema.sql'], {encoding:'utf8'});
   await db.exec(portable(oldSchema));
   await query("select public.set_fee_calc_access_code('synthetic-local-code')");
   const saved = await query("select * from public.feecalc_save_record('synthetic-local-code','가상검증',2026,8,'auto','100원','{\"synthetic\":true}')");
