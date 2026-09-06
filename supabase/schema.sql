@@ -1,3 +1,5 @@
+-- Server gateway only. For an existing installation apply secure_gateway.sql instead.
+begin;
 create table if not exists public.fee_calc_records (
   record_id uuid primary key default gen_random_uuid(),
   created_at timestamptz not null default now(),
@@ -33,8 +35,8 @@ alter table public.fee_calc_private_settings enable row level security;
 drop policy if exists "fee_calc_records_select_all" on public.fee_calc_records;
 drop policy if exists "fee_calc_records_insert_all" on public.fee_calc_records;
 
-revoke all on public.fee_calc_records from anon, authenticated;
-revoke all on public.fee_calc_private_settings from anon, authenticated;
+revoke all on public.fee_calc_records from public, anon, authenticated;
+revoke all on public.fee_calc_private_settings from public, anon, authenticated;
 
 drop function if exists public.set_fee_calc_access_code(text);
 create or replace function public.set_fee_calc_access_code(p_access_code text)
@@ -60,24 +62,12 @@ $$;
 drop function if exists public.fee_calc_check_access_code(text);
 create or replace function public.fee_calc_check_access_code(p_access_code text)
 returns boolean
-language plpgsql
-security definer
-set search_path = public
+language sql
+stable
+security invoker
+set search_path = ''
 as $$
-declare
-  stored_hash text;
-begin
-  select setting_value
-    into stored_hash
-  from public.fee_calc_private_settings
-  where setting_key = 'access_code_hash';
-
-  if stored_hash is null then
-    raise exception '수강료 계산기 접속 코드가 아직 설정되지 않았습니다.';
-  end if;
-
-  return md5(trim(coalesce(p_access_code, ''))) = stored_hash;
-end;
+  select coalesce(auth.role() = 'service_role', false);
 $$;
 
 drop function if exists public.feecalc_list_records(text, integer);
@@ -381,14 +371,26 @@ begin
 end;
 $$;
 
-grant execute on function public.feecalc_list_records(text, integer) to anon, authenticated;
-grant execute on function public.feecalc_search_records(text, text, integer) to anon, authenticated;
-grant execute on function public.feecalc_get_record(text, uuid) to anon, authenticated;
-grant execute on function public.feecalc_save_record(text, text, integer, integer, text, text, jsonb) to anon, authenticated;
-grant execute on function public.feecalc_update_record(text, uuid, text, integer, integer, text, text, jsonb) to anon, authenticated;
-grant execute on function public.feecalc_delete_record(text, uuid) to anon, authenticated;
-grant execute on function public.feecalc_get_app_settings(text) to anon, authenticated;
-grant execute on function public.feecalc_save_app_settings(text, jsonb) to anon, authenticated;
+revoke all on function public.feecalc_list_records(text, integer) from public, anon, authenticated;
+grant execute on function public.feecalc_list_records(text, integer) to service_role;
+revoke all on function public.feecalc_search_records(text, text, integer) from public, anon, authenticated;
+grant execute on function public.feecalc_search_records(text, text, integer) to service_role;
+revoke all on function public.feecalc_get_record(text, uuid) from public, anon, authenticated;
+grant execute on function public.feecalc_get_record(text, uuid) to service_role;
+revoke all on function public.feecalc_save_record(text, text, integer, integer, text, text, jsonb) from public, anon, authenticated;
+grant execute on function public.feecalc_save_record(text, text, integer, integer, text, text, jsonb) to service_role;
+revoke all on function public.feecalc_update_record(text, uuid, text, integer, integer, text, text, jsonb) from public, anon, authenticated;
+grant execute on function public.feecalc_update_record(text, uuid, text, integer, integer, text, text, jsonb) to service_role;
+revoke all on function public.feecalc_delete_record(text, uuid) from public, anon, authenticated;
+grant execute on function public.feecalc_delete_record(text, uuid) to service_role;
+revoke all on function public.feecalc_get_app_settings(text) from public, anon, authenticated;
+grant execute on function public.feecalc_get_app_settings(text) to service_role;
+revoke all on function public.feecalc_save_app_settings(text, jsonb) from public, anon, authenticated;
+grant execute on function public.feecalc_save_app_settings(text, jsonb) to service_role;
 
 revoke all on function public.fee_calc_check_access_code(text) from public, anon, authenticated;
 revoke all on function public.set_fee_calc_access_code(text) from public, anon, authenticated;
+grant execute on function public.fee_calc_check_access_code(text) to service_role;
+revoke all on function public.set_fee_calc_access_code(text) from service_role;
+
+commit;

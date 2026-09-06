@@ -22,6 +22,15 @@ const evidence = process.env.EVIDENCE_ROOT;
   page.on('pageerror', e => errors.push(e.message));
   page.on('dialog', dialog => dialog.accept());
   await page.route('**/*.supabase.co/**', route => route.fulfill({status: 200, contentType: 'application/json', body: '[]'}));
+  // Exercise calculator regressions with a synthetic authorized session only.
+  await page.route('**/auth-client.mjs', route => route.fulfill({status: 200, contentType: 'text/javascript', body: `
+    export async function initializeAuth(onState) {
+      const gateway = {rpc: async () => ({data: [], error: null})};
+      const notify = () => onState({state:'ready', actor:{uid:'synthetic',name:'검증'}, user:{uid:'synthetic'}, gateway});
+      queueMicrotask(notify);
+      return {gateway,retry:notify,logout:async()=>{},login:async()=>{}};
+    }
+  `}));
   const check = async (name, fn) => { await fn(); results.push({name, result: 'pass'}); console.log('PASS', name); };
   try {
     await page.goto(process.env.TEST_URL || `http://127.0.0.1:${server.address().port}/`, {waitUntil: 'networkidle'});
@@ -83,7 +92,7 @@ const evidence = process.env.EVIDENCE_ROOT;
     });
     await check('search response ordering',async()=>{
       assert.deepEqual(await page.evaluate(async()=>{
-        const original=fetchServerRecordRows;const pending={};fetchServerRecordRows=(_c,_a,k)=>new Promise(resolve=>pending[k]=resolve);
+        const original=fetchServerRecordRows;const pending={};fetchServerRecordRows=(_c,k)=>new Promise(resolve=>pending[k]=resolve);
         const input=document.getElementById('serverRecordSearch');input.value='old';const old=refreshServerRecordList();input.value='new';const latest=refreshServerRecordList();pending.new({rows:[{record_id:'new',student_name:'new'}]});await latest;pending.old({rows:[{record_id:'old',student_name:'old'}]});await old;fetchServerRecordRows=original;return serverRecordHistory.map(r=>r.recordId);
       }),['new']);
     });

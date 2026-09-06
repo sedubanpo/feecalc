@@ -7,7 +7,6 @@
     <link rel="icon" href="https://raw.githubusercontent.com/whdtjd5294/whdtjd5294.github.io/main/sedu_logo.png" type="image/png">
     <title>에스에듀 반포관 수강료 계산기 V54</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap');
@@ -489,9 +488,19 @@
                         <p class="mt-1.5 text-[10px] leading-4 text-slate-400">서버 저장 시 함께 보관되며, 같은 학생명의 메모가 우측 위젯에 표시됩니다.</p>
                     </div>
                 </div>
-                <input id="serverAccessCode" type="hidden">
-                <div class="text-[11px] bg-sky-50 text-sky-700 border border-sky-100 rounded-lg px-3 py-2 mb-3">
-                    내부 기록 서버에 자동 연결됩니다. 별도 접속코드 입력 없이 바로 저장/불러오기를 사용하시면 됩니다.
+                <div id="staffAuthPanel" class="text-xs bg-slate-50 text-slate-700 border border-slate-200 rounded-lg p-3 mb-3">
+                    <p class="font-bold mb-2">직원 로그인</p>
+                    <p class="text-[11px] leading-5 mb-2">서버 기록은 기존 직원 계정으로 로그인한 뒤 사용할 수 있습니다. 계산과 이미지·JSON 저장은 로그인 없이 사용할 수 있습니다. 다른 계정으로 로그인하면 입력 내용이 초기화됩니다.</p>
+                    <form id="staffLoginForm" onsubmit="submitStaffLogin(event)">
+                        <label for="staffLoginId" class="block mb-1">이메일 또는 휴대전화 번호</label>
+                        <input id="staffLoginId" autocomplete="username" required class="w-full p-2 border border-slate-200 rounded mb-2" style="min-height:40px">
+                        <label for="staffLoginPassword" class="block mb-1">비밀번호</label>
+                        <input id="staffLoginPassword" type="password" autocomplete="current-password" required class="w-full p-2 border border-slate-200 rounded mb-2" style="min-height:40px">
+                        <button id="staffLoginButton" type="submit" class="w-full p-2 bg-sky-700 text-white font-bold rounded" style="min-height:40px" disabled>로그인</button>
+                    </form>
+                    <p id="staffAuthStatus" role="status" aria-live="polite" class="leading-5 mt-2">로그인 기능을 준비하고 있습니다.</p>
+                    <button id="staffAuthRetry" type="button" onclick="retryStaffAuth()" class="p-2 underline" style="min-height:40px" hidden>다시 시도</button>
+                    <button id="staffLogout" type="button" onclick="logoutStaff()" class="p-2 underline" style="min-height:40px" hidden>로그아웃 및 입력 초기화</button>
                 </div>
                 <div class="mb-3">
                     <input id="serverRecordSearch" type="search" placeholder="이름으로 검색" class="record-search w-full p-2.5 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:border-sky-400 focus:outline-none" oninput="handleServerRecordSearchInput()">
@@ -829,11 +838,15 @@
         let serverLoadSequence = 0;
         let serverSavePending = false;
         let imageSavePending = false;
-        const SUPABASE_URL = 'https://jtdhvkotlvznedqixsvv.supabase.co';
-        const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_hPySjz_ia6iMRfp_WnsaqQ_DmYnpdhs';
-        const SUPABASE_TABLE = 'fee_calc_records';
-        const FEECALC_ACCESS_CODE_KEY = 'feecalc_access_code';
-        const FEECALC_DEFAULT_ACCESS_CODE = 'banpo-fee-2026-secure';
+        let staffAuth = null;
+        let staffAuthReady = false;
+        let staffAuthEpoch = 0;
+        let previousStaffUid = null;
+        let accountSwitchPending = false;
+        let recordLinkOpened = false;
+        let calculatorEditVersion = 0;
+        document.addEventListener('input', event => { if (!event.target.closest('#staffAuthPanel') && event.target.id !== 'serverRecordSearch') calculatorEditVersion++; });
+        try { localStorage.removeItem('feecalc_access_code'); } catch (_) {}
         const FEECALC_STORAGE_VERSION = 7;
         const PRICE_PRESETS_STORAGE_KEY = 'feecalc_price_presets';
         const AD_TEXT_STORAGE_KEY = 'feecalc_ad_text';
@@ -956,9 +969,9 @@
             if (!isServerConfigured()) return false;
             try {
                 const client = getSupabaseClient();
-                const accessCode = requireServerAccessCode();
+
                 const { error } = await client.rpc('feecalc_save_app_settings', {
-                    p_access_code: accessCode,
+
                     p_settings: collectSharedAppSettings()
                 });
                 if (error) throw error;
@@ -968,14 +981,16 @@
             }
         }
         async function hydrateSharedSettingsFromServerConfig() {
+            const epoch = staffAuthEpoch, edits = calculatorEditVersion;
             if (!isServerConfigured()) return false;
             try {
                 const client = getSupabaseClient();
-                const accessCode = requireServerAccessCode();
+
                 const { data, error } = await client.rpc('feecalc_get_app_settings', {
-                    p_access_code: accessCode
+
                 });
                 if (error) throw error;
+                if (epoch !== staffAuthEpoch || edits !== calculatorEditVersion) return false;
                 return applySharedSettingsFromPayload(data || {});
             } catch (error) {
                 return false;
@@ -3486,52 +3501,9 @@
             updateInfoText(totalAmount, adj);
         }
 
-        function isServerConfigured() {
-            return !!SUPABASE_URL && !!SUPABASE_PUBLISHABLE_KEY && !SUPABASE_URL.includes('REPLACE_ME') && !SUPABASE_PUBLISHABLE_KEY.includes('REPLACE_ME');
-        }
-        function getServerAccessCode() {
-            const input = document.getElementById('serverAccessCode');
-            return String(input?.value || '').trim();
-        }
-        function persistServerAccessCode() {
-            const code = getServerAccessCode() || FEECALC_DEFAULT_ACCESS_CODE;
-            try {
-                if (code) localStorage.setItem(FEECALC_ACCESS_CODE_KEY, code);
-                else localStorage.removeItem(FEECALC_ACCESS_CODE_KEY);
-            } catch (error) {}
-        }
-        function clearServerAccessCode() {
-            const input = document.getElementById('serverAccessCode');
-            if (input) input.value = FEECALC_DEFAULT_ACCESS_CODE;
-            try { localStorage.setItem(FEECALC_ACCESS_CODE_KEY, FEECALC_DEFAULT_ACCESS_CODE); } catch (error) {}
-            setServerRecordStatus('기록 연결 코드를 기본값으로 복구했습니다.', 'info');
-        }
-        function hydrateServerAccessCode() {
-            try {
-                const saved = localStorage.getItem(FEECALC_ACCESS_CODE_KEY) || FEECALC_DEFAULT_ACCESS_CODE;
-                const input = document.getElementById('serverAccessCode');
-                if (input) input.value = saved;
-            } catch (error) {}
-        }
-        function requireServerAccessCode() {
-            const input = document.getElementById('serverAccessCode');
-            const code = getServerAccessCode() || FEECALC_DEFAULT_ACCESS_CODE;
-            if (input && !input.value) input.value = code;
-            persistServerAccessCode();
-            return code;
-        }
+        function isServerConfigured() { return staffAuthReady; }
         function getSupabaseClient() {
-            if (!isServerConfigured()) throw new Error('Supabase 연결 정보가 아직 설정되지 않았습니다.');
-            if (!window.supabase || !window.supabase.createClient) throw new Error('Supabase 클라이언트를 불러오지 못했습니다.');
-            if (!supabaseClient) {
-                supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
-                    auth: {
-                        persistSession: false,
-                        autoRefreshToken: false,
-                        detectSessionInUrl: false
-                    }
-                });
-            }
+            if (!staffAuthReady || !supabaseClient) throw new Error('서버 기록을 사용하려면 직원 계정으로 로그인해 주세요.');
             return supabaseClient;
         }
         function mapRecordRow(row = {}) {
@@ -3595,7 +3567,10 @@
             if (!widget || !nameEl || !countEl || !body) return;
             const visibleItems = items.filter(item => String(item.memo || '').trim()).slice(0, 8);
             widget.classList.toggle('hidden', !studentName || !visibleItems.length);
-            if (!studentName || !visibleItems.length) return;
+            if (!studentName || !visibleItems.length) {
+                nameEl.textContent = ''; countEl.textContent = ''; body.innerHTML = '';
+                return;
+            }
             nameEl.textContent = `${studentName} 학생 기준`;
             countEl.textContent = `${visibleItems.length}건`;
             body.innerHTML = visibleItems.map(item => {
@@ -3615,6 +3590,8 @@
             }).join('');
         }
         async function fetchServerRecordPayload(record) {
+            const authEpoch = staffAuthEpoch;
+            if (!isServerConfigured()) return null;
             const recordId = record?.recordId || '';
             if (!recordId) return null;
             if (record.payload) return record.payload;
@@ -3622,17 +3599,17 @@
             if (!isServerConfigured()) return null;
             try {
                 const client = getSupabaseClient();
-                const accessCode = requireServerAccessCode();
+
                 const { data, error } = await client.rpc('feecalc_get_record', {
-                    p_access_code: accessCode,
+
                     p_record_id: recordId
                 });
                 if (error) throw error;
                 const mapped = mapRecordRow(Array.isArray(data) ? (data[0] || {}) : (data || {}));
+                if (authEpoch !== staffAuthEpoch) return null;
                 memoPayloadCache[recordId] = mapped.payload || null;
                 return memoPayloadCache[recordId];
             } catch (error) {
-                memoPayloadCache[recordId] = null;
                 return null;
             }
         }
@@ -3669,9 +3646,11 @@
             renderStudentMemoWidget(studentName, items.concat(savedItems.filter(Boolean)));
         }
         async function hydrateSharedSettingsFromLatestServerRecord() {
+            const epoch = staffAuthEpoch, edits = calculatorEditVersion;
             if (!serverRecordHistory.length) return false;
             for (const record of serverRecordHistory.slice(0, 10)) {
                 const payload = await fetchServerRecordPayload(record);
+                if (epoch !== staffAuthEpoch || edits !== calculatorEditVersion) return false;
                 if (applySharedSettingsFromPayload(payload || {})) return true;
             }
             return false;
@@ -3684,7 +3663,7 @@
         function updateServerSaveModeUi() {
             const btn = document.getElementById('serverUpdateButton');
             if (!btn) return;
-            btn.disabled = !currentLoadedRecordId;
+            btn.disabled = !staffAuthReady || serverSavePending || !currentLoadedRecordId;
             btn.title = currentLoadedRecordId ? '현재 불러온 저장본을 덮어씁니다.' : '저장본을 먼저 불러오면 덮어쓰기를 사용할 수 있습니다.';
         }
         function renderServerRecordList() {
@@ -3693,6 +3672,7 @@
             updateServerSaveModeUi();
             list.innerHTML = '';
             const keyword = String(document.getElementById('serverRecordSearch')?.value || '').trim();
+            if (!isServerConfigured()) { list.textContent = '로그인 후 저장 기록을 확인할 수 있습니다.'; return; }
             if (!serverRecordHistory.length) {
                 list.innerHTML = keyword
                     ? '<div class="text-[11px] text-gray-400 text-center py-6 border border-dashed border-gray-200 rounded-lg">검색 결과가 없습니다.</div>'
@@ -3742,17 +3722,17 @@
             const code = String(error?.code || '');
             return code === 'PGRST202' || (message.includes('feecalc_search_records') && message.includes('schema cache'));
         }
-        async function fetchServerRecordRows(client, accessCode, keyword) {
+        async function fetchServerRecordRows(client, keyword) {
             if (keyword) {
                 const searchResult = await client.rpc('feecalc_search_records', {
-                    p_access_code: accessCode,
+
                     p_keyword: keyword,
                     p_limit: 500
                 });
                 if (!searchResult.error) return { rows: searchResult.data || [], fallback: false };
                 if (!isMissingSearchRpcError(searchResult.error)) throw searchResult.error;
                 const fallbackResult = await client.rpc('feecalc_list_records', {
-                    p_access_code: accessCode,
+
                     p_limit: 200
                 });
                 if (fallbackResult.error) throw fallbackResult.error;
@@ -3760,7 +3740,7 @@
                 return { rows, fallback: true };
             }
             const listResult = await client.rpc('feecalc_list_records', {
-                p_access_code: accessCode,
+
                 p_limit: 120
             });
             if (listResult.error) throw listResult.error;
@@ -3770,15 +3750,17 @@
             if (event) event.stopPropagation();
             if (!recordId) return;
             if (!window.confirm('이 저장된 수강료 기록을 삭제할까요?')) return;
+            const authEpoch = staffAuthEpoch;
             try {
                 setServerRecordStatus('선택한 기록을 삭제하는 중입니다.', 'info');
                 const client = getSupabaseClient();
-                const accessCode = requireServerAccessCode();
+
                 const { error } = await client.rpc('feecalc_delete_record', {
-                    p_access_code: accessCode,
+
                     p_record_id: recordId
                 });
                 if (error) throw error;
+                if (authEpoch !== staffAuthEpoch) return;
                 serverRecordHistory = serverRecordHistory.filter(record => record.recordId !== recordId);
                 delete memoPayloadCache[recordId];
                 if (currentLoadedRecordId === recordId) currentLoadedRecordId = '';
@@ -3786,6 +3768,7 @@
                 scheduleStudentMemoWidgetRefresh(0);
                 setServerRecordStatus('선택한 기록을 삭제했습니다.', 'success');
             } catch (error) {
+                if (authEpoch !== staffAuthEpoch) return;
                 setServerRecordStatus(error.message || '기록 삭제 중 오류가 발생했습니다.', 'error');
             }
         }
@@ -4038,9 +4021,10 @@
         async function saveServerRecord(mode = 'insert') {
             if (serverSavePending) return;
             if (!isServerConfigured()) {
-                setServerRecordStatus('index.html 상단의 SUPABASE_URL과 SUPABASE_PUBLISHABLE_KEY를 넣어야 서버 저장이 동작합니다.', 'warning');
+                setServerRecordStatus('서버 기록을 저장하려면 직원 계정으로 로그인해 주세요.', 'warning');
                 return;
             }
+            const authEpoch = staffAuthEpoch;
             const shouldUpdate = mode === 'update';
             if (shouldUpdate && !currentLoadedRecordId) {
                 setServerRecordStatus('덮어쓸 저장본이 없습니다. 먼저 저장본을 불러오거나 새 기록 저장을 사용해 주세요.', 'warning');
@@ -4052,12 +4036,13 @@
             serverSavePending = true;
             document.querySelectorAll('[onclick^="saveServerRecord("]').forEach(button => { button.disabled = true; button.setAttribute('aria-busy', 'true'); });
             try {
-                setServerRecordStatus(shouldUpdate ? '현재 저장본을 덮어쓰는 중입니다.' : 'Supabase에 새 기록을 저장 중입니다.', 'info');
+                setServerRecordStatus(shouldUpdate ? '현재 저장본을 덮어쓰는 중입니다.' : '새 기록을 서버에 저장 중입니다.', 'info');
                 const client = getSupabaseClient();
-                const accessCode = requireServerAccessCode();
-                await saveSharedAppSettingsToServer();
+
+                const settingsSaved = await saveSharedAppSettingsToServer();
+                if (authEpoch !== staffAuthEpoch) return;
                 const params = {
-                    p_access_code: accessCode,
+
                     p_student_name: payload.studentName || '',
                     p_target_year: payload.targetYear || null,
                     p_target_month: payload.targetMonth || null,
@@ -4070,19 +4055,23 @@
                     : await client.rpc('feecalc_save_record', params);
                 if (error) throw error;
                 const mapped = mapRecordRow(Array.isArray(data) ? (data[0] || {}) : (data || {}));
+                if (authEpoch !== staffAuthEpoch) return;
+                if (!mapped.recordId) throw new Error('서버에서 저장 결과를 확인하지 못했습니다. 기록 목록을 확인하고 다시 시도해 주세요.');
                 currentLoadedRecordId = mapped.recordId || '';
                 if (currentLoadedRecordId) memoPayloadCache[currentLoadedRecordId] = payload;
                 updateServerSaveModeUi();
                 const doneMessage = shouldUpdate
                     ? `덮어쓰기 완료: ${formatSavedAt(mapped.savedAt)} 저장본을 갱신했습니다.`
-                    : `저장 완료: ${formatSavedAt(mapped.savedAt)} 새 기록이 Supabase에 저장되었습니다.`;
+                    : `저장 완료: ${formatSavedAt(mapped.savedAt)} 새 기록이 서버에 저장되었습니다.`;
                 await refreshServerRecordList(true);
-                setServerRecordStatus(doneMessage, 'success');
+                if (authEpoch !== staffAuthEpoch) return;
+                setServerRecordStatus(settingsSaved ? doneMessage : doneMessage + ' 공통 설정은 저장하지 못했습니다. 다시 저장해 주세요.', settingsSaved ? 'success' : 'warning');
                 scheduleStudentMemoWidgetRefresh(0);
             } catch (error) {
+                if (authEpoch !== staffAuthEpoch) return;
                 const message = String(error.message || '');
                 if (shouldUpdate && (error.code === 'PGRST202' || message.includes('feecalc_update_record'))) {
-                    setServerRecordStatus('덮어쓰기 RPC가 아직 Supabase에 적용되지 않았습니다. supabase/schema.sql의 최신 SQL을 실행해 주세요.', 'error');
+                    setServerRecordStatus('기록을 덮어쓰지 못했습니다. 담당자에게 확인해 주세요.', 'error');
                 } else {
                     setServerRecordStatus(message || '서버 저장 중 오류가 발생했습니다.', 'error');
                 }
@@ -4097,21 +4086,21 @@
             if (!isServerConfigured()) {
                 serverRecordHistory = [];
                 renderServerRecordList();
-                if (!silent) setServerRecordStatus('Supabase 연결 정보가 아직 비어 있습니다. 프로젝트 URL과 publishable key를 먼저 연결해주세요.', 'warning');
+                if (!silent) setServerRecordStatus('직원 로그인 후 저장 기록을 불러올 수 있습니다.', 'warning');
                 return;
             }
             const keyword = String(document.getElementById('serverRecordSearch')?.value || '').trim();
             try {
                 if (!silent) setServerRecordStatus(keyword ? `"${keyword}" 이름으로 서버 전체 기록을 검색 중입니다.` : '저장 기록을 불러오는 중입니다.', 'info');
                 const client = getSupabaseClient();
-                const accessCode = requireServerAccessCode();
-                const result = await fetchServerRecordRows(client, accessCode, keyword);
+
+                const result = await fetchServerRecordRows(client, keyword);
                 if (sequence !== serverSearchSequence || keyword !== String(document.getElementById('serverRecordSearch')?.value || '').trim()) return;
                 serverRecordHistory = (result.rows || []).map(mapRecordRow);
                 renderServerRecordList();
                 scheduleStudentMemoWidgetRefresh(0);
                 if (result.fallback) {
-                    setServerRecordStatus(`Supabase SQL 적용 전이라 최근 200건 안에서 "${keyword}" 검색 결과 ${serverRecordHistory.length}건을 표시합니다.`, 'warning');
+                    setServerRecordStatus(`전체 검색을 사용할 수 없어 최근 200건 안에서 "${keyword}" 검색 결과 ${serverRecordHistory.length}건을 표시합니다.`, 'warning');
                 } else {
                     setServerRecordStatus(keyword ? `"${keyword}" 검색 결과 ${serverRecordHistory.length}건을 불러왔습니다.` : `저장 기록 ${serverRecordHistory.length}건을 불러왔습니다.`, 'success');
                 }
@@ -4128,15 +4117,15 @@
             const sequence = ++serverLoadSequence;
             if (!recordId) return;
             if (!isServerConfigured()) {
-                setServerRecordStatus('recordId가 있지만 Supabase 연결 정보가 설정되지 않아 기록을 불러올 수 없습니다.', 'warning');
+                setServerRecordStatus('직원 로그인 후 링크의 저장 기록을 열 수 있습니다.', 'warning');
                 return;
             }
             try {
                 setServerRecordStatus('저장된 기록을 불러오는 중입니다.', 'info');
                 const client = getSupabaseClient();
-                const accessCode = requireServerAccessCode();
+
                 const { data, error } = await client.rpc('feecalc_get_record', {
-                    p_access_code: accessCode,
+
                     p_record_id: recordId
                 });
                 if (sequence !== serverLoadSequence) return;
@@ -4157,20 +4146,73 @@
         }
         async function initializeServerRecordFlow() {
             renderServerRecordList();
-            hydrateServerAccessCode();
-            if (!isServerConfigured()) {
-                setServerRecordStatus('index.html 상단의 SUPABASE_URL과 SUPABASE_PUBLISHABLE_KEY를 넣으면 저장 기록 기능이 활성화됩니다.', 'warning');
+            try {
+                const { initializeAuth } = await import('./auth-client.mjs');
+                staffAuth = await initializeAuth(handleStaffAuthState);
+                supabaseClient = staffAuth.gateway;
+                document.getElementById('staffLoginButton').disabled = false;
+            } catch (_) {
+                document.getElementById('staffAuthStatus').textContent = '로그인 기능을 불러오지 못했습니다. 네트워크를 확인하고 다시 시도해 주세요.';
+                document.getElementById('staffAuthRetry').hidden = false;
+            }
+        }
+        async function handleStaffAuthState({state, actor, user, message, gateway}) {
+            if (accountSwitchPending) return;
+            if (gateway) supabaseClient = gateway;
+            const switchedAccount = !!user && !!previousStaffUid && previousStaffUid !== user.uid;
+            if (user) previousStaffUid = user.uid;
+            const epoch = ++staffAuthEpoch;
+            staffAuthReady = state === 'ready' && !switchedAccount;
+            serverSearchSequence++; serverLoadSequence++; memoWidgetToken++;
+            clearTimeout(serverRecordSearchTimer);
+            serverRecordHistory = []; currentLoadedRecordId = '';
+            Object.keys(memoPayloadCache).forEach(key => delete memoPayloadCache[key]);
+            renderServerRecordList(); renderStudentMemoWidget('', []);
+            if (switchedAccount) {
+                accountSwitchPending = true;
+                supabaseClient?.reset?.();
+                location.reload();
                 return;
             }
+            document.getElementById('staffLoginForm').hidden = !!user && ['pending', 'ready'].includes(state);
+            document.getElementById('staffLogout').hidden = !user;
+            document.getElementById('staffAuthRetry').hidden = !['error', 'denied'].includes(state);
+            document.getElementById('staffAuthStatus').textContent = message || (state === 'ready' ? `${actor.name || '직원'}님으로 로그인했습니다.` : state === 'pending' ? '직원 권한을 확인하고 있습니다.' : '직원 계정으로 로그인해 주세요.');
+            if (!staffAuthReady) { setServerRecordStatus(message || '로그인 후 서버 기록을 사용할 수 있습니다.', 'info'); return; }
+            // The auth observer can run before initializeAuth resolves.
+            await Promise.resolve();
+            if (!supabaseClient) supabaseClient = staffAuth?.gateway;
             await refreshServerRecordList(true);
+            if (epoch !== staffAuthEpoch || !staffAuthReady) return;
             const recordId = new URLSearchParams(window.location.search).get('recordId');
-            if (recordId) await loadServerRecord(recordId, { silent: true });
-            else {
-                const restoredServerSettings = await hydrateSharedSettingsFromServerConfig();
-                if (!restoredServerSettings) await hydrateSharedSettingsFromLatestServerRecord();
-                if (serverRecordHistory.length) setServerRecordStatus(`저장 기록 ${serverRecordHistory.length}건이 준비되었습니다.`, 'success');
-                else setServerRecordStatus('아직 저장된 기록이 없습니다. 첫 저장을 진행해 주세요.', 'info');
+            if (recordId && !recordLinkOpened) {
+                if (calculatorEditVersion && !confirm('링크의 저장 기록을 열면 현재 입력 내용이 바뀝니다. 저장 기록을 열까요?')) return;
+                await loadServerRecord(recordId, {silent: true});
+                recordLinkOpened = currentLoadedRecordId === recordId;
+            } else if (!recordId && calculatorEditVersion === 0) {
+                const restored = await hydrateSharedSettingsFromServerConfig();
+                if (!restored && epoch === staffAuthEpoch && calculatorEditVersion === 0) await hydrateSharedSettingsFromLatestServerRecord();
             }
+        }
+        async function submitStaffLogin(event) {
+            event.preventDefault();
+            if (!staffAuth) return;
+            const button = document.getElementById('staffLoginButton');
+            const input = document.getElementById('staffLoginPassword');
+            const password = input.value; input.value = '';
+            button.disabled = true; button.setAttribute('aria-busy', 'true');
+            document.getElementById('staffAuthStatus').textContent = '로그인하고 있습니다.';
+            try { await staffAuth.login(document.getElementById('staffLoginId').value, password); }
+            catch (error) { document.getElementById('staffAuthStatus').textContent = error.message; }
+            finally { button.disabled = false; button.removeAttribute('aria-busy'); }
+        }
+        async function retryStaffAuth() {
+            if (staffAuth) await staffAuth.retry(); else await initializeServerRecordFlow();
+        }
+        async function logoutStaff() {
+            if (!confirm('로그아웃하면 현재 입력한 학생 정보와 저장하지 않은 계산 내용이 초기화됩니다. 로그아웃할까요?')) return;
+            try { await staffAuth.logout(); location.reload(); }
+            catch (_) { document.getElementById('staffAuthStatus').textContent = '로그아웃하지 못했습니다. 다시 시도해 주세요.'; }
         }
 
         function collectCoreRows(selector, mapper) { return Array.from(document.querySelectorAll(selector)).map(mapper); }

@@ -1,3 +1,5 @@
+-- Run secure_gateway.sql first for an existing installation.
+begin;
 drop function if exists public.feecalc_search_records(text, text, integer);
 
 create or replace function public.feecalc_search_records(
@@ -58,4 +60,7 @@ begin
 end;
 $$;
 
-grant execute on function public.feecalc_search_records(text, text, integer) to anon, authenticated;
+revoke all on function public.feecalc_search_records(text, text, integer) from public, anon, authenticated;
+grant execute on function public.feecalc_search_records(text, text, integer) to service_role;
+
+commit;
