@@ -25,7 +25,7 @@ const evidence = process.env.EVIDENCE_ROOT;
   // Exercise calculator regressions with a synthetic authorized session only.
   await page.route('**/auth-client.mjs', route => route.fulfill({status: 200, contentType: 'text/javascript', body: `
     export async function initializeAuth(onState) {
-      const gateway = {rpc: async () => ({data: [], error: null})};
+      const gateway = {rpc: async name => ({data: name === 'feecalc_students' ? [{id:'qa',name:'검증학생'}] : [], error: null})};
       const notify = () => onState({state:'ready', actor:{uid:'synthetic',name:'검증'}, user:{uid:'synthetic'}, gateway});
       queueMicrotask(notify);
       return {gateway,retry:notify,logout:async()=>{},login:async()=>{}};
@@ -99,8 +99,9 @@ const evidence = process.env.EVIDENCE_ROOT;
     await check('save snapshot and duplicate submission guard (mock RPC)',async()=>{
       const data=await page.evaluate(async()=>{
         const originalClient=supabaseClient, originalSettings=saveSharedAppSettingsToServer, originalRefresh=refreshServerRecordList;
-        let release;const calls=[];saveSharedAppSettingsToServer=()=>new Promise(r=>release=r);refreshServerRecordList=async()=>{};
-        supabaseClient={rpc:async(name,params)=>{calls.push({name,params});return{data:{record_id:'test',saved_at:new Date().toISOString()}};}};
+        document.getElementById('studentName').value='검증학생';syncStudentMatch(false);
+        let release;const calls=[];refreshServerRecordList=async()=>{};
+        supabaseClient={rpc:async(name,params)=>{if(!name.includes('update_record'))return{data:[]};calls.push({name,params});await new Promise(r=>release=r);return{data:{record_id:'test',saved_at:new Date().toISOString()}};}};
         currentLoadedRecordId='before';const amount=document.getElementById('dispTotal').innerText;
         const first=saveServerRecord('update');const second=saveServerRecord('update');document.getElementById('dispTotal').innerText='999원';release();await Promise.all([first,second]);
         supabaseClient=originalClient;saveSharedAppSettingsToServer=originalSettings;refreshServerRecordList=originalRefresh;

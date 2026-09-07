@@ -386,7 +386,10 @@
                 <div class="space-y-3">
                     <div>
                         <label for="studentName" class="block text-xs font-bold text-gray-500 mb-1">학생 이름</label>
-                        <input type="text" id="studentName" placeholder="이름" class="w-full p-2.5 border border-gray-300 rounded-lg text-sm focus:border-[#004094] focus:outline-none" oninput="handleStudentNameInput()">
+                        <input type="text" id="studentName" placeholder="학생 이름 검색 또는 임시 입력" autocomplete="off" aria-describedby="studentMatchStatus" class="w-full p-2.5 border border-gray-300 rounded-lg text-sm focus:border-[#004094] focus:outline-none" oncompositionstart="beginStudentNameComposition()" oncompositionend="studentNameComposing = false; handleStudentNameInput()" oninput="handleStudentNameInput()">
+                        <p id="studentMatchStatus" class="ui-help" role="status">로그인 후 계정 관리의 학생과 연결할 수 있습니다.</p>
+                        <div id="studentMatches" class="student-matches"></div>
+                        <button type="button" class="ui-button" onclick="loadStudentRegistry()">학생 명부 새로고침</button>
                     </div>
                     <div class="flex gap-3">
                         <div class="flex-1"><label for="targetYear" class="block text-xs font-bold text-gray-500 mb-1">연도</label><input type="number" id="targetYear" class="w-full p-2.5 border border-gray-300 rounded-lg text-center text-sm font-bold" onchange="resetAndUpdate()"></div>
@@ -449,27 +452,23 @@
                     <button onclick="processSmartPaste()" class="w-full mt-2 py-2.5 bg-[#004094] text-white text-xs font-bold rounded hover:bg-blue-800 transition">분석하여 추가</button>
                 </div>
             </div>
-            <div id="coreDataArea" class="hidden bg-emerald-50 p-3 rounded-xl border border-emerald-100 shadow-inner">
-                <h3 class="text-xs font-bold text-emerald-700 mb-2">💾 기본 계산 데이터 저장/불러오기</h3>
-                <div class="flex gap-2">
-                    <button onclick="saveCoreData()" class="flex-1 py-2 bg-emerald-700 text-white text-xs font-bold rounded hover:bg-emerald-800">저장</button>
-                    <button onclick="triggerLoadCoreData()" class="flex-1 py-2 bg-slate-600 text-white text-xs font-bold rounded hover:bg-slate-700">불러오기</button>
-                </div>
-                <input id="coreDataInput" type="file" accept=".json,application/json" class="hidden" onchange="loadCoreData(event)">
-            </div>
             <div id="pricePresetArea" class="hidden bg-white p-3 rounded-xl border border-blue-100 shadow-sm">
                 <div class="flex items-center justify-between gap-3">
-                    <h3 class="text-xs font-bold text-[#004094]">💳 금액 선택지</h3>
-                    <button type="button" onclick="togglePricePresetSettings()" class="px-2.5 py-1 rounded bg-slate-100 text-slate-600 text-[10px] font-black hover:bg-slate-200">설정</button>
+                    <h3 class="text-sm font-bold text-[#004094]">수업 유형별 단가</h3>
+                    <button type="button" onclick="togglePricePresetSettings()" class="ui-button">단가 편집</button>
                 </div>
-                <div id="pricePresetSummary" class="mt-2 flex flex-wrap gap-1.5"></div>
+                <div id="pricePresetSummary" class="price-library"></div>
                 <div id="pricePresetSettings" class="hidden mt-3 pt-3 border-t border-slate-100">
-                    <div id="pricePresetList" class="flex flex-wrap gap-1.5 mb-2"></div>
-                    <div class="flex gap-2">
-                        <input id="pricePresetInput" type="number" class="flex-1 p-2 border border-slate-200 rounded text-xs text-right font-bold" placeholder="금액 추가">
-                        <button type="button" onclick="addPricePreset()" class="px-3 py-2 rounded bg-[#004094] text-white text-xs font-black hover:bg-blue-800">추가</button>
+                    <div id="pricePresetList"></div>
+                    <div class="price-editor">
+                        <label>수업 유형<select id="pricePresetType"></select></label>
+                        <label>단가 기준<select id="pricePresetUnit"><option value="perClass">회당</option><option value="perHour">시간당</option></select></label>
+                        <label>금액 (원)<input id="pricePresetInput" type="number" min="1" step="1" placeholder="예: 62500"></label>
+                        <button type="button" onclick="addPricePreset()" class="ui-button">목록에 추가</button>
                     </div>
                 </div>
+                <div class="price-actions"><button id="savePriceLibrary" type="button" class="ui-button primary" onclick="savePriceLibrary()">단가 서버 저장</button><button type="button" class="ui-button" onclick="reloadPriceLibrary()">서버 단가 조회</button></div>
+                <p id="priceLibraryStatus" class="ui-help" role="status">공통 단가 목록입니다. 수정 후 서버에 저장해 주세요.</p>
             </div>
             <div id="serverRecordArea" class="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
                 <div class="mb-3">
@@ -482,15 +481,10 @@
                         </div>
                     </div>
                     <p class="text-[11px] text-gray-500 leading-5 mt-2">새 기록 저장은 기록을 추가하고, 덮어쓰기는 현재 불러온 저장본을 갱신합니다.</p>
-                    <div class="mt-3 pt-3 border-t border-slate-100">
-                        <label class="block text-[11px] font-black text-slate-700 mb-1.5">📝 메모</label>
-                        <textarea id="recordMemoInput" class="w-full h-24 p-2.5 border border-amber-200 rounded-xl text-xs leading-relaxed text-slate-700 bg-amber-50/40 focus:outline-none focus:border-amber-400 resize-none" placeholder="변경 이유나 수강료 안내 시 주의할 사항을 적어두세요." oninput="handleRecordMemoInput()"></textarea>
-                        <p class="mt-1.5 text-[10px] leading-4 text-slate-400">서버 저장 시 함께 보관되며, 같은 학생명의 메모가 우측 위젯에 표시됩니다.</p>
-                    </div>
                 </div>
                 <div id="staffAuthPanel" class="text-xs bg-slate-50 text-slate-700 border border-slate-200 rounded-lg p-3 mb-3">
                     <p class="font-bold mb-2">직원 로그인</p>
-                    <p class="text-[11px] leading-5 mb-2">서버 기록은 기존 직원 계정으로 로그인한 뒤 사용할 수 있습니다. 계산과 이미지·JSON 저장은 로그인 없이 사용할 수 있습니다. 다른 계정으로 로그인하면 입력 내용이 초기화됩니다.</p>
+                    <p class="text-[11px] leading-5 mb-2">서버 기록은 직원 로그인 후 등록 학생에게 저장할 수 있습니다. 임시 이름으로도 계산과 이미지 저장은 가능합니다. 다른 계정으로 로그인하면 입력 내용이 초기화됩니다.</p>
                     <form id="staffLoginForm" onsubmit="submitStaffLogin(event)">
                         <label for="staffLoginId" class="block mb-1">이메일 또는 휴대전화 번호</label>
                         <input id="staffLoginId" autocomplete="username" required class="w-full p-2 border border-slate-200 rounded mb-2" style="min-height:40px">
@@ -637,7 +631,7 @@
             <div id="studentMemoWidget" class="hidden w-full mb-4 bg-white rounded-2xl border border-amber-200 shadow-sm overflow-hidden">
                 <div class="flex items-center justify-between gap-3 px-4 py-3 bg-amber-50 border-b border-amber-100">
                     <div class="min-w-0">
-                        <div class="text-sm font-black text-slate-900">📝 학생 메모</div>
+                        <div class="text-sm font-black text-slate-900">데스크 포털 · 수강료 메모</div>
                         <div id="studentMemoWidgetName" class="text-[11px] font-bold text-amber-700 truncate mt-0.5"></div>
                     </div>
                     <span id="studentMemoWidgetCount" class="shrink-0 rounded-full bg-white border border-amber-200 px-2.5 py-1 text-[10px] font-black text-amber-700">0건</span>
@@ -646,18 +640,16 @@
             </div>
             <div id="captureArea" class="w-full receipt-shadow border-t-[10px] border-[#004094] rounded-b-2xl mb-6 bg-white transition-colors duration-300">
                 <img src="https://raw.githubusercontent.com/whdtjd5294/whdtjd5294.github.io/main/sedu_logo.png" class="watermark-img" crossorigin="anonymous" alt="" aria-hidden="true" width="240" height="240">
-                <div class="text-center mb-6 relative z-20">
-                    <img src="https://raw.githubusercontent.com/whdtjd5294/whdtjd5294.github.io/main/sedu_logo.png" crossorigin="anonymous" class="h-12 mx-auto mb-1 object-contain" alt="에스에듀 반포관 로고" width="48" height="48">
+                <div class="receipt-header relative z-20">
+                  <div class="receipt-brand"><img src="https://raw.githubusercontent.com/whdtjd5294/whdtjd5294.github.io/main/sedu_logo.png" crossorigin="anonymous" class="h-12 object-contain" alt="에스에듀 반포관 로고" width="48" height="48"><div>
                     <h1 class="text-xl font-black text-[#004094] mb-0.5 tracking-tight">에스에듀 반포관</h1>
-                    <p id="receiptSubTitle" class="text-[10px] text-gray-500 font-bold tracking-widest">수강료 안내서</p>
+                    <p id="receiptSubTitle" class="text-sm text-gray-700 font-bold">수강료 안내서</p>
+                  </div></div>
+                  <div class="receipt-student"><h2 class="text-2xl font-black text-gray-900" id="dispName">학생명</h2><div id="dateBadge" class="text-sm font-bold"><span id="dispDate">2026년 2월분</span></div></div>
                 </div>
                 
                 <div class="receipt-content layout-default" id="receiptContent">
                     <div class="receipt-left relative z-10">
-                        <div class="flex justify-between items-end border-b-4 border-gray-800 pb-2 mb-4">
-                            <div><span class="text-[10px] text-gray-500 font-bold block mb-0.5">학생명</span><h2 class="text-2xl font-black text-gray-900 leading-none" id="dispName">학생명</h2></div>
-                            <div><div id="dateBadge" class="bg-[#004094] text-white px-4 h-7 rounded-full font-bold shadow-md flex items-center justify-center text-xs"><span id="dispDate">2026년 2월분</span></div></div>
-                        </div>
                         <table class="receipt-fee-table w-full text-sm mb-4">
                             <thead><tr class="text-gray-500 border-b-2 border-gray-200"><th class="text-left py-1.5 pl-1 font-extrabold text-sm th-nowrap">과목 / 상세 내용</th><th id="thAmount" class="text-right py-1.5 pr-1 font-extrabold w-28 text-sm th-nowrap">금액</th></tr></thead>
                             <tbody id="receiptBody"></tbody>
@@ -4039,7 +4031,8 @@
                 setServerRecordStatus(shouldUpdate ? '현재 저장본을 덮어쓰는 중입니다.' : '새 기록을 서버에 저장 중입니다.', 'info');
                 const client = getSupabaseClient();
 
-                const settingsSaved = await saveSharedAppSettingsToServer();
+                // Shared prices are saved explicitly, not as a side effect of saving a student.
+                const settingsSaved = true;
                 if (authEpoch !== staffAuthEpoch) return;
                 const params = {
 
@@ -4271,5 +4264,7 @@
         const __origSwitchTab = switchTab;
         switchTab = function(tab){ __origSwitchTab(tab); showTabHelp(tab); updateCoreDataArea(tab); };
     </script>
+    <link rel="stylesheet" href="fee-ui.css">
+    <script src="fee-ui.js"></script>
 </body>
 </html>

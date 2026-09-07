@@ -35,6 +35,18 @@ Supabase의 `fee_calc_records`와 `fee_calc_private_settings`는 RLS를 유지�
 
 ## 검증
 
+## UI / 학생 연결 (2026-09-07)
+
+`fee-ui.js`는 기존 계산 엔진의 입력·저장 연결을 확장하며 `fee-ui.css`는 요청된 단가·조정·문서 헤더 변경을 담당합니다. 배포 시 두 파일도 함께 올립니다.
+
+- 직원 인증 게이트웨이의 `feecalc_students`는 계정 관리의 `students` 명부에서 ID·이름·학교·학년만 반환합니다. 동명이인은 후보를 선택하고 임시 이름은 서버 저장할 수 없습니다. 서버도 매 저장마다 ID/이름을 검증합니다.
+- `feecalc_student_memos`는 데스크 포털의 `tuitionStudentMemos`를 읽기 전용으로 조회합니다. 이름 기반 메모 원본이 동명이인에게 모호하면 조회를 거부합니다. 메모는 안내 이미지에 포함하지 않습니다. 기존 계산기 메모 원본은 보존하지만 작성 UI는 제거합니다.
+- 공통 설정 `rateLibrary`는 `{type, unit, amount}` 배열입니다. 유형 없는 예전 단가는 `기타 / 회당`으로 보존합니다. 단가 저장은 명시적 버튼을 통해 하며 학생 기록 저장의 부수효과로 갱신하지 않습니다.
+- 예전 서버 기록은 읽을 수 있습니다. 저장 시 현재 명부와 연결되며 `studentId`가 추가됩니다. JSON 저장/불러오기 UI는 제거했습니다.
+- 이월·초과금 행의 `kind`는 `carry / extra / other`; 이전 행은 `other`로 읽어 기존 텍스트와 부호를 보존합니다.
+
+`node tests/fee-ui.cjs`는 Playwright와 설치된 Chrome을 사용합니다. 모든 학생·메모·저장 API를 가상 응답으로 대체하며 운영 데이터를 쓰지 않습니다.
+
 - `node --test tests/auth*.mjs`: 모의 인증·세션·오류·동시 요청 검증
 - `node --test ../sedu-intranet/tests/feecalc.test.mjs`: 서버 인증·권한·RPC 허용 목록 검증
 - `node tests/database-access.mjs`: PGlite 로컬 PostgreSQL에서 가상 기록으로 권한·반복 적용·기록 보존 검증. 기본 모듈 경로는 `/tmp/feecalc-sql-test/node_modules/@electric-sql/pglite/dist/index.js`, 다른 설치 위치는 `PGLITE_MODULE`로 지정합니다. 이 검증은 pg_trgm 인덱스만 생략하며 운영 DB에 연결하지 않습니다.

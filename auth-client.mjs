@@ -22,6 +22,10 @@ export function createGateway({getUser, fetcher = fetch, onDenied = () => {}}) {
         });
         if (expected !== generation || getUser()?.uid !== user.uid) throw stale();
         if (!response.ok) {
+            if ([400, 409, 413].includes(response.status)) {
+                const result = await response.json().catch(() => ({}));
+                throw new Error(result.error?.message || '입력값을 확인하고 다시 시도해 주세요.');
+            }
             const message = response.status === 401 ? '로그인이 만료되었습니다. 다시 로그인해 주세요.' : response.status === 403 ? '이 계정에는 기록 접근 권한이 없습니다. 담당자에게 확인해 주세요.' : '기록 서버에 연결하지 못했습니다. 잠시 후 다시 시도해 주세요.';
             if ([401, 403].includes(response.status)) { actor = null; generation++; onDenied(message); }
             throw new Error(message);
