@@ -4,6 +4,7 @@
     const validDate = value => typeof value === 'string' && /^20\d{2}-\d{2}-\d{2}$/.test(value) && !isNaN(Date.parse(value)) && new Date(value).toISOString().slice(0,10) === value;
     const dayOfWeek = date => new Date(date + 'T00:00:00Z').getUTCDay();
     const daysInMonth = month => new Date(Date.UTC(Number(month.slice(0,4)),Number(month.slice(5)),0)).getUTCDate();
+    const monthEnd = month => month+'-'+String(daysInMonth(month)).padStart(2,'0');
     const courseKey = row => {
         const teacher = String(row.teacher || '').trim().replace(/\s+/g,'').replace(/T$/i,'');
         let course = String(row.className || '').replace(/\s+/g,'').replace(/개별정규/g,'개별').replace(/-?\d+(?:\.\d+)?h$/i,'');
@@ -56,12 +57,13 @@
         const snapshot = state?.snapshot;
         if (!snapshot) return {actual:[],predicted:[],templates:[],actualAmount:0,predictedAmount:0,pending:0};
         const cutoff = validDate(state.cutoff) && state.cutoff.slice(0,7) === snapshot.month ? state.cutoff : snapshot.month + '-01';
+        const endDate = validDate(state.endDate) && state.endDate.slice(0,7) === snapshot.month ? state.endDate : monthEnd(snapshot.month);
         const choices = state.mode === 'manual' ? manualTemplates(snapshot,cutoff) : templates(snapshot,cutoff), excluded = new Set(state.excluded || []);
         const actual = snapshot.lessons.map(r=>({...r,predicted:false}));
         const occupied = new Set(actual.map(r=>courseKey(r)+'|'+r.date));
         const predicted = [], seen = new Set(), slots = new Set();
         function add(template,date) {
-            if (!template || !validDate(date) || date.slice(0,7) !== snapshot.month || date <= cutoff || occupied.has(courseKey(template)+'|'+date)) return;
+            if (!template || !validDate(date) || date.slice(0,7) !== snapshot.month || date <= cutoff || date > endDate || occupied.has(courseKey(template)+'|'+date)) return;
             const id = template.id + '@' + date;
             const slot = courseKey(template)+'|'+date+'|'+template.start+'|'+template.end;
             if (state.mode === 'manual' && (slots.has(slot) || predicted.some(r=>courseKey(r)===courseKey(template) && r.date===date && r.start<template.end && template.start<r.end))) return;
@@ -82,7 +84,7 @@
         predicted.sort((a,b)=>a.date.localeCompare(b.date)||a.start.localeCompare(b.start)||a.className.localeCompare(b.className));
         return {actual,predicted,templates:choices,actualAmount:actual.reduce((s,r)=>s+(r.amount || 0),0),predictedAmount:predicted.reduce((s,r)=>s+(r.amount || 0),0),pending:[...actual,...predicted].filter(r=>r.amount===null || r.minutes===null).length};
     }
-    const api = {validMonth,validDate,daysInMonth,dayOfWeek,courseKey,validateSnapshot,templates,defaultCutoff,calculate};
+    const api = {validMonth,validDate,daysInMonth,monthEnd,dayOfWeek,courseKey,validateSnapshot,templates,defaultCutoff,calculate};
     if (typeof module !== 'undefined' && module.exports) module.exports = api;
     else root.ProgressCore = api;
 })(typeof window === 'undefined' ? {} : window);

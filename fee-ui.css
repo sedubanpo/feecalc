@@ -7,6 +7,7 @@
 .progress-method label { display:flex; align-items:center; gap:8px; min-height:40px; }
 .progress-method input { accent-color:var(--color-primary); }
 .progress-field { display:grid; gap:8px; margin-top:12px; }
+.progress-range { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:8px; }
 .progress-field input,.progress-field select { width:100%; min-width:0; min-height:40px; padding:8px; background:var(--color-surface); border:1px solid var(--color-border); border-radius:8px; color:var(--color-fg); }
 .progress-panel :focus-visible { outline:2px solid var(--color-primary); outline-offset:2px; }
 .progress-dates { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:4px; }

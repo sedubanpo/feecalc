@@ -1,6 +1,15 @@
 const test=require('node:test'),assert=require('node:assert/strict'),core=require('../progress-core.js');
 const row=(id,date,hours=2,extra={})=>({id,date,className:`수학-개별(검증강사)-${hours}h`,teacher:'검증강사',kind:'regular',start:'16:00',end:'18:00',minutes:hours*60,amount:hours*30000,...extra});
 const state=lessons=>({snapshot:{studentId:'qa',month:'2026-09',lessons},cutoff:'2026-09-16',mode:'auto',excluded:[],manual:[]});
+test('forecast end is inclusive and never removes actual lessons after it',()=>{
+ const s=state([row('a','2026-09-09'),row('actual','2026-09-29')]);s.endDate='2026-09-23';
+ const r=core.calculate(s);assert.deepEqual(r.predicted.map(x=>x.date),['2026-09-23']);assert.equal(r.actual.length,2);assert.equal(r.actualAmount,120000);
+ s.endDate=s.cutoff;assert.equal(core.calculate(s).predicted.length,0);
+});
+test('manual forecasts respect end; old states default to month end',()=>{
+ const s=state([row('a','2026-09-09')]);s.mode='manual';s.endDate='2026-09-21';s.manual=['2026-09-21','2026-09-22'].map(date=>({templateId:'a',date}));
+ assert.deepEqual(core.calculate(s).predicted.map(x=>x.date),['2026-09-21']);delete s.endDate;assert.equal(core.calculate(s).predicted.length,2);assert.equal(core.monthEnd('2028-02'),'2028-02-29');
+});
 test('absence-only weekday bills zero that day and repeats normal fee next week',()=>{
  const s=state([row('absent','2026-09-10',0,{kind:'absence',amount:0,forecastMinutes:120,forecastAmount:62500})]);s.cutoff='2026-09-10';
  const r=core.calculate(s);assert.equal(r.actualAmount,0);assert.equal(r.actual[0].minutes,0);

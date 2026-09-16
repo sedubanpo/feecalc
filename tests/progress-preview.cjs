@@ -17,6 +17,7 @@ const auth=`export async function initializeAuth(onState){
  return{data:[]};}};
  const qa=document.createElement('aside');qa.id='qaToolbar';qa.style='padding:12px;background:white;border:1px solid #004094';qa.innerHTML='<strong>합성 데이터 검증 전용 · 운영 저장 없음</strong> <label><input id="qaFail" type="checkbox"> 조회 실패 검증</label> <label><input id="qaPending" type="checkbox"> 미확인 금액 검증</label> <button id="qaRestore">검증 저장본 복원</button><output id="qaSaved"></output>';document.body.prepend(qa);
  document.getElementById('qaRestore').onclick=()=>{if(saved)applyCalculatorState(saved);};
+ const stale=document.createElement('button');stale.textContent='구형 저장본 열기';stale.onclick=()=>{const data=collectCalculatorState();data.currentTab='progress';data.progress={snapshot:{studentId:data.studentId,month:'2026-09',fetchedAt:'2026-09-10T07:00:00Z',lessons:[row('a','2026-09-02'),row('b','2026-09-09',3)]},mode:'auto',cutoff:'2026-09-10',manual:[],excluded:[]};applyCalculatorState(data);};qa.append(stale);
  const denseLabel=document.createElement('label');denseLabel.innerHTML='<input id="qaDense" type="checkbox"> 많은 수업 검증';qa.append(denseLabel);
  // Test-only capture sink: exercise the real image button and retain its PNG.
  const click=HTMLAnchorElement.prototype.click;
