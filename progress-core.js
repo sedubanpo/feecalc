@@ -29,7 +29,7 @@
             const start=clock(row.start),end=clock(row.end);
             const minutes=row.forecastMinutes ?? (start!==null && end!==null && end>start ? end-start : null);
             const prior=snapshot.lessons.filter(r=>r.date<row.date && dayOfWeek(r.date)===dayOfWeek(row.date) && courseKey(r)===courseKey(row) && ['regular','late','absenceMakeup'].includes(r.kind) && r.minutes===minutes).sort((a,b)=>b.date.localeCompare(a.date))[0];
-            return [{...row,minutes,amount:row.forecastAmount ?? prior?.amount ?? null}];
+            return [{...row,minutes,amount:row.forecastAmount !== undefined ? row.forecastAmount : prior?.amount ?? null}];
         });
     }
     function templates(snapshot, cutoff) {

@@ -16,6 +16,10 @@ test('absence with unknown schedule is pending and does not silently disappear',
  const r=core.calculate(state([row('a','2026-09-10',0,{kind:'absence',amount:0,start:'',end:'',forecastMinutes:null,forecastAmount:null})]));
  assert.equal(r.predicted.length,2);assert.equal(r.pending,2);
 });
+test('explicit unresolved forecast fee cannot silently reuse an older fee',()=>{
+ const r=core.calculate(state([row('old','2026-09-03'),row('abs','2026-09-10',0,{kind:'absence',amount:0,forecastMinutes:120,forecastAmount:null})]));
+ assert.equal(r.predicted[0].amount,null);assert.equal(r.pending,2);
+});
 test('latest weekday duration repeats to month end, not the average',()=>{
  const r=core.calculate(state([row('old','2026-09-02',2),row('recent','2026-09-09',3)]));
  assert.deepEqual(r.predicted.map(x=>[x.date,x.minutes,x.amount]),[['2026-09-23',180,90000],['2026-09-30',180,90000]]);
