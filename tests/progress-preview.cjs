@@ -7,7 +7,7 @@ const auth=`export async function initializeAuth(onState){
  const dense=[];
  for(let day=1;day<=10;day++)for(let index=0;index<(day===5?5:2);index++){
   const subject=['국어','수학','영어','사탐'][index%4],teacher=['가강사','나강사','다강사','라강사'][day%4],hours=day%3+1,type=index===4?'1:1':'개별';
-  dense.push(row('dense-'+day+'-'+index,'2026-09-'+String(day).padStart(2,'0'),hours,{className:subject+'-'+type+'('+teacher+')-'+hours+'h',teacher,start:String(12+index*2).padStart(2,'0')+':00',end:String(12+index*2+hours).padStart(2,'0')+':00',...(day===10?{kind:'absence',minutes:0,amount:0,forecastMinutes:hours*60,forecastAmount:hours*30000}:{})}));
+  dense.push(row('dense-'+day+'-'+index,'2026-09-'+String(day).padStart(2,'0'),hours,{className:day>5?subject+'-'+type+'-'+teacher:subject+'-'+type+'('+teacher+')-'+hours+'h',teacher,start:String(12+index*2).padStart(2,'0')+':00',end:String(12+index*2+hours).padStart(2,'0')+':00',...(day===10?{kind:'absence',minutes:0,amount:0,forecastMinutes:hours*60,forecastAmount:hours*30000}:{})}));
  }
  const gateway={rpc:async(rpc,p)=>{
  if(rpc==='feecalc_students')return{data:[{id:'qa',name:'검증학생',school:'검증중',grade:'2'},{id:'qa2',name:'다른학생',school:'검증고',grade:'1'}]};

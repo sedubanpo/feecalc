@@ -170,7 +170,10 @@ function groupProgressReceipt(rows) {
         if(!subjects.has(subject))subjects.set(subject,new Map());
         const teachers=subjects.get(subject);
         if(!teachers.has(teacher))teachers.set(teacher,{teacher,total:0,pending:false,variants:new Map()});
-        const group=teachers.get(teacher),type=info.type || '수업',kind=row.predicted?'regular':row.kind;
+        // Modern class names omit the teacher's T suffix; do not mistake that
+        // last name segment for the teaching format or split equivalent rows.
+        const format=String(row.className||'').split('-')[1]?.split('(')[0]?.trim();
+        const group=teachers.get(teacher),type=format || '수업',kind=row.predicted?'regular':row.kind;
         const key=JSON.stringify([type,row.minutes,row.amount,kind]);
         if(!group.variants.has(key))group.variants.set(key,{type,minutes:row.minutes,amount:row.amount,kind,count:0,predicted:0,dates:[]});
         const variant=group.variants.get(key);variant.count++;variant.predicted+=row.predicted?1:0;variant.dates.push(Number(row.date.slice(8)));

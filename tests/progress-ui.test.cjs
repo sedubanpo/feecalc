@@ -30,6 +30,13 @@ test('progress message retains offsetting named adjustments and manual provenanc
  const text=context.buildProgressMessage({actual:[{}],predicted:[{}],actualAmount:100000,predictedAmount:50000},150000,{amount:0});
  assert.match(text,/8월 이월금: -50,000원/);assert.match(text,/8월 초과금: 50,000원/);assert.match(text,/조정 합계: 0원/);assert.match(text,/선택한 날짜/);
 });
+test('legacy and modern class names share compact details without repeating teacher',()=>{
+ const context=vm.createContext({parseSubjectInfo:name=>({mainName:name.split('-')[0],type:'김경석'})});
+ vm.runInContext(source.slice(source.indexOf('function groupProgressReceipt'),source.indexOf('function renderProgressReceipt')),context);
+ const row=className=>({className,teacher:'김경석',minutes:120,amount:220000,kind:'regular',date:'2026-09-12'});
+ const group=context.groupProgressReceipt([row('국어-1:1(김경석)-1h'),row('국어-1:1-김경석')])[0].teachers[0];
+ assert.equal(group.variants.size,1);assert.equal([...group.variants.values()][0].type,'1:1');assert.equal([...group.variants.values()][0].count,2);assert.equal(group.total,440000);
+});
 test('month invalidation settles before the first fetch request token',async()=>{
  const context=vm.createContext({progressRequest:0,progressLoading:false,progressStatus:'',staffAuthEpoch:1,progressState:{mode:'auto'},matchedStudent:()=>({id:'qa'}),progressMonth:()=>'2026-10',isServerConfigured:()=>true,progressBound:()=>false,progressToday:()=>'2026-09-16',ProgressCore:{validMonth:()=>true,validateSnapshot:x=>x,defaultCutoff:()=> '2026-10-01',monthEnd:()=> '2026-10-31'},getSupabaseClient:()=>({rpc:async()=>({data:{studentId:'qa',month:'2026-10',lessons:[]}})})});
  let first=true;context.renderProgress=()=>{if(first){first=false;context.progressRequest++;context.progressLoading=false;}};
