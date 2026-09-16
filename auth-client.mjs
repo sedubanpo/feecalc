@@ -81,6 +81,12 @@ export async function createStaffAuth(auth, sdk, onState, fetcher = fetch) {
         catch (error) { if (error.code !== 'AUTH_CHANGED') onState({state: 'error', user, message: error instanceof TypeError || error.name === 'TimeoutError' ? '직원 권한을 확인하지 못했습니다. 네트워크를 확인하고 다시 시도해 주세요.' : error.message || '권한 확인에 실패했습니다. 다시 시도해 주세요.'}); }
     }
     sdk.onAuthStateChanged(auth, check);
+    const {installSso} = await import('./hub-client.mjs');
+    await installSso({appId:'fees',brokerUrl:'https://asia-northeast3-fir-lms-prod.cloudfunctions.net/hubSsoApi',hubOrigins:['https://sedubanpo.github.io'],
+      async signIn(token,uid){const c=await sdk.signInWithCustomToken(auth,token);if(c.user.uid!==uid)throw Error('Identity mismatch');await check(c.user);if(!gateway.actor)throw Error('Staff access denied');},
+      signOut:()=>sdk.signOut(auth)
+    });
+
     return {gateway, retry: () => check(auth.currentUser), logout: () => sdk.signOut(auth),
         async login(identifier, password) {
             try {
