@@ -16,13 +16,25 @@
         for (const row of value.lessons) {
             if (!row || typeof row.id !== 'string' || !row.id || ids.has(row.id) || !validDate(row.date) || row.date.slice(0,7) !== value.month || typeof row.className !== 'string' || typeof row.teacher !== 'string' || typeof row.start !== 'string' || typeof row.end !== 'string' || (row.minutes !== null && (!Number.isInteger(row.minutes) || row.minutes < 0 || row.minutes > 1440)) || (row.amount !== null && (typeof row.amount !== 'number' || !Number.isFinite(row.amount) || row.amount < 0 || row.amount > 1e10))) throw Error('진행형 수업 날짜·시간·금액을 확인해 주세요.');
             ids.add(row.id);
+            if (row.forecastMinutes !== undefined && row.forecastMinutes !== null && (!Number.isInteger(row.forecastMinutes) || row.forecastMinutes <= 0 || row.forecastMinutes > 1440)) throw Error('예상 수업 시간을 확인해 주세요.');
+            if (row.forecastAmount !== undefined && row.forecastAmount !== null && (typeof row.forecastAmount !== 'number' || !Number.isFinite(row.forecastAmount) || row.forecastAmount < 0 || row.forecastAmount > 1e10)) throw Error('예상 수업 금액을 확인해 주세요.');
         }
         return JSON.parse(JSON.stringify(value));
     }
+    function templateRows(snapshot, cutoff) {
+        return snapshot.lessons.filter(r=>r.date<=cutoff).flatMap(row=>{
+            if (['regular','late','absenceMakeup'].includes(row.kind) && row.minutes) return [row];
+            if (row.kind !== 'absence') return [];
+            const clock = value => {const m=/^(\d{1,2}):(\d{2})$/.exec(value);return m && +m[1]<24 && +m[2]<60 ? +m[1]*60 + +m[2] : null;};
+            const start=clock(row.start),end=clock(row.end);
+            const minutes=row.forecastMinutes ?? (start!==null && end!==null && end>start ? end-start : null);
+            const prior=snapshot.lessons.filter(r=>r.date<row.date && dayOfWeek(r.date)===dayOfWeek(row.date) && courseKey(r)===courseKey(row) && ['regular','late','absenceMakeup'].includes(r.kind) && r.minutes===minutes).sort((a,b)=>b.date.localeCompare(a.date))[0];
+            return [{...row,minutes,amount:row.forecastAmount ?? prior?.amount ?? null}];
+        });
+    }
     function templates(snapshot, cutoff) {
         const latest = new Map();
-        for (const row of snapshot.lessons) {
-            if (!['regular','late','absenceMakeup'].includes(row.kind) || row.date > cutoff || !row.minutes) continue;
+        for (const row of templateRows(snapshot,cutoff)) {
             const key = courseKey(row) + '|' + dayOfWeek(row.date), old = latest.get(key);
             if (!old || row.date > old.date) latest.set(key,{date:row.date,rows:[row]});
             else if (old.date === row.date) old.rows.push(row);
@@ -35,8 +47,7 @@
     }
     function manualTemplates(snapshot,cutoff) {
         const distinct=new Map();
-        for(const row of [...snapshot.lessons].sort((a,b)=>a.date.localeCompare(b.date))) {
-            if(row.date>cutoff || !row.minutes || !['regular','late','absenceMakeup'].includes(row.kind))continue;
+        for(const row of templateRows(snapshot,cutoff).sort((a,b)=>a.date.localeCompare(b.date))) {
             distinct.set(JSON.stringify([courseKey(row),row.minutes,row.amount,row.start,row.end]),row);
         }
         return [...distinct.values()];

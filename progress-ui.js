@@ -122,14 +122,14 @@ function renderProgress() {
     progressEl('progressFetch').disabled=progressLoading || !matchedStudent() || !isServerConfigured();
     progressEl('progressFetch').setAttribute('aria-busy',String(progressLoading));
     progressEl('progressControls').hidden=!bound;
-    progressEl('progressStatus').textContent=progressStatus || '등록 학생과 월을 확인한 뒤 인트라넷 수업을 불러오세요.';
+    progressEl('progressStatus').textContent=progressStatus || (bound?'저장된 수업 조회본입니다. 최신 수업·단가를 반영하려면 다시 불러오세요.':'등록 학생과 월을 확인한 뒤 인트라넷 수업을 불러오세요.');
     if(bound){
         const cutoff=progressEl('progressCutoff');cutoff.value=progressState.cutoff;cutoff.min=progressMonth()+'-01';cutoff.max=progressMonth()+'-'+ProgressCore.daysInMonth(progressMonth());
         document.querySelectorAll('input[name="progressMode"]').forEach(el=>{el.checked=el.value===progressState.mode;});
         progressEl('progressManual').hidden=progressState.mode!=='manual';progressEl('progressRestore').hidden=progressState.mode!=='auto';
         progressEl('progressRestore').disabled=!progressState.excluded.length;
         const select=progressEl('progressTemplate'),previous=select.value;select.replaceChildren();
-        result.templates.forEach(r=>{const option=document.createElement('option');option.value=r.id;option.textContent=`${r.className} · ${r.teacher} · ${r.minutes/60}시간 · ${r.date.slice(5)} ${r.start}`;select.append(option);});
+        result.templates.forEach(r=>{const option=document.createElement('option');option.value=r.id;option.textContent=`${r.className} · ${r.teacher} · ${r.minutes===null?'시간 확인 필요':r.minutes/60+'시간'} · ${r.date.slice(5)} ${r.start}`;select.append(option);});
         if(result.templates.some(r=>r.id===previous))select.value=previous;
         if(!result.templates.length){const option=document.createElement('option');option.textContent='반복할 출석 수업이 없습니다.';select.append(option);}
         renderProgressDates();
@@ -142,30 +142,55 @@ function renderProgress() {
     renderProgressReceipt(result,bound);
     updateServerSaveModeUi();
 }
+function groupProgressReceipt(rows) {
+    const subjects=new Map();
+    for(const row of rows){
+        const info=parseSubjectInfo(row.className),subject=info.mainName || '기타',teacher=(row.teacher || info.teacher || '강사 미지정').replace(/T$/i,'');
+        if(!subjects.has(subject))subjects.set(subject,new Map());
+        const teachers=subjects.get(subject);
+        if(!teachers.has(teacher))teachers.set(teacher,{teacher,total:0,pending:false,variants:new Map()});
+        const group=teachers.get(teacher),type=info.type || '수업',kind=row.predicted?'regular':row.kind;
+        const key=JSON.stringify([type,row.minutes,row.amount,kind]);
+        if(!group.variants.has(key))group.variants.set(key,{type,minutes:row.minutes,amount:row.amount,kind,count:0,predicted:0,dates:[]});
+        const variant=group.variants.get(key);variant.count++;variant.predicted+=row.predicted?1:0;variant.dates.push(Number(row.date.slice(8)));
+        group.total+=row.amount || 0;group.pending ||= row.amount===null;
+    }
+    return [...subjects].sort(([a],[b])=>a.localeCompare(b,'ko')).map(([subject,teachers])=>({subject,teachers:[...teachers.values()].sort((a,b)=>a.teacher.localeCompare(b.teacher,'ko'))}));
+}
 function renderProgressReceipt(result,bound) {
     restoreDefaultPriceSummaryArea();
     progressEl('receiptSubTitle').textContent=`진행형 수강료 예상 안내서${bound?' · '+progressState.cutoff+' 기준':''}`;progressEl('labelTotal').textContent='예상 납부액';
     progressEl('dispTotal').parentElement.classList.add('progress-total');
     progressEl('dispName').textContent=getCurrentStudentName()||'학생명';progressEl('dispDate').textContent=`${progressEl('targetYear').value}년 ${progressEl('targetMonth').value}월분`;
     const tbody=progressEl('receiptBody');tbody.replaceChildren();
-    const groups=new Map();
-    [...result.actual,...result.predicted].forEach(row=>{
-        const key=JSON.stringify([row.className,row.teacher,row.predicted,row.minutes,row.amount,row.kind]);
-        if(!groups.has(key))groups.set(key,{...row,dates:[]});groups.get(key).dates.push(Number(row.date.slice(8)));
-    });
-    for(const row of groups.values()){
-        const tr=document.createElement('tr'),name=document.createElement('td'),amount=document.createElement('td');
-        const strong=document.createElement('strong'),small=document.createElement('small');strong.textContent=`${row.predicted?'예상':'입력'} · ${row.className} · ${row.teacher}`;
-        small.textContent=`${row.dates.join(', ')}일 · ${row.dates.length}회 · ${row.minutes===null?'시간 확인 필요':row.minutes/60+'시간/회'}${row.predicted?'':' · '+progressKind(row.kind)}`;
-        name.append(strong,small);amount.textContent=progressMoney(row.amount===null?null:row.amount*row.dates.length);tr.append(name,amount);tbody.append(tr);
+    const groups=groupProgressReceipt([...result.actual,...result.predicted]);
+    for(const subject of groups){
+        const heading=document.createElement('tr'),cell=document.createElement('th');cell.colSpan=2;cell.scope='rowgroup';cell.textContent=subject.subject;heading.className='progress-subject-heading';heading.append(cell);tbody.append(heading);
+        for(const group of subject.teachers){
+            const tr=document.createElement('tr'),name=document.createElement('td'),amount=document.createElement('td'),strong=document.createElement('strong'),details=document.createElement('div');
+            strong.textContent=group.teacher+'T';details.className='progress-variants';
+            for(const variant of group.variants.values()){
+                const detail=document.createElement('span');
+                if(variant.kind==='absence') {detail.className='progress-absence-detail';detail.textContent=`${variant.type} · ${variant.dates.join(', ')}일 결석예고 · 0원`;}
+                else detail.textContent=`${variant.type} ${variant.minutes===null?'시간 확인':variant.minutes/60+'h'} × ${variant.count}회${variant.predicted?' · 예상 '+variant.predicted:''}${variant.kind!=='regular'?' · '+progressKind(variant.kind):''}${variant.amount===null?' · 금액 확인':''}`;
+                detail.title=`회당 ${progressMoney(variant.amount)}`;
+                details.append(detail);
+            }
+            name.append(strong,details);amount.textContent=progressMoney(group.pending?null:group.total);tr.append(name,amount);tbody.append(tr);
+        }
     }
-    if(!groups.size){const tr=document.createElement('tr'),td=document.createElement('td');td.colSpan=2;td.textContent=bound?'입력된 수업이 없습니다.':'인트라넷 수업을 불러오면 예상 내역이 표시됩니다.';tr.append(td);tbody.append(tr);}
+    if(!groups.length){const tr=document.createElement('tr'),td=document.createElement('td');td.colSpan=2;td.textContent=bound?'입력된 수업이 없습니다.':'인트라넷 수업을 불러오면 예상 내역이 표시됩니다.';tr.append(td);tbody.append(tr);}
     tbody.classList.add('progress-receipt');
     const subtotal=result.actualAmount+result.predictedAmount,discount=getPercentDiscountInfo(subtotal);
     progressEl('dispSubtotal').textContent=progressMoney(subtotal);updateDiscountSummaryRow(discount);renderAdjustmentSummary();
     const total=discount.discountedBase+(Number(progressEl('adjustment').value)||0);
     progressEl('dispTotal').textContent=!bound?'조회 필요':result.pending?'확인 필요':progressMoney(total);
-    renderCommonReceiptCalendar([...result.actual,...result.predicted].map(row=>({day:Number(row.date.slice(8)),name:(row.predicted?'예상 ':'입력 ')+parseSubjectInfo(row.className).mainName,rawName:row.className,durationHours:(row.minutes||0)/60,isPredicted:row.predicted})));
+    progressEl('captureArea').classList.add('progress-document');
+    renderCommonReceiptCalendar([...result.actual,...result.predicted].sort((a,b)=>a.date.localeCompare(b.date)||a.start.localeCompare(b.start)).map(row=>({day:Number(row.date.slice(8)),name:parseSubjectInfo(row.className).mainName,rawName:row.className,durationHours:(row.minutes||0)/60,isPredicted:row.predicted,isAbsent:!row.predicted && row.kind==='absence'})));
+    let legend=progressEl('progressCalendarLegend');
+    if(!legend){legend=document.createElement('p');legend.id='progressCalendarLegend';progressEl('receiptMiniCalGrid').after(legend);}
+    legend.textContent=`진행 수업 ${progressMoney(result.actualAmount)} · 예상 ${progressMoney(result.predictedAmount)} | 점선: 예상 · 회색: 결석예고(0원)`;
+    legend.hidden=false;
     progressEl('generatedTextArea').value=!bound?'인트라넷 수업을 먼저 불러와 주세요.':result.pending?'금액·시간이 미확인인 수업이 있습니다. 인트라넷에서 확인한 뒤 다시 불러와 주세요.':buildProgressMessage(result,total,discount);
 }
 function buildProgressMessage(result,total,discount) {
@@ -183,6 +208,8 @@ function buildProgressMessage(result,total,discount) {
 }
 const progressOriginalSwitch=switchTab;
 switchTab=function(tab){
+    progressEl('captureArea').classList.toggle('progress-document',tab==='progress');
+    if(progressEl('progressCalendarLegend'))progressEl('progressCalendarLegend').hidden=tab!=='progress';
     progressOriginalSwitch(tab);
     progressEl('calendarGrid').parentElement.classList.toggle('hidden',tab==='progress');
     progressEl('receiptBody').classList.toggle('progress-receipt',tab==='progress');

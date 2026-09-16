@@ -1527,6 +1527,7 @@
             return '';
         }
         function renderCalendarEventPill(event, extraClass = '') {
+            if (event.isAbsent) return `<span class="rc-subject rc-absent" aria-label="${event.day}일 ${escapeHtml(event.name)} 결석예고 0원"><span class="rc-subject-label">${escapeHtml(event.name)}</span><span class="rc-subject-time">결석 · 0원</span></span>`;
             const durationClass = getCalendarDurationClass(event.durationHours);
             const timeBadge = formatCalendarHourBadge(event.durationHours);
             const subjectInfo = parseSubjectInfo(event.rawName || event.name || '');
@@ -1539,7 +1540,7 @@
             }
             const typeBadge = isOneOnOne ? '<span class="rc-type-badge">1:1</span>' : '';
             const classes = ['rc-subject', 'shadow-sm', 'text-optical-center', colorClass, durationClass, extraClass].filter(Boolean).join(' ');
-            return `<span class="${classes}"><span class="rc-subject-main"><span class="rc-subject-label">${escapeHtml(event.name)}</span>${typeBadge}</span>${timeBadge ? `<span class="rc-subject-time">${timeBadge}</span>` : ''}</span>`;
+            return `<span class="${classes}" aria-label="${event.day}일 ${event.isPredicted?'예상 ':''}${escapeHtml(event.name)} ${escapeHtml(timeBadge)}"><span class="rc-subject-main"><span class="rc-subject-label">${escapeHtml(event.name)}</span>${typeBadge}</span>${timeBadge ? `<span class="rc-subject-time">${timeBadge}</span>` : ''}</span>`;
         }
         function parseAccessTime(tStr) {
             const match = String(tStr || '').trim().match(/^(?:(오전|오후)\s*)?(\d{1,2}):(\d{2})(?::\d{2})?$/);

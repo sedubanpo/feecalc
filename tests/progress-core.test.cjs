@@ -1,6 +1,21 @@
 const test=require('node:test'),assert=require('node:assert/strict'),core=require('../progress-core.js');
 const row=(id,date,hours=2,extra={})=>({id,date,className:`수학-개별(검증강사)-${hours}h`,teacher:'검증강사',kind:'regular',start:'16:00',end:'18:00',minutes:hours*60,amount:hours*30000,...extra});
 const state=lessons=>({snapshot:{studentId:'qa',month:'2026-09',lessons},cutoff:'2026-09-16',mode:'auto',excluded:[],manual:[]});
+test('absence-only weekday bills zero that day and repeats normal fee next week',()=>{
+ const s=state([row('absent','2026-09-10',0,{kind:'absence',amount:0,forecastMinutes:120,forecastAmount:62500})]);s.cutoff='2026-09-10';
+ const r=core.calculate(s);assert.equal(r.actualAmount,0);assert.equal(r.actual[0].minutes,0);
+ assert.deepEqual(r.predicted.map(r=>[r.date,r.minutes,r.amount]),[['2026-09-17',120,62500],['2026-09-24',120,62500]]);
+ assert.equal(r.pending,0);assert.equal(s.snapshot.lessons[0].kind,'absence');
+});
+test('legacy absence uses earlier same-weekday price, unknown price remains pending',()=>{
+ const s=state([row('regular','2026-09-03'),row('absence','2026-09-10',0,{kind:'absence',amount:0})]);
+ assert.equal(core.calculate(s).predicted[0].amount,60000);
+ s.snapshot.lessons.shift();assert.equal(core.calculate(s).predicted[0].amount,null);assert.equal(core.calculate(s).pending,2);
+});
+test('absence with unknown schedule is pending and does not silently disappear',()=>{
+ const r=core.calculate(state([row('a','2026-09-10',0,{kind:'absence',amount:0,start:'',end:'',forecastMinutes:null,forecastAmount:null})]));
+ assert.equal(r.predicted.length,2);assert.equal(r.pending,2);
+});
 test('latest weekday duration repeats to month end, not the average',()=>{
  const r=core.calculate(state([row('old','2026-09-02',2),row('recent','2026-09-09',3)]));
  assert.deepEqual(r.predicted.map(x=>[x.date,x.minutes,x.amount]),[['2026-09-23',180,90000],['2026-09-30',180,90000]]);

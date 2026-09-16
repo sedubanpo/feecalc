@@ -23,6 +23,27 @@
 .progress-total { flex-wrap:wrap; gap:8px; }
 .progress-total #dispTotal { white-space:nowrap; font-size:clamp(20px,2vw,30px); margin-left:auto; }
 .progress-total #labelTotal { white-space:nowrap; }
+.progress-document .receipt-content { flex-direction:column; gap:16px; }
+.progress-document { container-type:inline-size; }
+.progress-document .receipt-left,.progress-document .receipt-right { flex:none; width:100%; min-width:0; }
+.progress-document .progress-receipt td { padding:8px 4px; font-size:12px; vertical-align:top; }
+.progress-document .progress-subject-heading th { padding:8px 4px 4px; text-align:left; color:var(--color-primary); font-size:14px; border-bottom:1px solid var(--color-border); }
+.progress-document .progress-variants { display:flex; flex-wrap:wrap; gap:4px 16px; margin-top:4px; font-size:12px; line-height:1.6; }
+.progress-document .progress-absence-detail { color:var(--color-muted); }
+.progress-document #receiptCalendarArea { flex:none; padding:8px; }
+.progress-document .receipt-cal-grid { grid-template-columns:repeat(7,minmax(0,1fr)); overflow:visible; }
+.progress-document .receipt-cal-cell { min-width:0; min-height:58px; }
+.progress-document .rc-subject { min-width:0; flex-shrink:0; box-shadow:none; }
+.progress-document .rc-subject-label { white-space:normal; overflow:visible; overflow-wrap:anywhere; text-overflow:clip; }
+.progress-document .rc-subject-time { white-space:normal; overflow-wrap:anywhere; }
+.progress-document .rc-absent { background:var(--color-bg); color:var(--color-muted); border:1px solid var(--color-border); }
+.progress-document #progressCalendarLegend { margin-top:8px; color:var(--color-muted); font-size:12px; line-height:1.6; }
+.progress-document #progressCalendarLegend[hidden] { display:none; }
+@container (min-width:680px) {
+ .progress-document .receipt-content { flex-direction:row; align-items:flex-start; }
+ .progress-document .receipt-left { flex:1 1 52%; width:52%; }
+ .progress-document .receipt-right { flex:0 0 46%; width:46%; }
+}
 .ui-button { min-height:40px; padding:8px 12px; border:1px solid var(--color-border); border-radius:8px; background:var(--color-surface); color:var(--color-fg); font-size:12px; font-weight:700; }
 .ui-button:hover { background:var(--color-bg); }
 .ui-button.primary,.ui-button[aria-pressed="true"] { background:var(--color-primary); color:white; border-color:var(--color-primary); }
