@@ -64,7 +64,10 @@ test('inline application compiles and contains no direct Supabase authentication
     assert.match(html, /localStorage.removeItem\('feecalc_access_code'\)/);
 });
 
-test('same UID reauthentication explicitly checks session without observer event', async () => {
+test('same UID reauthentication explicitly checks session without observer event', async (t) => {
+    const previousWindow=globalThis.window;
+    globalThis.window={location:{href:'https://sedubanpo.github.io/feecalc/'}};
+    t.after(()=>{if(previousWindow===undefined)delete globalThis.window;else globalThis.window=previousWindow;});
     const {createStaffAuth} = await import('../auth-client.mjs');
     const auth = {currentUser: user('a')};
     const states = [], calls = [];
