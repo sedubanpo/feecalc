@@ -866,6 +866,7 @@
             </div>
         `;
         const TAB_LABELS = {
+            progress: '진행형',
             auto: '요일고정',
             select: '선택형',
             manual: '변동형',
@@ -1725,7 +1726,7 @@
 
         function switchTab(tab) {
             currentTab = tab;
-            ['auto', 'select', 'manual', 'guide', 'first', 'history', 'payment', 'ai', 'timetable'].forEach(t => {
+            ['auto', 'select', 'manual', 'guide', 'first', 'history', 'payment', 'ai', 'timetable', 'progress'].forEach(t => {
                 document.getElementById(`tab-${t}`).classList.toggle('hidden', t !== tab);
                 const btn = document.getElementById(`btn-${t}`);
                 if(t === tab) {
@@ -2167,6 +2168,7 @@
         }
 
         function updateAll(options = {}) {
+            if (currentTab === 'progress') { renderProgress(); return; }
             if (currentTab === 'history' || currentTab === 'payment' || currentTab === 'ai' || currentTab === 'guide' || currentTab === 'first' || currentTab === 'timetable') return;
             const name = document.getElementById('studentName').value || '학생명';
             const year = document.getElementById('targetYear').value;
@@ -3837,7 +3839,7 @@
         }
         function applyCalculatorState(data = {}) {
             if (!data || typeof data !== 'object' || Array.isArray(data)) throw new Error('올바른 계산기 저장 데이터가 아닙니다.');
-            if (data.currentTab && !['auto','select','manual','guide','first','timetable','history','ai','payment'].includes(data.currentTab)) throw new Error('지원하지 않는 계산 모드입니다.');
+            if (data.currentTab && !['auto','select','manual','guide','first','timetable','history','ai','payment','progress'].includes(data.currentTab)) throw new Error('지원하지 않는 계산 모드입니다.');
             for (const key of ['autoRows','selectRows','manualRows','guideRows','firstRows','ttRows','historyData','aiData','paymentRows']) {
                 if (data[key] !== undefined && (!Array.isArray(data[key]) || data[key].some(row => !row || typeof row !== 'object' || Array.isArray(row)))) throw new Error(`${key}: 저장 데이터 형식을 확인해 주세요.`);
             }
@@ -4266,5 +4268,7 @@
     </script>
     <link rel="stylesheet" href="fee-ui.css">
     <script src="fee-ui.js"></script>
+    <script src="progress-core.js"></script>
+    <script src="progress-ui.js"></script>
 </body>
 </html>

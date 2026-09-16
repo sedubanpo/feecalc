@@ -1,4 +1,28 @@
 .ui-help { font-size:12px; line-height:1.6; color:var(--color-muted); margin:8px 0; overflow-wrap:anywhere; }
+.progress-panel { font-size:12px; color:var(--color-fg); }
+.progress-panel [hidden] { display:none!important; }
+.progress-panel h3,.progress-panel h4 { font-weight:700; text-wrap:balance; }
+.progress-method { margin:16px 0; border-top:1px solid var(--color-border); }
+.progress-method legend { font-weight:700; padding:8px 0; }
+.progress-method label { display:flex; align-items:center; gap:8px; min-height:40px; }
+.progress-method input { accent-color:var(--color-primary); }
+.progress-field { display:grid; gap:8px; margin-top:12px; }
+.progress-field input,.progress-field select { width:100%; min-width:0; min-height:40px; padding:8px; background:var(--color-surface); border:1px solid var(--color-border); border-radius:8px; color:var(--color-fg); }
+.progress-panel :focus-visible { outline:2px solid var(--color-primary); outline-offset:2px; }
+.progress-dates { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:4px; }
+.progress-dates .ui-button { padding:4px; }
+.progress-summary { margin:16px 0; padding:12px 0; border-block:1px solid var(--color-border); line-height:1.8; font-variant-numeric:tabular-nums; }
+.progress-actions { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.progress-lesson { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:12px 0; border-bottom:1px solid var(--color-border); overflow-wrap:anywhere; }
+.progress-lesson span { display:block; margin-top:4px; color:var(--color-muted); font-variant-numeric:tabular-nums; }
+.progress-lesson button { flex-shrink:0; }
+.progress-panel summary { min-height:40px; padding:12px 0; cursor:pointer; font-weight:700; }
+.progress-receipt td { padding:12px 4px; border-bottom:1px solid var(--color-border); }
+.progress-receipt td:last-child { text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }
+.progress-receipt small { display:block; margin-top:4px; color:var(--color-muted); }
+.progress-total { flex-wrap:wrap; gap:8px; }
+.progress-total #dispTotal { white-space:nowrap; font-size:clamp(20px,2vw,30px); margin-left:auto; }
+.progress-total #labelTotal { white-space:nowrap; }
 .ui-button { min-height:40px; padding:8px 12px; border:1px solid var(--color-border); border-radius:8px; background:var(--color-surface); color:var(--color-fg); font-size:12px; font-weight:700; }
 .ui-button:hover { background:var(--color-bg); }
 .ui-button.primary,.ui-button[aria-pressed="true"] { background:var(--color-primary); color:white; border-color:var(--color-primary); }

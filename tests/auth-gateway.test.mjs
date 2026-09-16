@@ -5,6 +5,11 @@ import vm from 'node:vm';
 import {createGateway, normalizeLogin} from '../auth-client.mjs';
 const reply = (data, status = 200) => ({ok: status === 200, status, json: async () => data});
 const user = uid => ({uid, getIdToken: async () => 'test-token'});
+test('Intranet scope denial does not revoke valid calculator session',async()=>{
+ let denied=false;
+ const gateway=createGateway({getUser:()=>user('a'),onDenied:()=>{denied=true;},fetcher:async(url)=>reply(url.endsWith('/session')?{data:{uid:'a'}}:{error:{code:'PROGRESS_SCOPE_REQUIRED',message:'인트라넷 조회 권한 필요'}},url.endsWith('/session')?200:403)});
+ await gateway.authorize();assert.match((await gateway.rpc('feecalc_progress')).error.message,/인트라넷/);assert.equal(gateway.actor.uid,'a');assert.equal(denied,false);
+});
 test('existing email and phone identifiers', () => {
     assert.equal(normalizeLogin('  staff@example.com '), 'staff@example.com');
     assert.equal(normalizeLogin('010-1234-5678'), '01012345678@sedu-auth.local');

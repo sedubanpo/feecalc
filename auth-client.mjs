@@ -22,6 +22,11 @@ export function createGateway({getUser, fetcher = fetch, onDenied = () => {}}) {
         });
         if (expected !== generation || getUser()?.uid !== user.uid) throw stale();
         if (!response.ok) {
+            if (response.status === 403 && body?.rpc === 'feecalc_progress') {
+                const result = await response.json().catch(() => ({}));
+                // A separate Intranet scope does not revoke the calculator session.
+                if (result.error?.code === 'PROGRESS_SCOPE_REQUIRED') throw new Error(result.error.message);
+            }
             if ([400, 409, 413].includes(response.status)) {
                 const result = await response.json().catch(() => ({}));
                 throw new Error(result.error?.message || '입력값을 확인하고 다시 시도해 주세요.');
