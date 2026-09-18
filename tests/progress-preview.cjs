@@ -12,13 +12,22 @@ const auth=`export async function initializeAuth(onState){
  const gateway={rpc:async(rpc,p)=>{
  if(rpc==='feecalc_students')return{data:[{id:'qa',name:'검증학생',school:'검증중',grade:'2'},{id:'qa2',name:'다른학생',school:'검증고',grade:'1'}]};
  if(rpc==='feecalc_progress'){if(document.getElementById('qaFail').checked)return{error:{message:'합성 조회 실패'}};return{data:{studentId:p.p_student_id,month:p.p_month,fetchedAt:'2026-09-16T07:00:00Z',lessons:p.p_month==='2026-09'?(document.getElementById('qaDense').checked?dense:[row('a','2026-09-02'),row('b','2026-09-09',3),row('c','2026-09-15',2,{className:'국어-1:1(검증강사)-2h',amount:document.getElementById('qaPending').checked?null:200000})]):[]}};}
- if(rpc==='feecalc_get_app_settings')return{data:{rateLibrary:[]}};
+ if(rpc==='feecalc_get_app_settings')return{data:{rateLibrary:[{type:'개별정규',unit:'perClass',amount:87500},{type:'개별정규',unit:'perHour',amount:30000},{type:'1:1',unit:'perHour',amount:100000}]}};
  if(rpc==='feecalc_save_record'||rpc==='feecalc_update_record'){saved=p.p_payload;document.getElementById('qaSaved').textContent='검증 서버 저장 완료 · '+saved.currentTab;return{data:{record_id:'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',saved_at:'2026-09-16T07:00:00Z'}};}
  return{data:[]};}};
  const qa=document.createElement('aside');qa.id='qaToolbar';qa.style='padding:12px;background:white;border:1px solid #004094';qa.innerHTML='<strong>합성 데이터 검증 전용 · 운영 저장 없음</strong> <label><input id="qaFail" type="checkbox"> 조회 실패 검증</label> <label><input id="qaPending" type="checkbox"> 미확인 금액 검증</label> <button id="qaRestore">검증 저장본 복원</button><output id="qaSaved"></output>';document.body.prepend(qa);
  document.getElementById('qaRestore').onclick=()=>{if(saved)applyCalculatorState(saved);};
  const stale=document.createElement('button');stale.textContent='구형 저장본 열기';stale.onclick=()=>{const data=collectCalculatorState();data.currentTab='progress';data.progress={snapshot:{studentId:data.studentId,month:'2026-09',fetchedAt:'2026-09-10T07:00:00Z',lessons:[row('a','2026-09-02'),row('b','2026-09-09',3)]},mode:'auto',cutoff:'2026-09-10',manual:[],excluded:[]};applyCalculatorState(data);};qa.append(stale);
  const denseLabel=document.createElement('label');denseLabel.innerHTML='<input id="qaDense" type="checkbox"> 많은 수업 검증';qa.append(denseLabel);
+ const workspace=document.createElement('button');workspace.textContent='입력 화면 검증';workspace.onclick=()=>{
+ const data=collectCalculatorState();data.studentName='검증학생';data.studentId='qa';data.currentTab='auto';
+ data.autoRows=[{name:'수학-개별(검증)-3h',hours:3,rate:87500,rateMode:'perClass',days:[2,4]},{name:'영어-개별정규-검증T-2h',hours:2,rate:62500,rateMode:'perClass',days:[1]}];
+ data.selectRows=[{name:'수학-개별(검증)-3h',hours:3,rate:87500,rateMode:'perClass',dates:[1,3]},{name:'영어-개별정규-검증T-2h',hours:2,rate:62500,rateMode:'perClass',dates:[2]}];
+ data.manualRows=[{name:'수학-개별(검증)-3h',time:3,count:2,rate:87500,rateMode:'perClass'},{name:'영어-개별정규-검증T-2h',time:2,count:1,rate:62500,rateMode:'perClass'}];
+ data.firstRows=[{name:'수학-개별(검증)-3h',hours:3,weekdays:[2],rate:87500,rateMode:'perClass',startDate:'2026-09-01'},{name:'영어-개별정규-검증T-2h',hours:2,weekdays:[4],rate:62500,rateMode:'perClass',startDate:'2026-09-01'}];
+ applyCalculatorState(data);
+ serverRecordHistory=['auto','select','manual','first'].map((currentTab,index)=>({recordId:'qa-'+index,studentName:'검증학생',currentTab,targetYear:2026,targetMonth:9,totalText:'100,000원',savedAt:'2026-09-18'}));renderServerRecordList();};qa.append(workspace);
+ const dirty=document.createElement('button');dirty.textContent='이탈 경고 검증';dirty.onclick=()=>{const event=new Event('beforeunload',{cancelable:true});window.dispatchEvent(event);document.getElementById('qaSaved').textContent=event.defaultPrevented?'미저장 경고 있음':'미저장 경고 없음';};qa.append(dirty);
  // Test-only capture sink: exercise the real image button and retain its PNG.
  const click=HTMLAnchorElement.prototype.click;
  HTMLAnchorElement.prototype.click=function(){if(this.download.endsWith('.png') && this.href.startsWith('blob:')){fetch(this.href).then(r=>r.blob()).then(blob=>fetch('/__qa_export',{method:'POST',body:blob})).then(()=>{document.getElementById('qaSaved').textContent='검증 PNG 보관 완료';});return;}return click.call(this);};

@@ -3678,6 +3678,7 @@
                 const isActive = currentLoadedRecordId && currentLoadedRecordId === record.recordId;
                 const wrapper = document.createElement('div');
                 wrapper.className = `record-item p-3 transition ${isActive ? 'record-item-active' : ''}`;
+                wrapper.dataset.mode = record.currentTab || 'auto';
                 wrapper.innerHTML = `
                     <div class="flex items-start justify-between gap-3">
                         <div class="min-w-0">
@@ -4055,6 +4056,7 @@
                 if (!mapped.recordId) throw new Error('서버에서 저장 결과를 확인하지 못했습니다. 기록 목록을 확인하고 다시 시도해 주세요.');
                 currentLoadedRecordId = mapped.recordId || '';
                 if (currentLoadedRecordId) memoPayloadCache[currentLoadedRecordId] = payload;
+                if (typeof markCalculatorSaved === 'function') markCalculatorSaved(payload);
                 updateServerSaveModeUi();
                 const doneMessage = shouldUpdate
                     ? `덮어쓰기 완료: ${formatSavedAt(mapped.savedAt)} 저장본을 갱신했습니다.`
@@ -4271,5 +4273,7 @@
     <script src="fee-ui.js"></script>
     <script src="progress-core.js?v=20260916-range"></script>
     <script src="progress-ui.js?v=20260916-compact-types"></script>
+    <link rel="stylesheet" href="workspace-ui.css?v=20260918">
+    <script src="workspace-ui.js?v=20260918"></script>
 </body>
 </html>
