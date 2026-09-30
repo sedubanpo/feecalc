@@ -18,3 +18,10 @@
 
 - Notice documents may use up to 1120px width to reduce height. Place lesson variants side by side when space allows, and calendar subject/time horizontally; preserve long times and teacher/status without splitting Korean subject names.
 - Use the warm brown rendition of the original academy logo; retain its exact source contour and transparency. Keep financial blue/red semantics.
+
+## Calculator refinements — 2026-09-30
+
+- The app header uses the calculator favicon as its logo. The exported notice and watermarks keep the original warm academy logo.
+- Use the loaded Noto Sans KR weights consistently: 400/500 for body and labels, 700 for headings, amounts, and action buttons. Action buttons share the restrained navy palette and rounded geometry.
+- Financial adjustment rows use one type selector with a matching SVG icon, description, signed amount, and delete action. Avoid repeating three type buttons on every row. Negative deductions are red; positive amounts display + in blue.
+- Progress calendar blank areas and per-date + buttons open temporary lesson entry, with single-date or weekday repetition and a count/amount preview. Temporary lessons live in the calculation draft, are clearly marked, and support removal/undo and saved draft restoration. Never write them into intranet source lessons. Reject student/month mismatches and exclude overlapping occurrences of the same course.

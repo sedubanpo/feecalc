@@ -166,6 +166,63 @@ const root=path.resolve(__dirname,'..'),evidence=process.env.EVIDENCE_ROOT;
  if(evidence && !process.env.SKIP_VISUAL)await page.screenshot({path:path.join(evidence,'mobile.png'),fullPage:true});
  await check('mobile no horizontal page overflow',async()=>{assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));});
  await check('intermediate and breakpoint overflow',async()=>{for(const width of [600,601,768,1279,1280]){await page.setViewportSize({width,height:1000});assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),String(width));}});
+ await check('calculator brand, compact signed adjustments and temporary lesson popup lifecycle',async()=>{
+ await page.setViewportSize({width:1920,height:1100});
+ await page.evaluate(()=>{
+ window.testProgressSnapshot={studentId:'one',month:'2026-09',fetchedAt:'2026-09-30T00:00:00Z',lessons:[{id:'qa-source',date:'2026-09-01',className:'수학-개별정규(검증강사)-2h',teacher:'검증강사',start:'16:00',end:'18:00',minutes:120,amount:62500,kind:'regular'}]};
+ applyCalculatorState({currentTab:'progress',studentName:'검증학생',studentId:'one',targetYear:2026,targetMonth:9,progress:{snapshot:testProgressSnapshot,mode:'auto',cutoff:'2026-09-29',endDate:'2026-09-30',excluded:[],manual:[]},adjustmentItems:[{label:'8월 이월금',amount:-50000,kind:'carry'},{label:'8월 초과금',amount:10000,kind:'extra'}]});
+ FeeCalendar.navigate('progress');
+ });
+ await page.waitForFunction(()=>progressVerified&&!progressLoading);
+ assert.match(await page.locator('.product-brand img').getAttribute('src'),/feecalc-favicon/);
+ assert.equal(await page.locator('.adjustment-kinds button').count(),0);
+ assert.equal(await page.locator('.adjustment-kinds select').count(),2);
+ assert.equal(await page.locator('[data-kind=carry] .adjustment-amount').evaluate(n=>getComputedStyle(n).color),'rgb(186, 48, 56)');
+ assert.equal(await page.locator('[data-kind=extra] .adjustment-plus').innerText(),'+');
+ assert.equal(await page.locator('[data-kind=extra] .adjustment-amount').evaluate(n=>getComputedStyle(n).color),'rgb(9, 94, 184)');
+ const source=await page.evaluate(()=>JSON.stringify(progressState.snapshot)),writes=await page.evaluate(()=>testWrites.length);
+ await page.locator('#workCalendar [data-day="2"]').click({position:{x:70,y:110}});
+ assert.equal(await page.locator('#temporaryLessonDialog').evaluate(n=>n.open),true);
+ assert.equal(await page.locator('#temporaryCourse').evaluate(n=>document.activeElement===n),true);
+ await page.locator('[name=temporaryScope][value=repeat]').check();
+ await page.locator('#temporaryWeekdays [data-weekday="1"]').click();
+ assert.match(await page.locator('#temporaryPreview').innerText(),/9회.*562,500원/);
+ if(process.env.TEMP_VISUAL&&evidence){fs.mkdirSync(evidence,{recursive:true});await page.screenshot({path:path.join(evidence,'temporary-desktop.png')});await page.setViewportSize({width:390,height:844});await page.screenshot({path:path.join(evidence,'temporary-mobile.png')});assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));await page.setViewportSize({width:1920,height:1100});}
+ await page.locator('#temporaryConfirm').click();
+ assert.equal(await page.evaluate(()=>progressState.temporary.length),9);
+ assert.equal(await page.evaluate(()=>progressResult().predictedAmount),562500);
+ assert.equal(await page.evaluate(()=>JSON.stringify(progressState.snapshot)),source);
+ assert.equal(await page.evaluate(()=>testWrites.length),writes);
+ assert.match(await page.locator('#workCalendar [data-day="2"] .calendar-event').innerText(),/임시/);
+ await page.locator('#workCalendar [data-day="2"] .calendar-event').click();
+ await page.locator('#dayDetail').getByRole('button',{name:'임시 수업 삭제'}).click();
+ assert.equal(await page.evaluate(()=>progressState.temporary.length),8);
+ await page.locator('#undoCalendar').click();await page.waitForFunction(()=>progressVerified&&!progressLoading);
+ assert.equal(await page.evaluate(()=>progressState.temporary.length),9);
+ await page.locator('#undoCalendar').click();await page.waitForFunction(()=>progressVerified&&!progressLoading);
+ assert.equal(await page.evaluate(()=>progressState.temporary.length),0);
+ // Blank space on an occupied day opens the popup; the existing slot is excluded.
+ await page.locator('#workCalendar [data-day="1"]').click({position:{x:70,y:130}});
+ assert.equal(await page.locator('#temporaryConfirm').isDisabled(),true);assert.match(await page.locator('#temporarySkipped').innerText(),/1일/);
+ await page.locator('#temporaryStart').fill('18:00');
+ assert.equal(await page.locator('#temporaryConfirm').isDisabled(),false);await page.locator('#temporaryConfirm').click();
+ assert.equal(await page.evaluate(()=>progressResult().actual.length),1);assert.equal(await page.evaluate(()=>progressState.temporary.length),1);
+ const saved=await page.evaluate(()=>collectCalculatorState());await page.evaluate(s=>applyCalculatorState(s),saved);await page.waitForFunction(()=>progressVerified&&!progressLoading);
+ assert.equal(await page.evaluate(()=>progressState.temporary.length),1);assert.equal(await page.evaluate(()=>progressResult().predictedAmount),62500);
+ await page.locator('#workCalendar').getByRole('button',{name:'3일 임시 수업 추가',exact:true}).focus();await page.keyboard.press('Enter');
+ await page.locator('#temporaryCourse').selectOption('custom');await page.locator('#temporaryName').fill('국어-1:1');await page.locator('#temporaryTeacher').fill('추가강사');await page.locator('#temporaryStart').fill('22:00');await page.locator('#temporaryHours').fill('3');await page.locator('#temporaryAmount').fill('0');
+ assert.match(await page.locator('#temporaryError').innerText(),/자정/);assert.equal(await page.locator('#temporaryConfirm').isDisabled(),true);
+ await page.locator('#temporaryHours').fill('1');assert.equal(await page.locator('#temporaryConfirm').isDisabled(),false);await page.locator('#temporaryConfirm').click();
+ assert.equal(await page.evaluate(()=>progressState.temporary.length),2);assert.equal(await page.evaluate(()=>progressResult().predictedAmount),62500);
+ await page.locator('#workCalendar').getByRole('button',{name:'4일 임시 수업 추가',exact:true}).focus();await page.keyboard.press('Enter');await page.keyboard.press('Escape');assert.equal(await page.locator('#temporaryLessonDialog').evaluate(n=>n.open),false);
+ assert.equal(await page.evaluate(()=>testWrites.length),writes);
+ if(process.env.TEMP_VISUAL&&evidence){await page.screenshot({path:path.join(evidence,'progress-desktop.png')});await page.setViewportSize({width:390,height:844});await page.screenshot({path:path.join(evidence,'progress-mobile.png'),fullPage:true});assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));await page.setViewportSize({width:1920,height:1100});}
+ await page.locator('#viewNotice').click();assert.match(await page.locator('#receiptBody').innerText(),/임시/);
+ await page.locator('#returnWork').click();await page.locator('#workCalendar').getByRole('button',{name:'4일 임시 수업 추가',exact:true}).click();
+ await page.evaluate(()=>{document.getElementById('targetMonth').value=10;});await page.locator('#temporaryLessonForm').evaluate(n=>n.requestSubmit());
+ assert.match(await page.locator('#temporaryError').innerText(),/学生|학생/);await page.keyboard.press('Escape');
+ await page.evaluate(()=>{document.getElementById('targetMonth').value=9;applyCalculatorState({currentTab:'auto',studentName:'검증학생',studentId:'one',targetYear:2026,targetMonth:9,autoRows:[]});});
+ });
  await check('IME composition does not match or fetch partial names',async()=>{await page.evaluate(()=>{beginStudentNameComposition();handleStudentNameInput();});assert.equal(await page.evaluate(()=>matchedStudent()),null);await page.evaluate(()=>{studentNameComposing=false;handleStudentNameInput();});assert.equal(await page.evaluate(()=>matchedStudent().id),'one');});
 
  await check('signed-out account controls fit narrow and intermediate headers',async()=>{

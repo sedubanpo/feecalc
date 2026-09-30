@@ -196,8 +196,18 @@ function previousMonthLabel(kind) {
     const month = Number(document.getElementById('targetMonth').value);
     return `${month === 1 ? 12 : month - 1}월 ${kind === 'carry' ? '이월금' : '초과금'}`;
 }
+function adjustmentIcon(kind) {
+    const paths={carry:'M19 7H7m0 0 5-5M7 7l5 5M5 17h14',extra:'M5 7h14M7 17h12m0 0-5-5m5 5-5 5',other:'M4 7h16M4 17h16M8 4v6m8 4v6'};
+    return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${paths[kind] || paths.other}"/></svg>`;
+}
 function adjustmentKindButtons(id, kind) {
-    return `<div class="adjustment-kinds" role="group" aria-label="조정 유형">${[['carry','이월금'],['extra','초과금'],['other','기타']].map(([value,label])=>`<button type="button" class="ui-button" aria-pressed="${kind===value}" onclick="setAdjustmentKind('${id}','${value}')">${label}</button>`).join('')}</div>`;
+    return `<label class="adjustment-kinds">${adjustmentIcon(kind)}<select aria-label="조정 유형" onchange="setAdjustmentKind('${id}',this.value)">${[['carry','이월금'],['extra','초과금'],['other','기타']].map(([value,label])=>`<option value="${value}" ${kind===value?'selected':''}>${label}</option>`).join('')}</select></label>`;
+}
+function updateAdjustmentTone(row) {
+    const value=Number(row.querySelector('.adjustment-amount').value)||0;
+    row.dataset.tone=value<0?'negative':value>0?'positive':'neutral';
+    row.querySelector('.adjustment-plus').textContent=value>0?'+':'';
+    const input=row.querySelector('.adjustment-amount');input.style.width=Math.max(6,input.value.length+1)+'ch';
 }
 normalizeAdjustmentItems = function(items = [], legacyAmount = 0) {
     const rows = (Array.isArray(items) ? items : []).map((item,index) => {
@@ -212,7 +222,8 @@ collectAdjustmentItems = function(includeBlank = false) {
 };
 addAdjustmentItem = function(label = '', amount = '', options = {}) {
     const id = `adjustment-${++adjustmentItemCounter}`, kind = options.kind || 'other';
-    document.getElementById('adjustmentList').insertAdjacentHTML('beforeend', `<div id="${id}" class="adjustment-item" data-kind="${kind}">${adjustmentKindButtons(id,kind)}<div class="adjustment-fields"><input class="adjustment-label" aria-label="조정 내용" value="${escapeHtml(label)}" placeholder="조정 내용" oninput="handleAdjustmentInput()"><input type="number" class="adjustment-amount" aria-label="조정 금액 (원)" value="${amount === '' ? '' : Number(amount)||0}" placeholder="금액 (원)" oninput="normalizeAdjustmentSign(this)"><button type="button" class="ui-button" aria-label="이월·초과금 항목 삭제" onclick="removeAdjustmentItem('${id}')">삭제</button></div></div>`);
+    document.getElementById('adjustmentList').insertAdjacentHTML('beforeend', `<div id="${id}" class="adjustment-item" data-kind="${kind}">${adjustmentKindButtons(id,kind)}<div class="adjustment-fields"><input class="adjustment-label" aria-label="조정 내용" value="${escapeHtml(label)}" placeholder="조정 내용" oninput="handleAdjustmentInput()"><div class="adjustment-money"><span class="adjustment-plus" aria-hidden="true">${Number(amount)>0?'+':''}</span><input type="number" class="adjustment-amount" aria-label="조정 금액 (원)" value="${amount === '' ? '' : Number(amount)||0}" placeholder="금액 (원)" oninput="normalizeAdjustmentSign(this)"><span class="adjustment-currency" aria-hidden="true">원</span></div><button type="button" class="ui-button" aria-label="이월·초과금 항목 삭제" onclick="removeAdjustmentItem('${id}')">삭제</button></div></div>`);
+    updateAdjustmentTone(document.getElementById(id));
     if (!options.silent) handleAdjustmentInput();
 };
 setAdjustmentItems = function(items = [], legacyAmount = 0) {
@@ -220,14 +231,17 @@ setAdjustmentItems = function(items = [], legacyAmount = 0) {
     normalizeAdjustmentItems(items,legacyAmount).forEach(item=>addAdjustmentItem(item.label,item.amount,{silent:true,kind:item.kind})); syncLegacyAdjustmentInput();
 };
 function setAdjustmentKind(id, kind) {
-    const row = document.getElementById(id); row.dataset.kind = kind;
-    row.querySelector('.adjustment-kinds').outerHTML = adjustmentKindButtons(id,kind);
+    if(!['carry','extra','other'].includes(kind))return;
+    const row = document.getElementById(id);if(!row)return;row.dataset.kind = kind;
+    row.querySelector('.adjustment-kinds select').value=kind;
+    row.querySelector('.adjustment-kinds svg').outerHTML=adjustmentIcon(kind);
     if (kind !== 'other') row.querySelector('.adjustment-label').value = previousMonthLabel(kind);
     normalizeAdjustmentSign(row.querySelector('.adjustment-amount'));
 }
 function normalizeAdjustmentSign(input) {
     const kind = input.closest('.adjustment-item').dataset.kind;
     if (input.value !== '' && kind !== 'other') input.value = (kind === 'carry' ? -1 : 1) * Math.abs(Number(input.value)||0);
+    updateAdjustmentTone(input.closest('.adjustment-item'));
     handleAdjustmentInput();
 }
 function addPaymentAdjustment(kind) {
@@ -236,6 +250,6 @@ function addPaymentAdjustment(kind) {
 const paymentTable = document.getElementById('paymentGridBody')?.closest('table');
 if (paymentTable) {
     const bar = document.createElement('div'); bar.className='price-actions';
-    bar.innerHTML = '<span class="ui-help">조정 추가</span>' + [['carry','이월금'],['extra','초과금'],['other','기타']].map(([kind,label])=>`<button type="button" class="ui-button" onclick="addPaymentAdjustment('${kind}')">${label}</button>`).join('');
+    bar.innerHTML = '<span class="ui-help">조정 추가</span>' + [['carry','이월금'],['extra','초과금'],['other','기타']].map(([kind,label])=>`<button type="button" class="ui-button" onclick="addPaymentAdjustment('${kind}')">${adjustmentIcon(kind)}${label}</button>`).join('');
     paymentTable.before(bar);
 }

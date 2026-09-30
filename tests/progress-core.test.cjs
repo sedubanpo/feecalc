@@ -74,3 +74,21 @@ test('manual durations cannot overlap, but consecutive sessions are allowed',()=
  s.manual=['b','a','c'].map(templateId=>({templateId,date:'2026-09-21'}));
  assert.deepEqual(core.calculate(s).predicted.map(r=>r.templateId),['b','c']);
 });
+test('temporary drafts allow earlier days, preserve source, and survive cutoff changes',()=>{
+ const s=state([row('source','2026-09-09')]);s.endDate=s.cutoff;
+ s.temporary=[row('local:one','2026-09-01',2,{start:'18:00',end:'20:00',amount:0}),row('local:two','2026-09-09',1,{start:'19:00',end:'20:00',amount:29166.67})];
+ const original=JSON.stringify(s.snapshot),r=core.calculate(s);
+ assert.equal(r.actual.length,1);assert.equal(r.predicted.length,2);assert.equal(r.predictedAmount,29166.67);assert.ok(r.predicted.every(x=>x.temporary&&x.predicted));assert.equal(JSON.stringify(s.snapshot),original);
+ s.cutoff='2026-09-29';s.endDate='2026-09-30';assert.equal(core.calculate(s).predicted.filter(x=>x.temporary).length,2);
+});
+test('temporary drafts skip source and forecast overlaps while keeping separate times',()=>{
+ const s=state([row('source','2026-09-09')]);
+ s.temporary=[row('local:source','2026-09-09'),row('local:forecast','2026-09-23'),row('local:separate','2026-09-09',2,{start:'18:00',end:'20:00'})];
+ const r=core.calculate(s);assert.deepEqual(r.predicted.filter(x=>x.temporary).map(x=>x.id),['local:separate']);
+ s.snapshot.lessons.push(row('latest','2026-09-09',2,{start:'18:00',end:'20:00'}));assert.equal(core.calculate(s).predicted.filter(x=>x.temporary).length,0);
+});
+test('temporary draft validation rejects wrong month, identity, unknown/negative amount, and times',()=>{
+ const valid=row('local:qa','2026-09-01');assert.equal(core.validateTemporary([valid],'2026-09').length,1);
+ for(const extra of [{id:'source'},{date:'2026-10-01'},{amount:null},{amount:-1},{minutes:null},{minutes:0},{start:'25:00'},{end:'17:00'},{teacher:''},{className:''}])assert.throws(()=>core.validateTemporary([{...valid,...extra}],'2026-09'));
+ assert.throws(()=>core.validateTemporary([valid,valid],'2026-09'));assert.deepEqual(core.validateTemporary(undefined,'2026-09'),[]);
+});

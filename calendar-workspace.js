@@ -23,7 +23,7 @@
         if(['auto','select'].includes(currentTab))return C.expand(readRows(),currentTab,month(),[...excludedDates]);
         if(currentTab==='history'&&historyMismatch())return [];
         if(currentTab==='history')return historyData.filter(r=>!r.excludeFromHistory&&r.month===Number(el('targetMonth').value)&&r.year===Number(el('targetYear').value)).map((r,i)=>({...C.info(r.subject,r.teacher),id:'history:'+i,day:r.day,hours:r.hours||0,amount:r.amount,rawName:r.subject,start:r.startTime||'',end:r.endTime||'',status:(getHistoryStatusMeta(r)?.label||r.attend||'출석').replace(/ · (과금|0원)$/,''),rate:null,rateMode:'perClass'}));
-        if(currentTab==='progress'){const result=progressResult();return [...result.actual,...result.predicted].map(r=>({...C.info(r.className,r.teacher),id:r.id,day:Number(r.date.slice(-2)),hours:(r.minutes||0)/60,amount:r.amount,rawName:r.className,start:r.start,end:r.end,status:r.predicted?'예상':progressKind(r.kind),rate:null,predicted:r.predicted}));}
+        if(currentTab==='progress'){const result=progressResult();return [...result.actual,...result.predicted].map(r=>({...C.info(r.className,r.teacher),id:r.id,day:Number(r.date.slice(-2)),hours:(r.minutes||0)/60,amount:r.amount,rawName:r.className,start:r.start,end:r.end,status:r.temporary?'임시':r.predicted?'예상':progressKind(r.kind),rate:null,predicted:r.predicted,temporary:r.temporary}));}
         if(currentTab==='timetable')return options.timetableSource?.month===month()&&options.timetableSource?.studentName===getCurrentStudentName()?options.placements:[];
         if(currentTab==='first')return collectFirstRegistrationRows().flatMap((r,i)=>getFirstRegistrationMonthDates(r).map(day=>({...C.info(r.name),id:'first:'+i+':'+day,day,hours:r.hours,amount:Math.round(r.rate*(r.rateMode==='perHour'?r.hours:1)),rawName:r.name,start:'',end:'',status:'예정'}))); 
         return [];
@@ -42,11 +42,11 @@
         if(purpose==='timetable')switchTab('timetable');
         refresh();
     }
-    window.FeeCalendar={navigate,refresh,activeLessons};
+    window.FeeCalendar={navigate,refresh,activeLessons,remember:saveUndo,commit:commitCalendar,focusDay:day=>{detailDay=day;renderDay(activeLessons());}};
     function setup(){
         if(el('productHeader'))return;
         document.title='에스에듀 반포관 · 수강료 계산기';document.body.classList.add('calendar-app');
-        const header=document.createElement('header');header.id='productHeader';header.innerHTML=`<div class="product-brand"><img src="${logo}" alt="에스에듀 로고"><div><span>에스에듀 반포관</span><strong>수강료 계산기</strong></div></div><nav aria-label="수강료 업무 메뉴">${[['calculate','수강료 계산'],['progress','진행·정산'],['history','수업 이력'],['notice','안내서'],['timetable','시간표'],['settings','설정']].map(([key,label])=>`<button type="button" data-purpose="${key}">${svg(key)}${label}</button>`).join('')}</nav>`;
+        const header=document.createElement('header');header.id='productHeader';header.innerHTML=`<div class="product-brand"><img src="assets/brand/feecalc-favicon.svg" alt="수강료 계산기 로고"><div><span>에스에듀 반포관</span><strong>수강료 계산기</strong></div></div><nav aria-label="수강료 업무 메뉴">${[['calculate','수강료 계산'],['progress','진행·정산'],['history','수업 이력'],['notice','안내서'],['timetable','시간표'],['settings','설정']].map(([key,label])=>`<button type="button" data-purpose="${key}">${svg(key)}${label}</button>`).join('')}</nav>`;
         document.body.prepend(header);header.querySelectorAll('[data-purpose]').forEach(b=>b.onclick=()=>navigate(b.dataset.purpose));
         const controls=el('controlColumn'),grid=el('workspaceGrid');
         const work=document.createElement('section');work.id='calendarWorkspace';work.innerHTML=`
@@ -149,10 +149,14 @@
         for(let i=0;i<C.weekday(month(),1);i++){const b=document.createElement('div');b.className='calendar-day outside';host.append(b);}
         for(let day=1;day<=C.daysInMonth(month());day++){
             const cell=document.createElement('div');cell.className='calendar-day'+(selectedDays.has(day)?' selected-date':'');
+            cell.dataset.day=day;
+            if(currentTab==='progress')cell.onclick=e=>{if(!e.target.closest('button,input,label'))window.TemporaryLessons?.open(day);};
             const head=document.createElement('div');head.className='calendar-day-head';const title=document.createElement('button');title.type='button';title.textContent=day;title.setAttribute('aria-label',`${day}일 수업 내역`);title.onclick=()=>{detailDay=day;renderDay(lessons);};head.append(title);
+            if(currentTab==='progress'){const add=document.createElement('button');add.type='button';add.className='calendar-add-lesson';add.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>';add.setAttribute('aria-label',`${day}일 임시 수업 추가`);add.onclick=()=>window.TemporaryLessons?.open(day);head.append(add);}
             if(editable){const label=document.createElement('label'),box=document.createElement('input');box.type='checkbox';box.checked=selectedDays.has(day);box.setAttribute('aria-label',`${day}일 날짜 선택`);box.onchange=()=>{selectedExtraId=null;if(box.checked)selectedDays.add(day);else selectedDays.delete(day);cell.classList.toggle('selected-date',box.checked);updateDiff();};label.append(box);head.append(label);}cell.append(head);if(excludedDates.has(day))cell.insertAdjacentHTML('beforeend','<span class="global-holiday">전체 휴강</span>');
             for(const r of lessons.filter(r=>r.day===day&&(selectedSubject==='전체'||r.subject===selectedSubject))){const b=document.createElement('button');b.type='button';b.className=`calendar-event ${getSubjectColorClass(r.subject,false,false)}${r.row===selectedRow&&editable?' active-condition':''}`;b.innerHTML=`<strong>${subjectIcon(r.subject)}${esc(r.subject)}${r.teacher?' · '+esc(r.teacher):''}</strong><span>${esc(r.start&&r.end?`${r.start}–${r.end}`:r.hours+'시간')}${r.status==='예정'?'':' · '+esc(r.status)}</span>${currentTab==='timetable'?'':`<small class="${tone(r.amount)}">${signed(r.amount)}</small>`}`;b.onclick=()=>{detailDay=day;if(editable){selectedExtraId=null;selectedRow=r.row;updateBatch();}renderWork();};cell.append(b);}host.append(cell);
         }
+        el('calendarWorkspace').querySelector('.calendar-help').textContent=currentTab==='progress'?'날짜의 빈 공간이나 + 버튼을 누르면 임시 수업을 추가합니다. 날짜 제목과 수업을 누르면 당일 내역을 확인합니다.':'날짜의 체크 상자는 여러 날짜 선택, 날짜 제목은 당일 내역 확인입니다. 수업을 누르면 해당 조건을 선택합니다.';
         el('globalExcludeDays').hidden=!editable;el('restoreGlobalDays').hidden=!editable;renderDay(lessons);updateDiff();
     }
     function renderDay(lessons){
@@ -162,8 +166,11 @@
             if(['auto','select'].includes(currentTab)){
                 const edit=document.createElement('button');edit.type='button';edit.textContent='이 회차 수정';edit.onclick=()=>{selectedExtraId=r.id.includes(':extra:')?r.id:null;selectedRow=r.row;selectedDays=new Set([detailDay]);updateBatch();el('calendarHours').value=r.hours;el('calendarRate').value=r.rate??'';renderWork();};line.append(edit);
                 const remove=document.createElement('button');remove.type='button';remove.textContent='이 회차 제외';remove.onclick=()=>{saveUndo();const row=rowList()[r.row],s=scheduleOf(row);if(r.id.includes(':extra:'))s.additional=(s.additional||[]).filter(x=>r.id!==`${currentTab}:${r.row}:extra:${x.id}`);else s.removed=[...new Set([...(s.removed||[]),r.day])];row.dataset.legacyAggregate='false';row.dataset.schedule=JSON.stringify(s);commitCalendar();};line.append(remove);
-            }day.append(line);
+            }
+            if(currentTab==='progress'&&r.temporary){const remove=document.createElement('button');remove.type='button';remove.textContent='임시 수업 삭제';remove.onclick=()=>{saveUndo();removeProgressPrediction(r.id);commitCalendar();};line.append(remove);}
+            day.append(line);
         }
+        if(currentTab==='progress'){const add=document.createElement('button');add.type='button';add.textContent='임시 수업 추가';add.onclick=()=>window.TemporaryLessons?.open(detailDay);day.append(add);}
         if(!daily.length)day.insertAdjacentHTML('beforeend','<p>등록된 수업이 없습니다.</p>');
         if(['auto','select'].includes(currentTab)){const b=document.createElement('button');b.type='button';b.textContent='같은 조건의 별도 회차 추가';b.onclick=()=>{const row=rowList()[selectedRow],hours=Number(el('calendarHours').value),rate=Number(el('calendarRate').value);if(!row||!validBatch())return;saveUndo();const s=scheduleOf(row);s.additional=[...(s.additional||[]),{id:crypto.randomUUID(),day:detailDay,hours,rate}];row.dataset.legacyAggregate='false';row.dataset.schedule=JSON.stringify(s);commitCalendar();};day.append(b);}
     }
@@ -201,7 +208,7 @@
         for(let i=0;i<C.weekday(month(),1);i++){const c=document.createElement('div');c.className='receipt-cal-cell outside';cal.append(c);}
         for(let d=1;d<=C.daysInMonth(month());d++){
             const c=document.createElement('div');c.className='receipt-cal-cell';c.innerHTML=`<div class="rc-date">${d}</div>`;
-            if(!isReceiptCalendarDetailsHidden())for(const r of lessons.filter(r=>r.day===d))c.insertAdjacentHTML('beforeend',`<div class="notice-event ${getSubjectColorClass(r.subject,false,false)}${r.status==='예상'?' predicted':''}"><strong>${subjectIcon(r.subject)}${esc(r.subject)}</strong><span class="notice-time">${esc(r.start&&r.end?formatCompactTimeRange(r.start,r.end):r.hours+'시간')}</span><small class="notice-meta">${r.teacher?'<span class="notice-teacher-name">'+esc(r.teacher)+'</span>':''}${r.status==='예정'||r.status==='출석'?'':'<span class="notice-status">'+esc(r.status)+'</span>'}</small></div>`);cal.append(c);
+            if(!isReceiptCalendarDetailsHidden())for(const r of lessons.filter(r=>r.day===d))c.insertAdjacentHTML('beforeend',`<div class="notice-event ${getSubjectColorClass(r.subject,false,false)}${r.predicted?' predicted':''}"><strong>${subjectIcon(r.subject)}${esc(r.subject)}</strong><span class="notice-time">${esc(r.start&&r.end?formatCompactTimeRange(r.start,r.end):r.hours+'시간')}</span><small class="notice-meta">${r.teacher?'<span class="notice-teacher-name">'+esc(r.teacher)+'</span>':''}${r.status==='예정'||r.status==='출석'?'':'<span class="notice-status">'+esc(r.status)+'</span>'}</small></div>`);cal.append(c);
         }
     }
     function refresh(){
