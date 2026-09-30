@@ -114,6 +114,7 @@ const root=path.resolve(__dirname,'..'),evidence=process.env.EVIDENCE_ROOT;
  await page.locator('#voucherGuideText').fill('이월금 <img src=x onerror=alert(1)> 검증');
  await page.locator('#voucherGuideExample').fill('검증 바우처 예시');
  await page.locator('[onclick="saveAppSettings()"]').click();
+ await page.waitForFunction(()=>testSettings.voucherGuide.example==='검증 바우처 예시');
  assert.equal(await page.evaluate(()=>testSettings.voucherGuide.example),'검증 바우처 예시');
  assert.match(await page.locator('#receiptGuideList').innerText(),/검증 취소 안내/);
  assert.equal(await page.locator('#voucherGuideBox .voucher-guide-title img').count(),0);

@@ -254,49 +254,62 @@
         }catch(error){if(token===fetchToken)el('sourceStatus').textContent=error.message+' 다시 불러오기를 누르거나 직접 입력해 주세요.';}
         finally{if(token===fetchToken){sourcePending='';el('loadSource').disabled=false;}}
     }
-    function pickedCandidateCards(){
-        return [...el('sourceCandidates').querySelectorAll('[data-source-group]')].map(card=>{
-            const group=candidateGroups[Number(card.dataset.sourceGroup)];
-            const days=[...card.querySelectorAll('[data-source-weekday][aria-pressed="true"]')].map(b=>Number(b.dataset.sourceWeekday));
-            const dates=[...card.querySelectorAll('[data-source-date]:checked')].map(input=>Number(input.dataset.sourceDate));
-            return {group,days,dates};
-        }).filter(item=>item.group&&(currentTab==='auto'?item.days.length:item.dates.length));
+    function candidateRow(group){
+        return rowList().find(row=>{
+            try{return JSON.parse(row.dataset.candidateKeys||'[]').includes(group.id);}catch{return false;}
+        });
+    }
+    function candidateSelection(card){
+        return {
+            days:[...card.querySelectorAll('[data-source-weekday][aria-pressed="true"]')].map(button=>Number(button.dataset.sourceWeekday)),
+            dates:[...card.querySelectorAll('[data-source-date]:checked')].map(input=>Number(input.dataset.sourceDate))
+        };
     }
     function updateCandidateSelection(){
-        const host=el('sourceCandidates');
-        for(const card of host.querySelectorAll('[data-source-group]')){
-            const count=currentTab==='auto'?card.querySelectorAll('[data-source-weekday][aria-pressed="true"]').length:card.querySelectorAll('[data-source-date]:checked').length;
-            card.querySelector('.source-selection-count').textContent=count?currentTab==='auto'?`${count}개 요일 선택`:`${count}일 선택`:'선택 없음';
+        for(const card of el('sourceCandidates').querySelectorAll('[data-source-group]')){
+            const selection=candidateSelection(card);
+            const count=currentTab==='auto'?selection.days.reduce((sum,weekday)=>sum+Array.from({length:C.daysInMonth(month())},(_,i)=>i+1).filter(day=>C.weekday(month(),day)===weekday).length,0):selection.dates.length;
+            card.querySelector('.source-selection-count').textContent=count?`이번 달 ${count}회 달력에 반영됨`:'이번 달 수업 없음 · 요일을 누르면 달력에 바로 반영';
+            card.classList.toggle('source-candidate-active',count>0);
         }
-        const chosen=pickedCandidateCards();el('applyCandidates').disabled=!chosen.length;
-        el('candidateSelectionSummary').textContent=chosen.length?`${chosen.length}개 수업 조건을 ${month()} 달력에 추가합니다. 기존 수업은 유지됩니다.`:'수업의 요일이나 날짜를 선택해 주세요.';
     }
     function renderCandidates(){
         const host=el('sourceCandidates');host.hidden=!candidateGroups.length;
         if(!candidateGroups.length){host.replaceChildren();return;}
         const selective=currentTab==='select',weekdayLabels=['일','월','화','수','목','금','토'];
-        host.innerHTML=`<div class="source-candidate-heading"><strong>지난달 수업 ${candidateGroups.length}개</strong><span>${selective?'이번 달 수업 날짜를 고르세요. 요일을 누르면 해당 날짜가 한 번에 선택됩니다.':'이번 달에 진행할 요일을 고르세요. 반복된 요일은 미리 선택했습니다.'}</span></div><div id="candidateRows" class="source-candidate-grid"></div><div class="source-candidate-footer"><p>시간표·학생별 변경 안내를 확인한 뒤 적용하세요. 1회 기록과 같은 날 다른 조건은 직접 확인이 필요합니다.</p><span id="candidateSelectionSummary" role="status"></span><button type="button" id="applyCandidates" class="primary" disabled>선택한 ${selective?'날짜':'요일'}로 수업 추가</button></div>`;
+        host.innerHTML=`<div class="source-candidate-heading"><strong>지난달 수업 ${candidateGroups.length}개</strong><span>수업마다 요일을 누르면 이번 달 달력에 바로 반영됩니다.</span></div><div id="candidateRows" class="source-candidate-grid"></div><p class="source-candidate-note">반복 수업은 한 번에 가져올 수 있습니다. 시간표·학생별 변경 안내를 확인하고, 1회 수업은 필요한 경우에만 선택하세요.</p>`;
         candidateGroups.forEach((group,i)=>{
             const card=document.createElement('section');card.className='source-candidate';card.dataset.sourceGroup=String(i);
             const suggested=new Set(group.weekdays.filter(w=>w.suggested).map(w=>w.day));
+            const linked=candidateRow(group),activeDates=new Set(linked?[...(selectRowDates[linked.id.replace('srow-','')]||[])]:[]);
+            const activeDays=new Set(linked?[...linked.querySelectorAll('.day-chk:checked')].map(input=>Number(input.value)):[]);
             const evidence=group.sourceDates.map(date=>date.slice(5).replace('-','/')).join(' · ');
             const warnings=group.reasons.filter(reason=>reason!=='다음 달 시간표·변경 안내 대조');
-            card.innerHTML=`<div class="source-candidate-title"><strong>${subjectIcon(group.subject)}${esc(group.subject)} · ${esc(group.teacher||'강사 미기재')}</strong><b>${group.amount===null?'단가 확인 필요':esc(money(group.amount)+'/회')}</b></div><div class="source-candidate-meta">${esc(group.type)} · ${group.hours}시간 · 지난달 ${group.sourceDates.length}회${group.separateSession&&group.times.length?' · 기록 시각 '+esc(group.times.join(', ')):group.times.length>1?' · 시각 변경 기록':''}</div><p class="source-evidence">수업일 ${esc(evidence)}${warnings.length?' · '+esc(warnings.join(' / ')):''}</p><div class="source-weekdays" role="group" aria-label="${esc(group.subject)} ${esc(group.teacher)} ${selective?'날짜 빠른 선택':'요일 선택'}">${weekdayLabels.map((day,index)=>`<button type="button" data-source-weekday="${index}" aria-pressed="${suggested.has(index)?'true':'false'}"><span>${day}</span>${group.weekdays.some(w=>w.day===index)?`<small>${group.weekdays.find(w=>w.day===index).count}회</small>`:''}</button>`).join('')}</div>${selective?`<button type="button" class="source-date-toggle" aria-expanded="false">날짜 직접 고르기</button><div class="source-date-picker" hidden><div class="source-date-weekdays">${weekdayLabels.map(day=>`<span>${day}</span>`).join('')}</div><div class="source-date-grid">${Array.from({length:C.weekday(month(),1)},()=>'<span></span>').join('')}${Array.from({length:C.daysInMonth(month())},(_,n)=>{const day=n+1,checked=suggested.has(C.weekday(month(),day));return `<label><input type="checkbox" data-source-date="${day}" aria-label="${esc(group.subject)} ${day}일" ${checked?'checked':''}><span>${day}</span></label>`;}).join('')}</div></div>`:''}<span class="source-selection-count"></span>`;
+            card.innerHTML=`<div class="source-candidate-title"><strong>${subjectIcon(group.subject)}${esc(group.subject)} · ${esc(group.teacher||'강사 미기재')}</strong><b>${group.amount===null?'단가 확인 필요':esc(money(group.amount)+'/회')}</b></div><div class="source-candidate-meta">${esc(group.type)} · ${group.hours}시간 · 지난달 ${group.sourceDates.length}회</div><div class="source-candidate-actions">${suggested.size?`<button type="button" class="source-quick-add">지난달 반복 요일 사용</button>`:''}<details class="source-evidence"><summary>지난달 수업일 보기</summary><p>${esc(evidence)}${group.separateSession&&group.times.length?' · 기록 시각 '+esc(group.times.join(', ')):''}${warnings.length?' · '+esc(warnings.join(' / ')):''}</p></details></div><div class="source-weekdays" role="group" aria-label="${esc(group.subject)} ${esc(group.teacher)} 이번 달 요일">${weekdayLabels.map((day,index)=>`<button type="button" data-source-weekday="${index}" data-suggested="${suggested.has(index)}" aria-pressed="${selective?Array.from(activeDates).filter(date=>C.weekday(month(),date)===index).length===Array.from({length:C.daysInMonth(month())},(_,n)=>n+1).filter(date=>C.weekday(month(),date)===index).length&&activeDates.size>0:activeDays.has(index)}" aria-label="${esc(group.subject)} ${day}요일 ${selective?'날짜 선택':'수업'} ${group.weekdays.find(w=>w.day===index)?.count||0}회 기록"><span>${day}</span>${group.weekdays.some(w=>w.day===index)?`<small>${group.weekdays.find(w=>w.day===index).count}회</small>`:''}</button>`).join('')}</div>${selective?`<button type="button" class="source-date-toggle" aria-expanded="false">날짜별로 조정</button><div class="source-date-picker" hidden><div class="source-date-weekdays">${weekdayLabels.map(day=>`<span>${day}</span>`).join('')}</div><div class="source-date-grid">${Array.from({length:C.weekday(month(),1)},()=>'<span></span>').join('')}${Array.from({length:C.daysInMonth(month())},(_,n)=>{const day=n+1;return `<label><input type="checkbox" data-source-date="${day}" aria-label="${esc(group.subject)} ${day}일" ${activeDates.has(day)?'checked':''}><span>${day}</span></label>`;}).join('')}</div></div>`:''}<span class="source-selection-count" role="status"></span>`;
             for(const button of card.querySelectorAll('[data-source-weekday]'))button.onclick=()=>{
                 const active=button.getAttribute('aria-pressed')!=='true';
                 if(selective){
                     for(const input of card.querySelectorAll('[data-source-date]'))if(C.weekday(month(),Number(input.dataset.sourceDate))===Number(button.dataset.sourceWeekday))input.checked=active;
                     syncCandidateWeekdays(card);
                 }else button.setAttribute('aria-pressed',String(active));
-                updateCandidateSelection();
+                syncCandidateToRow(card);
+            };
+            const quick=card.querySelector('.source-quick-add');
+            if(quick)quick.onclick=()=>{
+                if(selective){
+                    for(const input of card.querySelectorAll('[data-source-date]'))input.checked=suggested.has(C.weekday(month(),Number(input.dataset.sourceDate)));
+                    syncCandidateWeekdays(card);
+                }else for(const button of card.querySelectorAll('[data-source-weekday]'))button.setAttribute('aria-pressed',String(suggested.has(Number(button.dataset.sourceWeekday))));
+                syncCandidateToRow(card);
             };
             if(selective){
-                const toggle=card.querySelector('.source-date-toggle');toggle.onclick=()=>{const open=toggle.getAttribute('aria-expanded')!=='true';toggle.setAttribute('aria-expanded',String(open));card.querySelector('.source-date-picker').hidden=!open;toggle.textContent=open?'날짜 선택 접기':'날짜 직접 고르기';};
-                card.querySelector('.source-date-picker').onchange=()=>{syncCandidateWeekdays(card);updateCandidateSelection();};
+                syncCandidateWeekdays(card);
+                const toggle=card.querySelector('.source-date-toggle');toggle.onclick=()=>{const open=toggle.getAttribute('aria-expanded')!=='true';toggle.setAttribute('aria-expanded',String(open));card.querySelector('.source-date-picker').hidden=!open;toggle.textContent=open?'날짜 선택 접기':'날짜별로 조정';};
+                card.querySelector('.source-date-picker').onchange=()=>{syncCandidateWeekdays(card);syncCandidateToRow(card);};
             }
             el('candidateRows').append(card);
         });
-        el('applyCandidates').onclick=applyCandidates;updateCandidateSelection();
+        updateCandidateSelection();
     }
     function syncCandidateWeekdays(card){
         for(const button of card.querySelectorAll('[data-source-weekday]')){
@@ -305,26 +318,45 @@
             button.classList.toggle('partly-selected',inputs.some(input=>input.checked)&&!inputs.every(input=>input.checked));
         }
     }
-    function applyCandidates(){
+    function syncCandidateToRow(card){
         if(sourceContext!==matchedStudent()?.id+'|'+month())return;
-        const chosen=pickedCandidateCards();if(!chosen.length)return;
-        const mode=currentTab;if(!['auto','select'].includes(mode))return;saveUndo();
-        const existing=new Set(readRows().map(row=>{const info=C.info(row.name);return JSON.stringify([info.subject,info.teacher,info.type,row.hours,row.rate,mode==='auto'?row.days.sort((a,b)=>a-b):row.dates.sort((a,b)=>a-b)]);}));
-        const selectedKeys=new Set(rowList().flatMap(row=>JSON.parse(row.dataset.candidateKeys||'[]')));
-        let added=0;
-        for(const {group,days,dates} of chosen){
-            const selected=(mode==='auto'?days:dates).sort((a,b)=>a-b),key=JSON.stringify([group.subject,group.teacher,group.type,group.hours,group.amount,selected]);
-            if(selectedKeys.has(group.id)||(!group.separateSession&&existing.has(key)))continue;
-            const name=`${group.subject}-${group.type}(${group.teacher})-${group.hours}h`;
-            if(mode==='auto')addAutoRow(name);else addSelectRow(name);
-            const row=rowList().at(-1);row.querySelector('.sub-rate').value=group.amount??'';row.querySelector('.sub-hours').value=group.hours;row.querySelector('.rate-mode').value='perClass';
-            if(mode==='auto')for(const day of days)row.querySelector(`.day-chk[value="${day}"]`).checked=true;
-            else selectRowDates[row.id.replace('srow-','')]=new Set(dates);
-            row.dataset.sourceIds=JSON.stringify(group.sourceIds);row.dataset.candidateKeys=JSON.stringify([group.id]);existing.add(key);added++;
-        }
-        options.source={studentId:sourceSnapshot.studentId,month:sourceSnapshot.month,fetchedAt:sourceSnapshot.fetchedAt,confirmedAt:new Date().toISOString(),sourceIds:chosen.flatMap(item=>item.group.sourceIds),targetMonth:month()};
-        options.previous={studentId:sourceSnapshot.studentId,month:sourceSnapshot.month,hours:C.hoursBySubject(C.normalizeSnapshot(sourceSnapshot).filter(r=>r.kind!=='absence'))};
-        el('sourceCandidates').hidden=true;el('sourceStatus').textContent=added?`${added}개 수업을 추가했습니다. 달력에서 날짜와 금액을 확인하세요.`:'이미 추가한 수업입니다. 달력에서 요일이나 날짜를 수정할 수 있습니다.';updateDateContext();commitCalendar();
+        const mode=currentTab,group=candidateGroups[Number(card.dataset.sourceGroup)];
+        if(!group||!['auto','select'].includes(mode))return;
+        const {days,dates}=candidateSelection(card),hasSelection=mode==='auto'?days.length:dates.length;
+        let row=candidateRow(group);
+        if(!row&&!hasSelection)return;
+        saveUndo();
+        applying=true;
+        try{
+            if(!hasSelection&&row&&!Object.keys(scheduleOf(row)).length){
+                removeEl(row.id);
+                row=null;
+            }
+            if(hasSelection&&!row){
+                const before=new Set(rowList().map(item=>item.id));
+                const name=`${group.subject}-${group.type}(${group.teacher})-${group.hours}h`;
+                if(mode==='auto')addAutoRow(name);else addSelectRow(name);
+                row=rowList().find(item=>!before.has(item.id));
+                if(!row)throw Error('새 수업을 찾지 못했습니다.');
+                row.querySelector('.sub-name').value=name;
+                row.querySelector('.sub-rate').value=group.amount??'';
+                row.querySelector('.sub-hours').value=group.hours;
+                row.querySelector('.rate-mode').value='perClass';
+                row.dataset.sourceIds=JSON.stringify(group.sourceIds);
+                row.dataset.candidateKeys=JSON.stringify([group.id]);
+                row.dataset.legacyAggregate='false';
+            }
+            if(row){
+                if(mode==='auto')for(const input of row.querySelectorAll('.day-chk'))input.checked=days.includes(Number(input.value));
+                else selectRowDates[row.id.replace('srow-','')]=new Set(dates);
+            }
+            const linked=rowList().filter(item=>item.dataset.sourceIds);
+            options.source=linked.length?{studentId:sourceSnapshot.studentId,month:sourceSnapshot.month,fetchedAt:sourceSnapshot.fetchedAt,confirmedAt:new Date().toISOString(),sourceIds:[...new Set(linked.flatMap(item=>JSON.parse(item.dataset.sourceIds||'[]')))],targetMonth:month()}:null;
+            options.previous={studentId:sourceSnapshot.studentId,month:sourceSnapshot.month,hours:C.hoursBySubject(C.normalizeSnapshot(sourceSnapshot).filter(item=>item.kind!=='absence'))};
+        }finally{applying=false;}
+        updateCandidateSelection();
+        el('sourceStatus').textContent=hasSelection?`${group.subject} · ${group.teacher} 수업을 달력에 반영했습니다. 저장 전에 이번 달 시간표를 확인하세요.`:`${group.subject} · ${group.teacher} 반복 요일을 달력에서 제외했습니다. 별도 회차는 유지됩니다.`;
+        updateDateContext();commitCalendar();
     }
     async function loadPrevious(){
         el('loadPreviousHours').disabled=true;el('previousStatus').textContent='전월 실제 시수 확인 중';

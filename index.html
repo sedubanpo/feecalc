@@ -3967,8 +3967,9 @@
             Object.keys(autoRowExcludedDates).forEach(key => delete autoRowExcludedDates[key]);
 
             (data.autoRows || []).forEach(rowData => {
+                const before = new Set(Array.from(document.querySelectorAll('#autoList .auto-row'), row => row.id));
                 addAutoRow(rowData.name || '');
-                const row = document.querySelector('#autoList .auto-row:last-child');
+                const row = Array.from(document.querySelectorAll('#autoList .auto-row')).find(item => !before.has(item.id));
                 row.querySelector('.sub-rate').value = rowData.rateKnown === false ? '' : (rowData.rate ?? '');
                 row.dataset.legacyAggregate = String(rowData.legacyAggregate ?? (Number(data.version || 0) < 8));
                 row.dataset.schedule = JSON.stringify(rowData.schedule || {});
@@ -3985,8 +3986,9 @@
                 renderAutoRowDatePills(rowId);
             });
             (data.selectRows || []).forEach(rowData => {
+                const before = new Set(Array.from(document.querySelectorAll('#selectList .select-row'), row => row.id));
                 addSelectRow(rowData.name || '');
-                const row = document.querySelector('#selectList .select-row:last-child');
+                const row = Array.from(document.querySelectorAll('#selectList .select-row')).find(item => !before.has(item.id));
                 const rowId = row.id.replace('srow-', '');
                 row.querySelector('.sub-rate').value = rowData.rateKnown === false ? '' : (rowData.rate ?? '');
                 row.dataset.legacyAggregate = String(rowData.legacyAggregate ?? (Number(data.version || 0) < 8));
@@ -4332,7 +4334,7 @@
     <script src="subject-icons.js?v=20260930-compact"></script>
     <script src="school-icons.js?v=20260930"></script>
     <script src="calendar-core.js?v=20260930-source-picker"></script>
-    <link rel="stylesheet" href="calendar-workspace.css?v=20260930-source-picker">
-    <script src="calendar-workspace.js?v=20260930-source-picker"></script>
+    <link rel="stylesheet" href="calendar-workspace.css?v=20260930-direct-picker">
+    <script src="calendar-workspace.js?v=20260930-direct-picker"></script>
 </body>
 </html>
