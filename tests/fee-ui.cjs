@@ -32,9 +32,9 @@ const root=path.resolve(__dirname,'..'),evidence=process.env.EVIDENCE_ROOT;
  await page.evaluate(()=>saveServerRecord());assert.equal(await page.evaluate(()=>testWrites.at(-1).p_payload.studentId),'one');
  });
  await check('grouped shared price persistence and per-hour application',async()=>{
- await page.locator('[onclick="togglePricePresetSettings()"]').click();await page.locator('#pricePresetType').selectOption('컨설팅');await page.locator('#pricePresetUnit').selectOption('perHour');await page.locator('#pricePresetInput').fill('150000');await page.locator('[onclick="addPricePreset()"]').click();await page.evaluate(()=>savePriceLibrary());
+ await page.getByRole('button',{name:'설정',exact:true}).click();await page.locator('#settingsTabRates').click();await page.getByRole('button',{name:'단가 편집',exact:true}).click();await page.locator('#pricePresetType').selectOption('컨설팅');await page.locator('#pricePresetUnit').selectOption('perHour');await page.locator('#pricePresetInput').fill('150000');await page.locator('[onclick="addPricePreset()"]').click();await page.evaluate(()=>savePriceLibrary());
  assert.ok(await page.evaluate(()=>testSettings.rateLibrary.some(x=>x.type==='컨설팅'&&x.amount===150000&&x.unit==='perHour')));
- await page.locator('.auto-row .row-price-type').first().selectOption('컨설팅');await page.locator('.auto-row .row-price-value').first().selectOption({label:'150,000원 · 시간당'});assert.equal(await page.locator('.auto-row .rate-mode').first().inputValue(),'perHour');assert.equal(await page.locator('.auto-row .sub-rate').first().inputValue(),'150000');
+ await page.getByRole('button',{name:'닫기',exact:true}).click();await page.locator('.auto-row .sub-name').first().fill('수학-컨설팅(검증)-2h');await page.getByRole('button',{name:'컨설팅 150,000원 · 시간당 적용',exact:true}).click();assert.equal(await page.locator('.auto-row .rate-mode').first().inputValue(),'perHour');assert.equal(await page.locator('.auto-row .sub-rate').first().inputValue(),'150000');
  await page.evaluate(()=>{rateLibrary=[];});await page.evaluate(()=>reloadPriceLibrary());assert.ok(await page.evaluate(()=>rateLibrary.some(x=>x.type==='컨설팅')));
  });
  await check('adjustment type, previous-month rollover, sign and old data roundtrip',async()=>{

@@ -839,7 +839,7 @@
         let calculatorEditVersion = 0;
         document.addEventListener('input', event => { if (!event.target.closest('#staffAuthPanel') && event.target.id !== 'serverRecordSearch') calculatorEditVersion++; });
         try { localStorage.removeItem('feecalc_access_code'); } catch (_) {}
-        const FEECALC_STORAGE_VERSION = 7;
+        const FEECALC_STORAGE_VERSION = 8;
         const PRICE_PRESETS_STORAGE_KEY = 'feecalc_price_presets';
         const AD_TEXT_STORAGE_KEY = 'feecalc_ad_text';
         const GUIDE_MESSAGES_STORAGE_KEY = 'feecalc_guide_messages';
@@ -1008,12 +1008,12 @@
             if (Number.isFinite(explicit) && explicit > 0) return explicit;
             return parseDurationHours(parseSubjectInfo(rawName).timeText) || fallback;
         }
-        function calculateRateTotal(count, hours, rate, mode) {
+        function calculateRateTotal(count, hours, rate, mode, legacyAggregate = false) {
             const safeCount = Number.isFinite(Number(count)) ? Math.max(0, Number(count)) : 0;
             const safeHours = Number.isFinite(Number(hours)) ? Math.max(0, Number(hours)) : 0;
             const safeRate = Number.isFinite(Number(rate)) ? Math.max(0, Number(rate)) : 0;
-            const multiplier = normalizeRateMode(mode) === 'perHour' ? safeCount * safeHours : safeCount;
-            return Math.round(multiplier * safeRate);
+            const perLesson = normalizeRateMode(mode) === 'perHour' ? safeHours * safeRate : safeRate;
+            return legacyAggregate ? Math.round(perLesson * safeCount) : Math.round(perLesson) * safeCount;
         }
         function buildRateDetail(count, hours, rate, mode, prefix = '') {
             const unit = normalizeRateMode(mode);
@@ -1623,13 +1623,13 @@
             const attendanceType = item.attendanceType || classifyHistoryAttendance(item.attend, item.subject);
             const originalAmount = Object.prototype.hasOwnProperty.call(item, 'originalAmount')
                 ? parsePaymentMoney(item.originalAmount) : parsePaymentMoney(item.amount);
-            const hourlyRate = parseInt(item.hourlyRate, 10) || 0;
+            const hourlyRate = parseFloat(item.hourlyRate) || 0;
             return {
                 ...item,
                 originalAmount,
                 hourlyRate,
                 attendanceType,
-                amount: getHistoryCharge(attendanceType, originalAmount, hourlyRate, parseFloat(item.hours) || 0, item.startTime, item.endTime),
+                amount: item.amountPending && !["absence_notice", "supplementary"].includes(attendanceType) ? null : getHistoryCharge(attendanceType, originalAmount, hourlyRate, parseFloat(item.hours) || 0, item.startTime, item.endTime),
                 excludeFromHistory: attendanceType === 'absence_notice',
                 isCancelled: attendanceType === 'same_day_cancel',
                 isMakeup: attendanceType === 'absence_makeup' || attendanceType === 'supplementary'
@@ -2198,11 +2198,11 @@
                     let durationHours = getBillableDuration(row, rawName, 0);
                     if(currentTab === 'manual') {
                         durationHours = parseFloat(row.querySelector('.sub-time').value) || 0;
-                        rowTotal = calculateRateTotal(count, durationHours, rate, rateMode);
+                        rowTotal = calculateRateTotal(count, durationHours, rate, rateMode, row.dataset.legacyAggregate === "true");
                         detailStr = buildRateDetail(count, durationHours, rate, rateMode, '월');
                         manualTime = durationHours ? `${durationHours}시간` : '';
                     } else {
-                        rowTotal = calculateRateTotal(count, durationHours, rate, rateMode);
+                        rowTotal = calculateRateTotal(count, durationHours, rate, rateMode, row.dataset.legacyAggregate === "true");
                         detailStr = buildRateDetail(count, durationHours, rate, rateMode, '월');
                     }
                     if (rowTotal > 0 || count > 0) {
@@ -2272,7 +2272,7 @@
         function collectAutoRowsForSelectImport() {
             return Array.from(document.querySelectorAll('#autoList .auto-row')).map((row, index) => {
                 const name = row.querySelector('.sub-name')?.value || '';
-                const rate = parseInt(row.querySelector('.sub-rate')?.value, 10) || 0;
+                const rate = parseFloat(row.querySelector('.sub-rate')?.value) || 0;
                 const duration = getBillableDuration(row, name, 0);
                 const rateMode = getRowRateMode(row, 'perClass');
                 return { name, rate, rateMode, duration, sortMeta: getSubjectSortMeta(name, duration, index) };
@@ -3137,10 +3137,10 @@
                 const name = row.querySelector('.sub-name')?.value || '';
                 const weekdays = Array.from(row.querySelectorAll('.first-weekday:checked')).map(input => parseInt(input.value, 10)).filter(day => Number.isFinite(day));
                 const hours = parseFloat(row.querySelector('.first-hours')?.value) || 0;
-                const rate = parseInt(row.querySelector('.sub-rate')?.value, 10) || 0;
+                const rate = parseFloat(row.querySelector('.sub-rate')?.value) || 0;
                 const rateMode = getRowRateMode(row, 'perClass');
                 const startDate = row.querySelector('.first-start-date')?.value || '';
-                return { name: name.trim(), weekdays: normalizeWeekdayList(weekdays), hours, rate, rateMode, startDate, index };
+                return { name: name.trim(), weekdays: normalizeWeekdayList(weekdays), hours, rate, rateMode, startDate, index, legacyAggregate: row.dataset.legacyAggregate === "true" };
             }).filter(item => includeBlank || item.name || item.rate || item.startDate);
         }
         function getFirstRegistrationMonthDates(row) {
@@ -3215,7 +3215,7 @@
                 const info = parseSubjectInfo(row.name);
                 if (row.hours) info.timeText = `${row.hours}시간`;
                 const billingCount = getFirstRegistrationBillingCount(row);
-                const total = calculateRateTotal(billingCount, row.hours, row.rate, row.rateMode);
+                const total = calculateRateTotal(billingCount, row.hours, row.rate, row.rateMode, row.legacyAggregate);
                 subtotal += total;
                 const dates = getFirstRegistrationMonthDates(row);
                 dates.forEach(day => calendarEvents.push({ day, name: info.mainName || row.name || '수업', rawName: row.name, durationHours: row.hours }));
@@ -3820,11 +3820,11 @@
                     excludedDates: Array.from(excludedDates).map(n => parseInt(n, 10)).filter(n => !isNaN(n)),
                     selectCutoffDay: parseInt(document.getElementById('selectCutoffDay')?.value, 10) || null,
                     selectCutoffExcludedDates: Array.from(selectCutoffExcludedDates).map(n => parseInt(n, 10)).filter(n => !isNaN(n)),
-                autoRows: collectCoreRows('#autoList .auto-row', row => { const id = row.id.replace('arow-', ''); return { name: row.querySelector('.sub-name').value || '', hours: getBillableDuration(row, row.querySelector('.sub-name').value || '', 0), rateMode: getRowRateMode(row, 'perClass'), rate: parseInt(row.querySelector('.sub-rate').value, 10) || 0, days: Array.from(row.querySelectorAll('.day-chk:checked')).map(c => parseInt(c.value, 10)), excludedDates: Array.from(autoRowExcludedDates[id] || []).map(n => parseInt(n, 10)).filter(n => !isNaN(n)) }; }),
-                selectRows: collectCoreRows('#selectList .select-row', row => { const id = row.id.replace('srow-', ''); return { name: row.querySelector('.sub-name').value || '', hours: getBillableDuration(row, row.querySelector('.sub-name').value || '', 0), rateMode: getRowRateMode(row, 'perClass'), rate: parseInt(row.querySelector('.sub-rate').value, 10) || 0, dates: Array.from(selectRowDates[id] || []).map(n => parseInt(n, 10)) }; }),
-                manualRows: collectCoreRows('#manualList .manual-row', row => ({ name: row.querySelector('.sub-name').value || '', time: parseFloat(row.querySelector('.sub-time').value) || 0, count: parseFloat(row.querySelector('.sub-count').value) || 0, rateMode: getRowRateMode(row, 'perHour'), rate: parseInt(row.querySelector('.sub-rate').value, 10) || 0 })),
+                autoRows: collectCoreRows('#autoList .auto-row', row => { const id = row.id.replace('arow-', ''); return { name: row.querySelector('.sub-name').value || '', hours: getBillableDuration(row, row.querySelector('.sub-name').value || '', 0), rateMode: getRowRateMode(row, 'perClass'), rate: parseFloat(row.querySelector('.sub-rate').value) || 0, days: Array.from(row.querySelectorAll('.day-chk:checked')).map(c => parseInt(c.value, 10)), excludedDates: Array.from(autoRowExcludedDates[id] || []).map(n => parseInt(n, 10)).filter(n => !isNaN(n)) }; }),
+                selectRows: collectCoreRows('#selectList .select-row', row => { const id = row.id.replace('srow-', ''); return { name: row.querySelector('.sub-name').value || '', hours: getBillableDuration(row, row.querySelector('.sub-name').value || '', 0), rateMode: getRowRateMode(row, 'perClass'), rate: parseFloat(row.querySelector('.sub-rate').value) || 0, dates: Array.from(selectRowDates[id] || []).map(n => parseInt(n, 10)) }; }),
+                manualRows: collectCoreRows('#manualList .manual-row', row => ({ name: row.querySelector('.sub-name').value || '', time: parseFloat(row.querySelector('.sub-time').value) || 0, count: parseFloat(row.querySelector('.sub-count').value) || 0, rateMode: getRowRateMode(row, 'perHour'), rate: parseFloat(row.querySelector('.sub-rate').value) || 0 })),
                 guideRows: collectGuideEstimateRows().map(item => ({ name: item.name, baseAmount: item.baseAmount, adjustment: item.adjustment })),
-                firstRows: collectFirstRegistrationRows(true).map(item => ({ name: item.name, weekdays: item.weekdays, hours: item.hours, rateMode: item.rateMode, rate: item.rate, startDate: item.startDate })),
+                firstRows: collectFirstRegistrationRows(true).map(item => ({ name: item.name, weekdays: item.weekdays, hours: item.hours, rateMode: item.rateMode, rate: item.rate, startDate: item.startDate, legacyAggregate: item.legacyAggregate })),
                 ttRows: (ttData || []).map(item => ({ day: parseInt(item.day, 10) || 0, subject: item.subject || '', start: parseInt(item.start, 10) || 0, duration: parseInt(item.duration, 10) || 1, rateMode: normalizeRateMode(item.rateMode, 'perClass'), price: parseInt(item.price, 10) || 0, manualDates: Array.from(item.manualDates || []).map(n => parseInt(n, 10)).filter(n => !isNaN(n)) })),
                 historyData: JSON.parse(JSON.stringify(historyData || [])),
                 aiData: JSON.parse(JSON.stringify(aiData || [])),
@@ -3928,7 +3928,11 @@
             (data.autoRows || []).forEach(rowData => {
                 addAutoRow(rowData.name || '');
                 const row = document.querySelector('#autoList .auto-row:last-child');
-                row.querySelector('.sub-rate').value = rowData.rate || '';
+                row.querySelector('.sub-rate').value = rowData.rateKnown === false ? '' : (rowData.rate ?? '');
+                row.dataset.legacyAggregate = String(rowData.legacyAggregate ?? (Number(data.version || 0) < 8));
+                row.dataset.schedule = JSON.stringify(rowData.schedule || {});
+                row.dataset.sourceIds = JSON.stringify(rowData.sourceIds || []);
+                row.dataset.candidateKeys = JSON.stringify(rowData.candidateKeys || []);
                 row.querySelector('.sub-hours').value = rowData.hours || '';
                 row.querySelector('.rate-mode').value = normalizeRateMode(rowData.rateMode, 'perClass');
                 (rowData.days || []).forEach(day => {
@@ -3943,7 +3947,11 @@
                 addSelectRow(rowData.name || '');
                 const row = document.querySelector('#selectList .select-row:last-child');
                 const rowId = row.id.replace('srow-', '');
-                row.querySelector('.sub-rate').value = rowData.rate || '';
+                row.querySelector('.sub-rate').value = rowData.rateKnown === false ? '' : (rowData.rate ?? '');
+                row.dataset.legacyAggregate = String(rowData.legacyAggregate ?? (Number(data.version || 0) < 8));
+                row.dataset.schedule = JSON.stringify(rowData.schedule || {});
+                row.dataset.sourceIds = JSON.stringify(rowData.sourceIds || []);
+                row.dataset.candidateKeys = JSON.stringify(rowData.candidateKeys || []);
                 row.querySelector('.sub-hours').value = rowData.hours || '';
                 row.querySelector('.rate-mode').value = normalizeRateMode(rowData.rateMode, 'perClass');
                 selectRowDates[rowId] = new Set((rowData.dates || []).map(n => parseInt(n, 10)).filter(n => !isNaN(n)));
@@ -3952,7 +3960,11 @@
                 addManualRow(rowData.name || '', rowData.time || '');
                 const row = document.querySelector('#manualList .manual-row:last-child');
                 row.querySelector('.sub-count').value = rowData.count || '';
-                row.querySelector('.sub-rate').value = rowData.rate || '';
+                row.querySelector('.sub-rate').value = rowData.rateKnown === false ? '' : (rowData.rate ?? '');
+                row.dataset.legacyAggregate = String(rowData.legacyAggregate ?? (Number(data.version || 0) < 8));
+                row.dataset.schedule = JSON.stringify(rowData.schedule || {});
+                row.dataset.sourceIds = JSON.stringify(rowData.sourceIds || []);
+                row.dataset.candidateKeys = JSON.stringify(rowData.candidateKeys || []);
                 row.querySelector('.rate-mode').value = normalizeRateMode(rowData.rateMode, 'perHour');
             });
             (data.guideRows || []).forEach(rowData => {
@@ -3961,6 +3973,7 @@
             if (!document.querySelector('#guideEstimateList .guide-estimate-row')) addGuideEstimateRow();
             (data.firstRows || []).forEach(rowData => {
                 addFirstRegRow(rowData.name || '', rowData.weekdays || rowData.weekday || [1], rowData.hours || '', rowData.rate || '', rowData.startDate || '', normalizeRateMode(rowData.rateMode, 'perClass'));
+                document.querySelector('#firstRegList .first-reg-row:last-child').dataset.legacyAggregate=String(rowData.legacyAggregate ?? (Number(data.version || 0) < 8));
             });
             if (!document.querySelector('#firstRegList .first-reg-row')) addFirstRegRow();
 
@@ -4275,5 +4288,10 @@
     <script src="progress-ui.js?v=20260916-compact-types"></script>
     <link rel="stylesheet" href="workspace-ui.css?v=20260918">
     <script src="workspace-ui.js?v=20260918"></script>
+    <script src="subject-icons.js?v=20260930"></script>
+    <script src="school-icons.js?v=20260930"></script>
+    <script src="calendar-core.js?v=20260930"></script>
+    <link rel="stylesheet" href="calendar-workspace.css?v=20260930">
+    <script src="calendar-workspace.js?v=20260930"></script>
 </body>
 </html>

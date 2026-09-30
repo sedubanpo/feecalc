@@ -68,15 +68,12 @@ const evidence = process.env.EVIDENCE_ROOT;
         return [amount,historyData.length,document.getElementById('dispTotal').innerText];
       }); assert.deepEqual(result,[0,1,'1,000원']);
     });
-    await check('AI uses amount column, selected month, comments, observed cutoff', async () => {
+    await check('retired AI cannot start predictions; legacy saved amounts remain read-only', async () => {
       const result=await page.evaluate(() => {
-        switchTab('ai'); document.getElementById('targetMonth').value=8;
-        document.getElementById('aiPasteInput').value=[
-          '90001\t8/1(토)\t수학\t반포\t출석\t검증\t12:00\t13:00\t1\t100,000\t50,000\t\t결제 확인',
-          '90002\t7/2(목)\t수학\t반포\t출석\t검증\t12:00\t13:00\t1\t100,000\t80,000',
-          '90003\t8/31(월)\t수학\t반포\t결석예고\t검증\t12:00\t13:00\t0\t100,000\t0'].join('\n');
-        processAiPrediction(); return aiData.map(d=>[d.amount,d.day,d.month,d.type]);
-      }); assert.deepEqual(result,[[50000,1,8,'existing']]);
+        const saved=collectCalculatorState();saved.currentTab='ai';saved.aiData=[{name:'수학',day:1,year:2026,month:8,type:'existing',amount:50000}];applyCalculatorState(saved);
+        processAiPrediction();const restored=collectCalculatorState();
+        return {rows:restored.aiData.map(d=>[d.amount,d.day,d.month,d.type]),hidden:document.getElementById('btn-ai').hidden};
+      });assert.deepEqual(result.rows,[[50000,1,8,'existing']]);assert.equal(result.hidden,true);
     });
     await check('payment classification, small discounts, invalid paste, legacy edits', async () => {
       const result=await page.evaluate(() => {
@@ -123,10 +120,10 @@ const evidence = process.env.EVIDENCE_ROOT;
       await page.locator('#selectCutoffDay').fill('15');
       await page.evaluate(()=>applySelectCutoff());
       assert.equal(await page.locator('#dispTotal').innerText(),'187,500원');
-      await page.locator('#calendarGrid [role="button"]').nth(7).focus();await page.keyboard.press('Enter');
+      await page.getByRole('checkbox',{name:'8일 날짜 선택',exact:true}).focus();await page.keyboard.press('Space');await page.getByRole('button',{name:'선택 수업 제외',exact:true}).click();
       assert.equal(await page.locator('#dispTotal').innerText(),'125,000원');
-      assert.equal(await page.locator('#calendarGrid [role="button"]').nth(7).getAttribute('aria-pressed'),'true');
-      await page.keyboard.press('Space');assert.equal(await page.locator('#dispTotal').innerText(),'187,500원');
+      assert.equal(await page.locator('#workCalendar .calendar-day').filter({has:page.getByRole('button',{name:'8일 수업 내역',exact:true})}).locator('.calendar-event').count(),0);
+      await page.getByRole('button',{name:'실행 취소',exact:true}).click();assert.equal(await page.locator('#dispTotal').innerText(),'187,500원');
     });
     await check('timetable ignores impossible month dates',async()=>{
       await page.evaluate(()=>applyCalculatorState({currentTab:'timetable',targetYear:2026,targetMonth:2,ttRows:[{day:1,subject:'수학',duration:1,price:10000,rateMode:'perClass',manualDates:[30,31]}]}));
@@ -139,16 +136,52 @@ const evidence = process.env.EVIDENCE_ROOT;
         return {millisecondsPerRender:(performance.now()-start)/10,count:document.querySelectorAll('#receiptMiniCalGrid .rc-subject').length};
       });assert.equal(metrics.count,186);console.log('dense history render ms',metrics.millisecondsPerRender);
       if(evidence){fs.mkdirSync(evidence,{recursive:true});fs.writeFileSync(path.join(evidence,'performance.json'),JSON.stringify(metrics));await page.screenshot({path:path.join(evidence,'browser.png'),fullPage:true});}
+      await page.getByRole('button',{name:'안내서',exact:true}).click();
       const downloadPromise=page.waitForEvent('download');
-      await page.locator('[onclick="downloadImage()"]').click();
+      await page.getByRole('button',{name:'이미지 저장',exact:true}).click();
       const download=await downloadPromise;assert.ok(download.suggestedFilename().endsWith('.png'));
       if(evidence)await download.saveAs(path.join(evidence,'export.png'));
-      await page.waitForFunction(()=>!imageSavePending);
+      await page.waitForFunction(()=>!document.getElementById('saveNoticeImage').disabled);
       assert.equal(await page.locator('#captureArea').evaluate(el=>el.style.width),'');
     });
     await check('numeric import validation and clipboard error recovery',async()=>{
       assert.equal(await page.evaluate(()=>{try{applyCalculatorState({studentName:'BAD',paymentRows:[{amount:'" onfocus="alert(1)'}]});return false;}catch{return document.getElementById('studentName').value==='검증학생';}}),true);
       await page.evaluate(async()=>{const original=navigator.clipboard.writeText.bind(navigator.clipboard);navigator.clipboard.writeText=async()=>{throw new Error('permission denied');};await copyGeneratedText();navigator.clipboard.writeText=original;});
+    });
+    await check('legacy fractional rounding and edited monthly drafts stay separate',async()=>{
+      await page.evaluate(()=>applyCalculatorState({version:7,currentTab:'select',studentName:'검증학생',targetYear:2026,targetMonth:9,selectRows:[{name:'수학-개별(A)-1.25h',hours:1.25,rate:10000.5,rateMode:'perHour',dates:[1,2,3]}]}));
+      assert.equal(await page.locator('#dispTotal').innerText(),'37,502원');
+      const saved=await page.evaluate(()=>collectCalculatorState());await page.evaluate(s=>applyCalculatorState(s),saved);assert.equal(await page.locator('#dispTotal').innerText(),'37,502원');
+      await page.evaluate(()=>applyCalculatorState({version:8,currentTab:'select',studentName:'검증학생',targetYear:2026,targetMonth:9,selectRows:[{name:'수학-개별(A)-1.25h',hours:1.25,rate:10000.5,rateMode:'perHour',dates:[1,2,3],schedule:{extraDates:[4],overrides:{4:{hours:2,rate:100}}}}]}));
+      assert.equal(await page.locator('#workCalendar .calendar-event').count(),4);
+      await page.locator('#targetMonth').fill('10');await page.locator('#studentName').click();
+      assert.equal(await page.locator('#workCalendar .calendar-event').count(),0);
+    });
+    await check('confirmed patterns import once; timetable placement and copy failure preserve draft',async()=>{
+      await page.evaluate(()=>{applyCalculatorState({version:8,currentTab:'select',studentId:'qa',studentName:'검증학생',targetYear:2026,targetMonth:10,selectRows:[]});window.originalQaRpc=supabaseClient.rpc;supabaseClient.rpc=async(name,p)=>name==='feecalc_progress'?{data:{studentId:'qa',month:p.p_month,fetchedAt:'2026-09-30T00:00:00Z',lessons:[1,8,15,22,29].map((d,i)=>({id:'s'+i,date:'2026-09-'+String(d).padStart(2,'0'),className:'수학-개별(A)-3h',teacher:'A',start:'14:00',end:'17:00',minutes:180,amount:87500,kind:i===3?'cancel':'regular',note:i===4?'오늘만':''}))}}:originalQaRpc(name,p);});
+      await page.locator('#loadSource').click();await page.locator('#changesChecked').check();await page.locator('[data-candidate]').check();await page.locator('#applyCandidates').click();
+      assert.equal(await page.locator('#workCalendar .calendar-event').count(),4);
+      await page.locator('#loadSource').click();await page.locator('#changesChecked').check();await page.locator('[data-candidate]').check();await page.locator('#applyCandidates').click();assert.equal(await page.locator('#workCalendar .calendar-event').count(),4);
+      await page.locator('#productHeader [data-purpose=timetable]').click();await page.locator('#importTimetable').click();await page.locator('#timetableEditors input[type=time]').first().fill('14:30');await page.locator('#studentName').click();await page.locator('#viewNotice').click();
+      assert.equal(await page.locator('#receiptMiniCalGrid .notice-event').count(),4);assert.match(await page.locator('#receiptMiniCalGrid').innerText(),/14:30–17:30/);assert.equal(await page.locator('#captureArea .receipt-left').isVisible(),false);
+      await page.evaluate(()=>{navigator.clipboard.write=async()=>{throw Error('synthetic denial');};});const dl=page.waitForEvent('download');await page.locator('#copyNoticeImage').click();await dl;await page.waitForFunction(()=>!document.getElementById('copyNoticeImage').disabled);assert.equal(await page.locator('#openNoticeImage').isVisible(),true);assert.equal(await page.locator('#receiptMiniCalGrid .notice-event').count(),4);
+      await page.evaluate(()=>{supabaseClient.rpc=originalQaRpc;});
+    });
+    await check('additional session edit, operation preview, and whole-date holiday are independent',async()=>{
+      await page.evaluate(()=>applyCalculatorState({version:8,currentTab:'select',studentName:'검증학생',targetYear:2026,targetMonth:9,selectRows:[{name:'수학-개별(A)-2h',hours:2,rate:62500,dates:[10],schedule:{additional:[{id:'extra',day:10,hours:1,rate:30000}]}},{name:'국어-개별(B)-3h',hours:3,rate:87500,dates:[10]}]}));
+      await page.getByRole('button',{name:'10일 수업 내역',exact:true}).click();await page.locator('#dayDetail .day-lesson').filter({hasText:'1시간'}).getByRole('button',{name:'이 회차 수정',exact:true}).click();await page.locator('#calendarHours').fill('1.5');await page.locator('#calendarRate').fill('40000');await page.locator('#applyCalendar').click();
+      let state=await page.evaluate(()=>collectCalculatorState());assert.equal(state.selectRows[0].schedule.additional[0].rate,40000);assert.equal(state.selectRows[0].schedule.overrides?.[10],undefined);assert.equal(await page.locator('#workCalendar .calendar-event').count(),3);
+      await page.locator('#undoCalendar').click();await page.getByRole('checkbox',{name:'10일 날짜 선택',exact:true}).check();assert.match(await page.locator('#calendarDiff').innerText(),/선택 수업 제외: −1건 · −2시간 · −62,500원/);assert.match(await page.locator('#calendarDiff').innerText(),/전체 휴강: −3건 · −6시간 · −180,000원/);
+      await page.locator('#globalExcludeDays').click();assert.equal(await page.locator('#workCalendar .calendar-event').count(),0);await page.locator('#restoreGlobalDays').click();assert.equal(await page.locator('#workCalendar .calendar-event').count(),3);
+      await page.evaluate(()=>prepareNextMonthCalculation({clearSelectedDates:false}));assert.equal((await page.evaluate(()=>collectCalculatorState())).selectRows[0].dates.length,1);assert.equal((await page.evaluate(()=>collectCalculatorState())).selectRows[0].schedule.additional,undefined);
+    });
+    await check('history cannot transfer to another student and legacy AI controls are frozen',async()=>{
+      await page.evaluate(()=>{applyCalculatorState({currentTab:'history',studentName:'검증학생',studentId:'qa',targetYear:2026,targetMonth:8,historyData:[{year:2026,month:8,day:1,subject:'수학',teacher:'A',hours:2,amount:62500,originalAmount:62500,attend:'출석'}]});document.getElementById('studentName').value='다른학생';handleStudentNameInput();});
+      assert.equal(await page.locator('#receiptBody tr').count(),0);assert.equal(await page.locator('#dispTotal').innerText(),'학생·월 자료 재확인');await page.locator('#productHeader [data-purpose=notice]').click();await page.locator('#saveNoticeImage').click();assert.match(await page.locator('#imageOutputStatus').innerText(),/학생·월이 다릅니다/);
+      assert.match(await page.locator('#generatedTextArea').inputValue(),/기록을 다시 불러온/);assert.doesNotMatch(await page.locator('#generatedTextArea').inputValue(),/62,500|다른학생 학생/);assert.equal(await page.locator('[onclick="copyGeneratedText()"]').isDisabled(),true);
+      assert.equal(await page.evaluate(async()=>{window.mismatchedTextCopies=0;navigator.clipboard.writeText=async()=>{window.mismatchedTextCopies++;};await copyGeneratedText();return window.mismatchedTextCopies;}),0);
+      await page.evaluate(()=>applyCalculatorState({currentTab:'ai',studentName:'구형학생',targetYear:2026,targetMonth:8,aiData:[{name:'수학',amount:50000,hours:2,count:1}]}));assert.equal(await page.locator('#controlColumn').isVisible(),false);assert.equal(await page.locator('#controlColumn').evaluate(n=>n.inert),true);
+      const before=await page.locator('#dispTotal').innerText();await page.evaluate(()=>updateServerSaveModeUi());assert.equal(await page.locator('#dispTotal').innerText(),before);
     });
     await check('calendar benchmark against previous deployed source',async()=>{
       const baseline=await browser.newPage({viewport:{width:1440,height:1000}});
