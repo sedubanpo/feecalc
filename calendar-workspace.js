@@ -12,7 +12,7 @@
     let view='work',lastMode='auto',selectedRow=0,selectedSubject='전체',selectedDays=new Set(),detailDay=1,selectedExtraId=null,undo=[],applying=false,queued=false;
     let options={layout:'compact',showComparison:false,previous:null,source:null,placements:[],timetableSource:null};
     const originalReceiptHead=document.querySelector('.receipt-fee-table thead').innerHTML;
-    let sourceSnapshot=null,sourceContext='',candidateResult=null,fetchToken=0,outputPending=false,legacySnapshot=null,draftMonth=null;
+    let sourceSnapshot=null,sourceContext='',candidateResult=null,candidateGroups=[],fetchToken=0,sourceTimer=0,sourceAttempt='',sourcePending='',outputPending=false,legacySnapshot=null,draftMonth=null;
     const iconPaths={calculate:'M4 3h16v18H4zM7 7h10M7 11h2m4 0h4M7 15h2m4 0h4',progress:'M4 20V10m8 10V4m8 16v-7',history:'M4 8a9 9 0 1 1-1 7M4 3v5h5m3 0v5l3 2',notice:'M6 3h8l4 4v14H6zM14 3v5h4M9 12h6m-6 4h6',timetable:'M5 3v4m14-4v4M3 10h18M5 5h14v16H5z',settings:'M4 7h16M4 17h16M8 4v6m8 4v6'};
     const svg=key=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${iconPaths[key]||iconPaths.calculate}"/></svg>`;
     const subjectIcon=s=>{const key=/사탐|사회|역사|지리|윤리/.test(s)?'사회':/물리|화학|생명|지학/.test(s)?'과학':s;const url=SUBJECT_ICONS[key];return url?`<img class="subject-icon" src="${esc(url)}" crossorigin="anonymous" alt="" aria-hidden="true" onerror="this.hidden=true">`:'';};
@@ -50,7 +50,7 @@
         const controls=el('controlColumn'),grid=el('workspaceGrid');
         const work=document.createElement('section');work.id='calendarWorkspace';work.innerHTML=`
           <div class="work-heading"><div><h2 id="workTitle">월간 수업 계산</h2><p id="workSummary"></p></div><div><button type="button" id="undoCalendar">실행 취소</button><button type="button" id="viewNotice">안내서 검토</button></div></div>
-          <section id="sourceTools" class="source-tools"><div><strong>전월 기록으로 초안 만들기</strong><span>정규 일정과 변경 안내를 확인한 조건만 다음 달에 적용합니다.</span></div><button type="button" id="loadSource">전월 인트라넷 불러오기</button><p id="sourceStatus" role="status"></p><div id="sourceCandidates" hidden></div></section>
+          <section id="sourceTools" class="source-tools"><div><strong>지난달 수업 가져오기</strong><span>학생을 찾으면 지난달 수업을 자동으로 보여 줍니다. 이번 달 요일이나 날짜를 선택해 적용하세요.</span></div><button type="button" id="loadSource">다시 불러오기</button><p id="sourceStatus" role="status"></p><div id="sourceCandidates" hidden></div></section>
           <div class="calendar-toolbar"><label>과목 표시<select id="calendarSubject"><option>전체</option></select></label><div id="weekdaySelect" aria-label="요일별 날짜 선택"></div><button type="button" id="clearCalendarSelection">날짜 선택 해제</button><button type="button" id="globalExcludeDays">선택 날짜 전체 휴강</button><button type="button" id="restoreGlobalDays">선택 날짜 휴강 해제</button></div>
           <div class="calendar-body"><div class="calendar-center"><img class="work-watermark" src="${logo}" alt="" aria-hidden="true"><div class="calendar-weekdays">${['일','월','화','수','목','금','토'].map(d=>`<span>${d}</span>`).join('')}</div><div id="workCalendar" class="work-calendar"></div></div><aside id="dayDetail" class="day-detail"></aside></div>
           <div id="calendarBatch" class="calendar-batch"><label>적용할 수업 조건<select id="calendarTemplate"></select></label><label>시수<input id="calendarHours" type="number" min="0" step="0.25"></label><label>단가<input id="calendarRate" type="number" min="0" step="any"></label><span id="calendarDiff" role="status"></span><div><button type="button" id="applyCalendar" class="primary">선택 날짜에 적용</button><button type="button" id="removeCalendar">선택 수업 제외</button></div></div>
@@ -84,7 +84,7 @@
         el('calendarHours').oninput=updateDiff;el('calendarRate').oninput=updateDiff;
         el('clearCalendarSelection').onclick=()=>{selectedExtraId=null;selectedDays.clear();renderWork();};
         el('applyCalendar').onclick=()=>applyDates(false);el('removeCalendar').onclick=()=>applyDates(true);el('globalExcludeDays').onclick=()=>globalDates(true);el('restoreGlobalDays').onclick=()=>globalDates(false);
-        el('loadSource').onclick=loadSource;el('loadPreviousHours').onclick=loadPrevious;
+        el('loadSource').onclick=()=>loadSource(false);el('loadPreviousHours').onclick=loadPrevious;
         el('noticeLayout').onchange=e=>{options.layout=e.target.value;markTouched();refresh();};
         el('showMonthComparison').onchange=e=>{options.showComparison=e.target.checked;markTouched();refresh();};
         ['일','월','화','수','목','금','토'].forEach((day,i)=>{const b=document.createElement('button');b.type='button';b.textContent=day;b.setAttribute('aria-label',`${day}요일 날짜 선택`);b.onclick=()=>{selectedExtraId=null;for(let d=1;d<=C.daysInMonth(month());d++)if(C.weekday(month(),d)===i)selectedDays.add(d);renderWork();};el('weekdaySelect').append(b);});
@@ -94,7 +94,7 @@
         el('workspaceTopBar').classList.add('hidden');
         el('calendarGrid').parentElement.classList.add('legacy-calendar');
         document.addEventListener('input',e=>{const row=e.target.closest('.auto-row,.select-row,.manual-row,.first-reg-row');if(row)row.dataset.legacyAggregate='false';if(e.target.closest('#controlColumn')&&!e.target.closest('#staffAuthPanel'))queue();});
-        document.addEventListener('change',e=>{if(e.target.closest('#controlColumn'))queue();});
+        document.addEventListener('change',e=>{if(e.target.closest('#controlColumn'))queue();if(['targetYear','targetMonth'].includes(e.target.id))scheduleSourceLookup();});
         refresh();
     }
     function decorateConditions(){
@@ -181,7 +181,7 @@
     function refresh(){
         if(!el('calendarWorkspace')||applying)return;
         if(draftMonth&&draftMonth!==month()){draftMonth=month();resetAndUpdate();}draftMonth=month();
-        if(sourceContext&&sourceContext!==matchedStudent()?.id+'|'+month()){sourceContext='';sourceSnapshot=null;candidateResult=null;fetchToken++;el('sourceCandidates').hidden=true;el('sourceStatus').textContent='학생·월이 바뀌었습니다. 전월 자료를 다시 불러와 주세요.';el('loadSource').disabled=false;}
+        if(sourceContext&&sourceContext!==matchedStudent()?.id+'|'+month()){sourceContext='';sourceSnapshot=null;candidateResult=null;candidateGroups=[];fetchToken++;el('sourceCandidates').hidden=true;el('sourceStatus').textContent='학생·월이 바뀌어 지난달 수업을 다시 확인합니다.';el('loadSource').disabled=false;}
         el('receiptContext').hidden=currentTab!=='progress'||!el('receiptContext').textContent;
         const lessons=activeLessons(),editable=['auto','select'].includes(currentTab),notice=view==='notice';
         document.body.dataset.view=notice?'notice':'work';document.body.dataset.mode=currentTab;
@@ -212,7 +212,7 @@
             const amount=Number(value.textContent.replace(/[^\d.-]/g,''));value.textContent=signed(amount);value.classList.remove('positive','negative','neutral');value.classList.add(tone(amount));
         }
         if(currentTab==='ai'){el('calendarWorkspace').hidden=true;view='notice';document.body.dataset.view='notice';el('noticeColumn').hidden=false;el('controlColumn').hidden=true;el('calendarBatch').hidden=true;}
-        updateServerSaveModeUi();decorateRecords();
+        updateServerSaveModeUi();decorateRecords();scheduleSourceLookup();
     }
     function renderComparison(lessons){
         const host=el('monthComparison');host.hidden=!options.showComparison||!['auto','select','history','progress','first'].includes(currentTab);
@@ -232,33 +232,99 @@
         if(error)throw Error(error.message);const snapshot=ProgressCore.validateSnapshot(data);
         if(snapshot.studentId!==studentId||snapshot.month!==whichMonth)throw Error('조회된 학생·월이 일치하지 않습니다.');return snapshot;
     }
-    async function loadSource(){
-        const token=++fetchToken;el('loadSource').disabled=true;el('sourceStatus').textContent='전월 전체 기록을 확인하고 있습니다.';
-        try{const snapshot=await fetchSnapshot(priorMonth());if(token!==fetchToken)return;sourceSnapshot=snapshot;sourceContext=matchedStudent().id+'|'+month();candidateResult=C.candidates(snapshot);renderCandidates();el('sourceStatus').textContent=`${snapshot.month} 원본 ${snapshot.lessons.length}건 · 정규 후보 ${candidateResult.rows.length}개 · 보충·결석·일회성 등 ${candidateResult.excluded.length}건 자동 적용 제외. 후보를 시간표·변경 안내와 대조하세요.`;}
-        catch(error){if(token===fetchToken)el('sourceStatus').textContent=error.message+' 기존 계산은 유지됩니다.';}finally{if(token===fetchToken)el('loadSource').disabled=false;}
+    function scheduleSourceLookup(){
+        if(!el('loadSource')||!['auto','select'].includes(currentTab))return;
+        const student=matchedStudent();
+        if(!student||!isServerConfigured()){clearTimeout(sourceTimer);sourceAttempt='';return;}
+        const key=student.id+'|'+month();
+        if(key===sourceContext||key===sourcePending||key===sourceAttempt)return;
+        clearTimeout(sourceTimer);
+        sourceTimer=setTimeout(()=>{if(matchedStudent()?.id===student.id&&month()===key.split('|')[1])loadSource(true);},320);
+    }
+    async function loadSource(automatic=false){
+        const student=matchedStudent(),key=student?.id+'|'+month();
+        if(automatic&&(!student||!['auto','select'].includes(currentTab)||key===sourceContext||key===sourcePending))return;
+        clearTimeout(sourceTimer);sourceAttempt=key;sourcePending=key;
+        const token=++fetchToken;el('loadSource').disabled=true;el('sourceStatus').textContent='지난달 수업을 불러오는 중입니다.';
+        try{
+            const snapshot=await fetchSnapshot(priorMonth());if(token!==fetchToken)return;
+            sourceSnapshot=snapshot;sourceContext=matchedStudent().id+'|'+month();candidateResult=C.candidates(snapshot);candidateGroups=C.groupCandidates(candidateResult.rows);
+            renderCandidates();
+            el('sourceStatus').textContent=snapshot.lessons.length?`${snapshot.month} 수업 ${snapshot.lessons.length}건에서 조건 ${candidateGroups.length}개를 찾았습니다. 보충·결석·일회성 등 ${candidateResult.excluded.length}건은 제안에서 뺐습니다.`:'지난달 수업 기록이 없습니다. 수업 조건을 직접 추가할 수 있습니다.';
+        }catch(error){if(token===fetchToken)el('sourceStatus').textContent=error.message+' 다시 불러오기를 누르거나 직접 입력해 주세요.';}
+        finally{if(token===fetchToken){sourcePending='';el('loadSource').disabled=false;}}
+    }
+    function pickedCandidateCards(){
+        return [...el('sourceCandidates').querySelectorAll('[data-source-group]')].map(card=>{
+            const group=candidateGroups[Number(card.dataset.sourceGroup)];
+            const days=[...card.querySelectorAll('[data-source-weekday][aria-pressed="true"]')].map(b=>Number(b.dataset.sourceWeekday));
+            const dates=[...card.querySelectorAll('[data-source-date]:checked')].map(input=>Number(input.dataset.sourceDate));
+            return {group,days,dates};
+        }).filter(item=>item.group&&(currentTab==='auto'?item.days.length:item.dates.length));
+    }
+    function updateCandidateSelection(){
+        const host=el('sourceCandidates');
+        for(const card of host.querySelectorAll('[data-source-group]')){
+            const count=currentTab==='auto'?card.querySelectorAll('[data-source-weekday][aria-pressed="true"]').length:card.querySelectorAll('[data-source-date]:checked').length;
+            card.querySelector('.source-selection-count').textContent=count?currentTab==='auto'?`${count}개 요일 선택`:`${count}일 선택`:'선택 없음';
+        }
+        const chosen=pickedCandidateCards();el('applyCandidates').disabled=!chosen.length;
+        el('candidateSelectionSummary').textContent=chosen.length?`${chosen.length}개 수업 조건을 ${month()} 달력에 추가합니다. 기존 수업은 유지됩니다.`:'수업의 요일이나 날짜를 선택해 주세요.';
     }
     function renderCandidates(){
-        const host=el('sourceCandidates');host.hidden=false;host.innerHTML=`<label class="candidate-confirm"><input type="checkbox" id="changesChecked"> 별도 시간표·학생별 변경 안내와 대조했습니다.</label><div id="candidateRows"></div><button type="button" id="applyCandidates" class="primary" disabled>확인한 조건을 현재 월에 추가</button>`;
-        candidateResult.rows.forEach((r,i)=>{const line=document.createElement('label');line.className='candidate-row';line.innerHTML=`<input type="checkbox" data-candidate="${i}" ${r.amount===null?'disabled':''}><span><strong>${subjectIcon(r.subject)}${esc(r.subject)} · ${esc(r.teacher)} · ${['일','월','화','수','목','금','토'][r.weekday]} · ${r.hours}h · ${money(r.amount)}/회</strong><small>근거: ${r.sourceDates.map(d=>esc(d.slice(5))).join(', ')} · ${esc(r.reasons.join(' / '))}</small></span>`;el('candidateRows').append(line);});
-        host.onchange=()=>{el('applyCandidates').disabled=!el('changesChecked').checked||!host.querySelector('[data-candidate]:checked');};el('applyCandidates').onclick=applyCandidates;
+        const host=el('sourceCandidates');host.hidden=!candidateGroups.length;
+        if(!candidateGroups.length){host.replaceChildren();return;}
+        const selective=currentTab==='select',weekdayLabels=['일','월','화','수','목','금','토'];
+        host.innerHTML=`<div class="source-candidate-heading"><strong>지난달 수업 ${candidateGroups.length}개</strong><span>${selective?'이번 달 수업 날짜를 고르세요. 요일을 누르면 해당 날짜가 한 번에 선택됩니다.':'이번 달에 진행할 요일을 고르세요. 반복된 요일은 미리 선택했습니다.'}</span></div><div id="candidateRows" class="source-candidate-grid"></div><div class="source-candidate-footer"><p>시간표·학생별 변경 안내를 확인한 뒤 적용하세요. 1회 기록과 같은 날 다른 조건은 직접 확인이 필요합니다.</p><span id="candidateSelectionSummary" role="status"></span><button type="button" id="applyCandidates" class="primary" disabled>선택한 ${selective?'날짜':'요일'}로 수업 추가</button></div>`;
+        candidateGroups.forEach((group,i)=>{
+            const card=document.createElement('section');card.className='source-candidate';card.dataset.sourceGroup=String(i);
+            const suggested=new Set(group.weekdays.filter(w=>w.suggested).map(w=>w.day));
+            const evidence=group.sourceDates.map(date=>date.slice(5).replace('-','/')).join(' · ');
+            const warnings=group.reasons.filter(reason=>reason!=='다음 달 시간표·변경 안내 대조');
+            card.innerHTML=`<div class="source-candidate-title"><strong>${subjectIcon(group.subject)}${esc(group.subject)} · ${esc(group.teacher||'강사 미기재')}</strong><b>${group.amount===null?'단가 확인 필요':esc(money(group.amount)+'/회')}</b></div><div class="source-candidate-meta">${esc(group.type)} · ${group.hours}시간 · 지난달 ${group.sourceDates.length}회${group.separateSession&&group.times.length?' · 기록 시각 '+esc(group.times.join(', ')):group.times.length>1?' · 시각 변경 기록':''}</div><p class="source-evidence">수업일 ${esc(evidence)}${warnings.length?' · '+esc(warnings.join(' / ')):''}</p><div class="source-weekdays" role="group" aria-label="${esc(group.subject)} ${esc(group.teacher)} ${selective?'날짜 빠른 선택':'요일 선택'}">${weekdayLabels.map((day,index)=>`<button type="button" data-source-weekday="${index}" aria-pressed="${suggested.has(index)?'true':'false'}"><span>${day}</span>${group.weekdays.some(w=>w.day===index)?`<small>${group.weekdays.find(w=>w.day===index).count}회</small>`:''}</button>`).join('')}</div>${selective?`<button type="button" class="source-date-toggle" aria-expanded="false">날짜 직접 고르기</button><div class="source-date-picker" hidden><div class="source-date-weekdays">${weekdayLabels.map(day=>`<span>${day}</span>`).join('')}</div><div class="source-date-grid">${Array.from({length:C.weekday(month(),1)},()=>'<span></span>').join('')}${Array.from({length:C.daysInMonth(month())},(_,n)=>{const day=n+1,checked=suggested.has(C.weekday(month(),day));return `<label><input type="checkbox" data-source-date="${day}" aria-label="${esc(group.subject)} ${day}일" ${checked?'checked':''}><span>${day}</span></label>`;}).join('')}</div></div>`:''}<span class="source-selection-count"></span>`;
+            for(const button of card.querySelectorAll('[data-source-weekday]'))button.onclick=()=>{
+                const active=button.getAttribute('aria-pressed')!=='true';
+                if(selective){
+                    for(const input of card.querySelectorAll('[data-source-date]'))if(C.weekday(month(),Number(input.dataset.sourceDate))===Number(button.dataset.sourceWeekday))input.checked=active;
+                    syncCandidateWeekdays(card);
+                }else button.setAttribute('aria-pressed',String(active));
+                updateCandidateSelection();
+            };
+            if(selective){
+                const toggle=card.querySelector('.source-date-toggle');toggle.onclick=()=>{const open=toggle.getAttribute('aria-expanded')!=='true';toggle.setAttribute('aria-expanded',String(open));card.querySelector('.source-date-picker').hidden=!open;toggle.textContent=open?'날짜 선택 접기':'날짜 직접 고르기';};
+                card.querySelector('.source-date-picker').onchange=()=>{syncCandidateWeekdays(card);updateCandidateSelection();};
+            }
+            el('candidateRows').append(card);
+        });
+        el('applyCandidates').onclick=applyCandidates;updateCandidateSelection();
+    }
+    function syncCandidateWeekdays(card){
+        for(const button of card.querySelectorAll('[data-source-weekday]')){
+            const inputs=[...card.querySelectorAll('[data-source-date]')].filter(input=>C.weekday(month(),Number(input.dataset.sourceDate))===Number(button.dataset.sourceWeekday));
+            button.setAttribute('aria-pressed',String(inputs.length>0&&inputs.every(input=>input.checked)));
+            button.classList.toggle('partly-selected',inputs.some(input=>input.checked)&&!inputs.every(input=>input.checked));
+        }
     }
     function applyCandidates(){
-        if(sourceContext!==matchedStudent()?.id+'|'+month()||!el('changesChecked').checked)return;
-        const chosen=[...el('sourceCandidates').querySelectorAll('[data-candidate]:checked')].map(n=>candidateResult.rows[Number(n.dataset.candidate)]);if(!chosen.length)return;
+        if(sourceContext!==matchedStudent()?.id+'|'+month())return;
+        const chosen=pickedCandidateCards();if(!chosen.length)return;
         const mode=currentTab;if(!['auto','select'].includes(mode))return;saveUndo();
-        const existing=new Set(readRows().map(r=>JSON.stringify([C.info(r.name).subject,C.info(r.name).teacher,C.info(r.name).type,r.hours,r.rate,r.days])));
+        const existing=new Set(readRows().map(row=>{const info=C.info(row.name);return JSON.stringify([info.subject,info.teacher,info.type,row.hours,row.rate,mode==='auto'?row.days.sort((a,b)=>a-b):row.dates.sort((a,b)=>a-b)]);}));
         const selectedKeys=new Set(rowList().flatMap(row=>JSON.parse(row.dataset.candidateKeys||'[]')));
         let added=0;
-        for(const c of chosen){const key=JSON.stringify([c.subject,c.teacher,c.type,c.hours,c.amount,[c.weekday]]);if(selectedKeys.has(c.id)||(mode==='auto'&&existing.has(key)))continue;const name=`${c.subject}-${c.type}(${c.teacher})-${c.hours}h`;
+        for(const {group,days,dates} of chosen){
+            const selected=(mode==='auto'?days:dates).sort((a,b)=>a-b),key=JSON.stringify([group.subject,group.teacher,group.type,group.hours,group.amount,selected]);
+            if(selectedKeys.has(group.id)||(!group.separateSession&&existing.has(key)))continue;
+            const name=`${group.subject}-${group.type}(${group.teacher})-${group.hours}h`;
             if(mode==='auto')addAutoRow(name);else addSelectRow(name);
-            const row=rowList().at(-1);row.querySelector('.sub-rate').value=c.amount;row.querySelector('.sub-hours').value=c.hours;row.querySelector('.rate-mode').value='perClass';
-            if(mode==='auto')row.querySelector(`.day-chk[value="${c.weekday}"]`).checked=true;
-            else{const id=row.id.replace('srow-','');selectRowDates[id]=new Set(Array.from({length:C.daysInMonth(month())},(_,i)=>i+1).filter(d=>C.weekday(month(),d)===c.weekday));}
-            row.dataset.sourceIds=JSON.stringify(c.sourceIds);row.dataset.candidateKeys=JSON.stringify([c.id]);existing.add(key);added++;
+            const row=rowList().at(-1);row.querySelector('.sub-rate').value=group.amount??'';row.querySelector('.sub-hours').value=group.hours;row.querySelector('.rate-mode').value='perClass';
+            if(mode==='auto')for(const day of days)row.querySelector(`.day-chk[value="${day}"]`).checked=true;
+            else selectRowDates[row.id.replace('srow-','')]=new Set(dates);
+            row.dataset.sourceIds=JSON.stringify(group.sourceIds);row.dataset.candidateKeys=JSON.stringify([group.id]);existing.add(key);added++;
         }
-        options.source={studentId:sourceSnapshot.studentId,month:sourceSnapshot.month,fetchedAt:sourceSnapshot.fetchedAt,confirmedAt:new Date().toISOString(),sourceIds:chosen.flatMap(c=>c.sourceIds),targetMonth:month()};
+        options.source={studentId:sourceSnapshot.studentId,month:sourceSnapshot.month,fetchedAt:sourceSnapshot.fetchedAt,confirmedAt:new Date().toISOString(),sourceIds:chosen.flatMap(item=>item.group.sourceIds),targetMonth:month()};
         options.previous={studentId:sourceSnapshot.studentId,month:sourceSnapshot.month,hours:C.hoursBySubject(C.normalizeSnapshot(sourceSnapshot).filter(r=>r.kind!=='absence'))};
-        el('sourceCandidates').hidden=true;el('sourceStatus').textContent=`${added}개 조건을 추가했습니다. ${month()} 달력에서 휴강·변경 회차를 확인하세요.`;updateDateContext();commitCalendar();
+        el('sourceCandidates').hidden=true;el('sourceStatus').textContent=added?`${added}개 수업을 추가했습니다. 달력에서 날짜와 금액을 확인하세요.`:'이미 추가한 수업입니다. 달력에서 요일이나 날짜를 수정할 수 있습니다.';updateDateContext();commitCalendar();
     }
     async function loadPrevious(){
         el('loadPreviousHours').disabled=true;el('previousStatus').textContent='전월 실제 시수 확인 중';
@@ -340,7 +406,7 @@
         if(data.currentTab==='history'&&data.historyData?.length&&!options.historySource)options.historySource={studentId:data.studentId||'',studentName:data.studentName||'',month:m,origin:'saved'};
         if(data.currentTab==='timetable'&&!data.calendarWorkspace)migrateTimetable();
         if(data.currentTab==='ai'){legacySnapshot=JSON.parse(JSON.stringify(data));view='notice';}else{view='work';lastMode=data.currentTab||'auto';}
-        selectedExtraId=null;selectedDays.clear();selectedRow=0;undo=[];sourceSnapshot=null;candidateResult=null;
+        selectedExtraId=null;selectedDays.clear();selectedRow=0;undo=[];sourceSnapshot=null;candidateResult=null;candidateGroups=[];sourceContext='';sourceAttempt='';sourcePending='';fetchToken++;clearTimeout(sourceTimer);if(el('sourceCandidates'))el('sourceCandidates').hidden=true;
         return result;}finally{applying=false;draftMonth=month();updateBatch();refresh();window.markCalculatorSaved();}
     };
     const oldSwitch=switchTab;
@@ -348,12 +414,12 @@
         if(tab==='ai'&&!applying){setServerRecordStatus('AI예측 기능은 폐기되었습니다. 기존 저장본에서만 열람할 수 있습니다.','warning');return;}
         if(tab!=='timetable'&&tab!=='ai')lastMode=tab;
         if(!applying&&tab!=='ai')legacySnapshot=null;
-        oldSwitch(tab);selectedDays.clear();selectedRow=0;updateBatch();queue();
+        oldSwitch(tab);selectedDays.clear();selectedRow=0;updateBatch();if(['auto','select'].includes(tab)&&candidateGroups.length&&sourceContext===matchedStudent()?.id+'|'+month())renderCandidates();queue();
     };
     const oldUpdate=updateAll;updateAll=function(...args){oldUpdate(...args);if(!applying)queue();};
     for(const name of ['updateHistoryView','renderPaymentReceipt','renderProgress','renderFirstRegistrationView','renderGuideEstimate','updateTimetableView']){const original=window[name];if(typeof original==='function')window[name]=function(...args){const result=original(...args);queue();return result;};}
     const oldReset=resetAndUpdate;resetAndUpdate=function(...args){selectedDays.clear();options.source=null;options.previous=null;options.showComparison=false;options.placements=[];options.timetableSource=null;document.querySelectorAll('[data-schedule]').forEach(row=>{delete row.dataset.schedule;delete row.dataset.sourceIds;delete row.dataset.candidateKeys;row.dataset.legacyAggregate='false';});return oldReset(...args);};
-    const oldClear=clearMonthlyState;clearMonthlyState=function(...args){draftMonth=null;selectedExtraId=null;legacySnapshot=null;options={layout:'compact',showComparison:false,previous:null,source:null,placements:[],timetableSource:null};sourceSnapshot=null;candidateResult=null;fetchToken++;selectedDays.clear();undo=[];document.querySelectorAll('[data-schedule]').forEach(row=>{delete row.dataset.schedule;delete row.dataset.sourceIds;delete row.dataset.candidateKeys;row.dataset.legacyAggregate='false';});return oldClear(...args);};
+    const oldClear=clearMonthlyState;clearMonthlyState=function(...args){draftMonth=null;selectedExtraId=null;legacySnapshot=null;options={layout:'compact',showComparison:false,previous:null,source:null,placements:[],timetableSource:null};sourceSnapshot=null;candidateResult=null;candidateGroups=[];sourceContext='';sourceAttempt='';sourcePending='';clearTimeout(sourceTimer);fetchToken++;selectedDays.clear();undo=[];if(el('sourceCandidates'))el('sourceCandidates').hidden=true;document.querySelectorAll('[data-schedule]').forEach(row=>{delete row.dataset.schedule;delete row.dataset.sourceIds;delete row.dataset.candidateKeys;row.dataset.legacyAggregate='false';});return oldClear(...args);};
     const oldSave=saveServerRecord;saveServerRecord=function(...args){refresh();if(currentTab==='history'&&historyMismatch()){setServerRecordStatus('선택 학생의 수업 이력을 다시 불러온 뒤 저장하세요.','warning');return;}if(legacySnapshot){setServerRecordStatus('폐기된 AI예측 저장본은 열람만 가능합니다. 새 계산으로 시작하세요.','warning');return;}if(['auto','select','history'].includes(currentTab)&&activeLessons().some(r=>r.amount===null)){setServerRecordStatus('단가 미확인 수업을 확인한 뒤 저장하세요.','warning');return;}return oldSave(...args);};
     const oldSaveUi=updateServerSaveModeUi;updateServerSaveModeUi=function(){oldSaveUi();if(legacySnapshot||(currentTab==='history'&&historyMismatch())||(['auto','select','history'].includes(currentTab)&&activeLessons().some(r=>r.amount===null)))document.querySelectorAll('[onclick^="saveServerRecord("]').forEach(b=>b.disabled=true);};
     const oldHistoryText=updateHistoryInfoText;updateHistoryInfoText=function(...args){if(historyMismatch()){el('generatedTextArea').value='선택 학생과 수업 이력의 학생·월이 다릅니다. 선택 학생의 기록을 다시 불러온 뒤 안내 문자를 생성하세요.';return;}return oldHistoryText(...args);};
@@ -361,6 +427,7 @@
     window.downloadImage=()=>outputImage('save');window.processAiPrediction=()=>setServerRecordStatus('AI예측 기능은 폐기되었습니다.','warning');
     const oldInit=initWorkspaceLayout;initWorkspaceLayout=function(){oldInit();setup();};
     const oldLoad=window.onload;window.onload=async function(...args){const value=await oldLoad.apply(this,args);setup();updateBatch();refresh();return value;};
+    const oldStudentMatch=syncStudentMatch;syncStudentMatch=function(...args){const result=oldStudentMatch(...args);scheduleSourceLookup();return result;};
     const oldRecords=renderServerRecordList;renderServerRecordList=function(){oldRecords();decorateRecords();};
     const knownSchools=typeof SCHOOL_ICONS==='undefined'?{}:SCHOOL_ICONS;
     function decorateRecords(){

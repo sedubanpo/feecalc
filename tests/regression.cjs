@@ -157,14 +157,43 @@ const evidence = process.env.EVIDENCE_ROOT;
       await page.locator('#targetMonth').fill('10');await page.locator('#studentName').click();
       assert.equal(await page.locator('#workCalendar .calendar-event').count(),0);
     });
+    await check('student lookup shows last-month classes automatically; weekday picker applies only chosen days',async()=>{
+      await page.evaluate(()=>{window.originalQaRpc=supabaseClient.rpc;supabaseClient.rpc=async(name,p)=>name==='feecalc_progress'?{data:{studentId:'qa',month:p.p_month,fetchedAt:'2026-09-30T00:00:00Z',lessons:[1,8,15,22].map((d,i)=>({id:'t'+i,date:'2026-09-'+String(d).padStart(2,'0'),className:'수학-개별(A)-3h',teacher:'A',start:i%2?'15:00':'14:00',end:i%2?'18:00':'17:00',minutes:180,amount:87500,kind:'regular'})).concat([{id:'th',date:'2026-09-03',className:'수학-개별(A)-3h',teacher:'A',start:'14:00',end:'17:00',minutes:180,amount:87500,kind:'regular'}])}}:originalQaRpc(name,p);applyCalculatorState({version:8,currentTab:'auto',studentName:'',targetYear:2026,targetMonth:10,autoRows:[]});});
+      await page.locator('#studentName').fill('검증학생');
+      await page.locator('#sourceCandidates [data-source-group]').first().waitFor();
+      assert.equal(await page.locator('#sourceCandidates [data-source-group]').count(),1);
+      assert.equal(await page.locator('[data-source-weekday="2"]').first().getAttribute('aria-pressed'),'true');
+      assert.equal(await page.locator('[data-source-weekday="4"]').first().getAttribute('aria-pressed'),'false');
+      assert.equal(await page.locator('#workCalendar .calendar-event').count(),0);
+      if(evidence){fs.mkdirSync(evidence,{recursive:true});await page.screenshot({path:path.join(evidence,'source-auto-desktop.png')});await page.setViewportSize({width:390,height:844});assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'source picker mobile overflow');await page.locator('#sourceTools').screenshot({path:path.join(evidence,'source-auto-mobile.png')});await page.setViewportSize({width:1440,height:1000});}
+      await page.locator('[data-source-weekday="4"]').first().click();await page.locator('#applyCandidates').click();
+      assert.equal(await page.locator('#workCalendar .calendar-event').count(),9);
+      assert.equal(await page.locator('.auto-row .day-chk:checked').count(),2);
+      await page.evaluate(()=>{supabaseClient.rpc=originalQaRpc;document.getElementById('studentName').value='다른 학생';handleStudentNameInput();});
+      assert.equal(await page.locator('#sourceCandidates').isVisible(),false);
+    });
     await check('confirmed patterns import once; timetable placement and copy failure preserve draft',async()=>{
       await page.evaluate(()=>{applyCalculatorState({version:8,currentTab:'select',studentId:'qa',studentName:'검증학생',targetYear:2026,targetMonth:10,selectRows:[]});window.originalQaRpc=supabaseClient.rpc;supabaseClient.rpc=async(name,p)=>name==='feecalc_progress'?{data:{studentId:'qa',month:p.p_month,fetchedAt:'2026-09-30T00:00:00Z',lessons:[1,8,15,22,29].map((d,i)=>({id:'s'+i,date:'2026-09-'+String(d).padStart(2,'0'),className:'수학-개별(A)-3h',teacher:'A',start:'14:00',end:'17:00',minutes:180,amount:87500,kind:i===3?'cancel':'regular',note:i===4?'오늘만':''}))}}:originalQaRpc(name,p);});
-      await page.locator('#loadSource').click();await page.locator('#changesChecked').check();await page.locator('[data-candidate]').check();await page.locator('#applyCandidates').click();
+      await page.locator('#sourceCandidates [data-source-group]').first().waitFor();
+      assert.equal(await page.locator('#sourceCandidates [data-source-group]').count(),1);
+      await page.locator('.source-date-toggle').first().click();
+      await page.locator('[data-source-date="6"]').first().uncheck();
+      assert.equal(await page.locator('#candidateSelectionSummary').innerText(),'1개 수업 조건을 2026-10 달력에 추가합니다. 기존 수업은 유지됩니다.');
+      if(evidence)await page.screenshot({path:path.join(evidence,'source-select-desktop.png')});
+      await page.locator('[data-source-date="6"]').first().check();await page.locator('#applyCandidates').click();
       assert.equal(await page.locator('#workCalendar .calendar-event').count(),4);
-      await page.locator('#loadSource').click();await page.locator('#changesChecked').check();await page.locator('[data-candidate]').check();await page.locator('#applyCandidates').click();assert.equal(await page.locator('#workCalendar .calendar-event').count(),4);
+      await page.locator('#loadSource').click();await page.locator('#applyCandidates').click();assert.equal(await page.locator('#workCalendar .calendar-event').count(),4);
       await page.locator('#productHeader [data-purpose=timetable]').click();await page.locator('#importTimetable').click();await page.locator('#timetableEditors input[type=time]').first().fill('14:30');await page.locator('#studentName').click();await page.locator('#viewNotice').click();
       assert.equal(await page.locator('#receiptMiniCalGrid .notice-event').count(),4);assert.match(await page.locator('#receiptMiniCalGrid').innerText(),/14:30–17:30/);assert.equal(await page.locator('#captureArea .receipt-left').isVisible(),false);
       await page.evaluate(()=>{navigator.clipboard.write=async()=>{throw Error('synthetic denial');};});const dl=page.waitForEvent('download');await page.locator('#copyNoticeImage').click();await dl;await page.waitForFunction(()=>!document.getElementById('copyNoticeImage').disabled);assert.equal(await page.locator('#openNoticeImage').isVisible(),true);assert.equal(await page.locator('#receiptMiniCalGrid .notice-event').count(),4);
+      await page.evaluate(()=>{supabaseClient.rpc=originalQaRpc;});
+    });
+    await check('same-day independent sessions remain separate when importing one class condition',async()=>{
+      await page.evaluate(()=>{window.originalQaRpc=supabaseClient.rpc;supabaseClient.rpc=async(name,p)=>name==='feecalc_progress'?{data:{studentId:'qa',month:p.p_month,fetchedAt:'2026-09-30T00:00:00Z',lessons:[1,8].flatMap((day,i)=>[10,14].map((hour,j)=>({id:'twice'+i+j,date:'2026-09-'+String(day).padStart(2,'0'),className:'수학-개별(A)-3h',teacher:'A',start:String(hour)+':00',end:String(hour+3)+':00',minutes:180,amount:87500,kind:'regular'})))}}:originalQaRpc(name,p);applyCalculatorState({version:8,currentTab:'auto',studentId:'qa',studentName:'검증학생',targetYear:2026,targetMonth:10,autoRows:[]});});
+      await page.locator('#sourceCandidates [data-source-group]').first().waitFor();assert.equal(await page.locator('#sourceCandidates [data-source-group]').count(),2);
+      assert.match(await page.locator('#sourceCandidates').innerText(),/기록 시각 10:00–13:00/);
+      await page.locator('[data-source-weekday="2"]').first().click();await page.locator('[data-source-weekday="2"]').last().click();await page.locator('#applyCandidates').click();
+      assert.equal(await page.locator('#workCalendar .calendar-event').count(),8);assert.equal(await page.locator('#autoList .auto-row').count(),2);
       await page.evaluate(()=>{supabaseClient.rpc=originalQaRpc;});
     });
     await check('additional session edit, operation preview, and whole-date holiday are independent',async()=>{

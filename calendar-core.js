@@ -77,6 +77,31 @@
         }
         return {rows,excluded};
     }
+    // Present one billable condition across weekdays. Keep genuinely separate
+    // same-day sessions apart, even when their subject, duration and rate match.
+    function groupCandidates(rows){
+        const buckets=new Map();
+        for(const row of rows){
+            const key=JSON.stringify([row.subject,row.teacher,row.type,row.hours,row.amount]);
+            if(!buckets.has(key))buckets.set(key,[]);
+            buckets.get(key).push(row);
+        }
+        const groups=[];
+        for(const [key,bucket] of buckets){
+            const seenDates=new Set();
+            const overlaps=bucket.some(row=>row.sourceDates.some(date=>seenDates.has(date)||(seenDates.add(date),false)));
+            for(const members of overlaps?bucket.map(row=>[row]):[bucket]){
+                const dates=[...new Set(members.flatMap(row=>row.sourceDates))].sort();
+                const weekdays=[...new Set(members.map(row=>row.weekday))].sort((a,b)=>a-b).map(day=>{
+                    const count=dates.filter(date=>weekday(date.slice(0,7),Number(date.slice(-2)))===day).length;
+                    const conflict=rows.some(row=>!members.includes(row)&&row.subject===members[0].subject&&row.teacher===members[0].teacher&&row.weekday===day);
+                    return {day,count,suggested:count>=2&&!conflict};
+                });
+                groups.push({id:JSON.stringify([key,...members.map(row=>row.id).sort()]),subject:members[0].subject,teacher:members[0].teacher,type:members[0].type,hours:members[0].hours,amount:members[0].amount,separateSession:overlaps,sourceIds:[...new Set(members.flatMap(row=>row.sourceIds))],sourceDates:dates,weekdays,times:[...new Set(members.map(row=>[row.start,row.end].filter(Boolean).join('–')).filter(Boolean))],reasons:[...new Set(members.flatMap(row=>row.reasons))]});
+            }
+        }
+        return groups;
+    }
     function validateSchedule(value,month){
         const s=value||{},last=daysInMonth(month),valid=d=>Number.isInteger(d)&&d>=1&&d<=last;
         for(const key of ['extraDates','removed'])if(s[key]!==undefined&&(!Array.isArray(s[key])||s[key].some(d=>!valid(d))))throw Error('달력 추가·제외 날짜를 확인해 주세요.');
@@ -86,6 +111,6 @@
         if(s.additional!==undefined&&(!Array.isArray(s.additional)||s.additional.some(v=>!valid(v.day)||typeof v.id!=='string'||!finite(v.hours)||v.hours<0||!finite(v.rate)||v.rate<0)))throw Error('추가 회차를 확인해 주세요.');
         return JSON.parse(JSON.stringify(s));
     }
-    const api={info,expand,groups,hoursBySubject,compareHours,candidates,normalizeSnapshot,daysInMonth,weekday,validateSchedule};
+    const api={info,expand,groups,hoursBySubject,compareHours,candidates,groupCandidates,normalizeSnapshot,daysInMonth,weekday,validateSchedule};
     if(typeof module!=='undefined')module.exports=api;else root.FeeCalendarCore=api;
 })(typeof window==='undefined'?{}:window);
