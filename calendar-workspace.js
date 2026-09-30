@@ -12,6 +12,7 @@
     let view='work',lastMode='auto',selectedRow=0,selectedSubject='전체',selectedDays=new Set(),detailDay=1,selectedExtraId=null,undo=[],applying=false,queued=false;
     let options={layout:'compact',showComparison:false,previous:null,source:null,placements:[],timetableSource:null};
     const originalReceiptHead=document.querySelector('.receipt-fee-table thead').innerHTML;
+    let sourceSubject='';
     let sourceSnapshot=null,sourceContext='',candidateResult=null,candidateGroups=[],fetchToken=0,sourceTimer=0,sourceAttempt='',sourcePending='',outputPending=false,legacySnapshot=null,draftMonth=null;
     const iconPaths={calculate:'M4 3h16v18H4zM7 7h10M7 11h2m4 0h4M7 15h2m4 0h4',progress:'M4 20V10m8 10V4m8 16v-7',history:'M4 8a9 9 0 1 1-1 7M4 3v5h5m3 0v5l3 2',notice:'M6 3h8l4 4v14H6zM14 3v5h4M9 12h6m-6 4h6',timetable:'M5 3v4m14-4v4M3 10h18M5 5h14v16H5z',settings:'M4 7h16M4 17h16M8 4v6m8 4v6'};
     const svg=key=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${iconPaths[key]||iconPaths.calculate}"/></svg>`;
@@ -49,13 +50,36 @@
         document.body.prepend(header);header.querySelectorAll('[data-purpose]').forEach(b=>b.onclick=()=>navigate(b.dataset.purpose));
         const controls=el('controlColumn'),grid=el('workspaceGrid');
         const work=document.createElement('section');work.id='calendarWorkspace';work.innerHTML=`
-          <div class="work-heading"><div><h2 id="workTitle">월간 수업 계산</h2><p id="workSummary"></p></div><div><button type="button" id="undoCalendar">실행 취소</button><button type="button" id="viewNotice">안내서 검토</button></div></div>
+          <div class="work-heading"><div><h2 id="workTitle">월간 수업 계산</h2><p id="workSummary"></p></div><div class="work-actions"><button type="button" id="toggleCalendarDetails" aria-pressed="false">캘린더 숨김</button><button type="button" id="toggleSiblingNotice" aria-pressed="false">형제/자매 함께 안내</button><button type="button" id="undoCalendar">실행 취소</button><button type="button" id="viewNotice">안내서 검토</button></div></div>
           <section id="sourceTools" class="source-tools"><div><strong>지난달 수업 가져오기</strong><span>학생을 찾으면 지난달 수업을 자동으로 보여 줍니다. 이번 달 요일이나 날짜를 선택해 적용하세요.</span></div><button type="button" id="loadSource">다시 불러오기</button><p id="sourceStatus" role="status"></p><div id="sourceCandidates" hidden></div></section>
           <div class="calendar-toolbar"><label>과목 표시<select id="calendarSubject"><option>전체</option></select></label><div id="weekdaySelect" aria-label="요일별 날짜 선택"></div><button type="button" id="clearCalendarSelection">날짜 선택 해제</button><button type="button" id="globalExcludeDays">선택 날짜 전체 휴강</button><button type="button" id="restoreGlobalDays">선택 날짜 휴강 해제</button></div>
           <div class="calendar-body"><div class="calendar-center"><img class="work-watermark" src="${logo}" alt="" aria-hidden="true"><div class="calendar-weekdays">${['일','월','화','수','목','금','토'].map(d=>`<span>${d}</span>`).join('')}</div><div id="workCalendar" class="work-calendar"></div></div><aside id="dayDetail" class="day-detail"></aside></div>
           <div id="calendarBatch" class="calendar-batch"><label>적용할 수업 조건<select id="calendarTemplate"></select></label><label>시수<input id="calendarHours" type="number" min="0" step="0.25"></label><label>단가<input id="calendarRate" type="number" min="0" step="any"></label><span id="calendarDiff" role="status"></span><div><button type="button" id="applyCalendar" class="primary">선택 날짜에 적용</button><button type="button" id="removeCalendar">선택 수업 제외</button></div></div>
           <p class="calendar-help">날짜의 체크 상자는 여러 날짜 선택, 날짜 제목은 당일 내역 확인입니다. 수업을 누르면 해당 조건을 선택합니다.</p>`;
         controls.after(work);
+        const optionFields=document.createElement('div');optionFields.id='workOptionFields';
+        work.querySelector('.work-heading').after(optionFields);
+        optionFields.append(el('calendarDisplayOptionArea'),el('siblingConfigArea'));
+        el('calendarDisplayOptionArea').hidden=true;
+        el('siblingConfigArea').querySelector(':scope > label').hidden=true;
+        optionFields.after(el('adjustmentArea'));
+        controls.append(el('sourceTools'));
+        el('sourceTools').querySelector('strong').textContent='지난달 수업';
+        el('sourceTools').querySelector('span').textContent='과목을 고르고 이번 달 요일을 선택하세요.';
+        el('loadSource').textContent='새로고침';
+        controls.querySelector('h2').textContent='기본 설정';
+        el('smartPasteSection').querySelector('h3').innerHTML=svg('notice')+'반명 붙여넣기';
+        for(const [mode,list,add] of [['auto','autoList',addAutoRow],['select','selectList',addSelectRow],['manual','manualList',addManualRow]]){
+            const button=el('tab-'+mode).querySelector(':scope > button');
+            button.className='new-condition-button';button.innerHTML='<span aria-hidden="true">＋</span> 새 수업 조건';
+            button.onclick=()=>{
+                let row=[...el(list).children].find(item=>!item.querySelector('.sub-name')?.value&&Number(item.querySelector('.sub-hours')?.value||0)===0&&Number(item.querySelector('.sub-rate')?.value||0)===0);
+                if(!row){const before=new Set([...el(list).children]);add();row=[...el(list).children].find(item=>!before.has(item));}
+                if(row){row.dataset.editing='true';el(list+'Subjects')?.querySelector('button')?.click();row.hidden=false;row.classList.add('condition-expanded');refresh();row.querySelector('.sub-name')?.focus();}
+            };
+        }
+        el('toggleCalendarDetails').onclick=()=>{el('hideReceiptCalendarDetails').click();queue();};
+        el('toggleSiblingNotice').onclick=()=>{el('siblingModeToggle').click();queue();};
         const auth=el('staffAuthPanel');header.append(auth);auth.setAttribute('aria-label','직원 계정');
         auth.querySelectorAll(':scope > p:not(#staffAuthStatus)').forEach(p=>p.remove());
         const staffName=document.createElement('span');staffName.id='headerStaffName';auth.prepend(staffName);
@@ -72,7 +96,7 @@
         const review=document.createElement('div');review.id='noticeControls';review.innerHTML=`<div class="notice-heading"><h2>안내서 검토</h2><button type="button" id="returnWork">계산 작업</button></div><div class="notice-options"><label>출력 배치<select id="noticeLayout"><option value="compact">금액 요약 + 전체 달력</option><option value="portrait">세로 배치</option></select></label><label><input type="checkbox" id="showMonthComparison"> 전월 대비 시수 표시</label><button type="button" id="loadPreviousHours">전월 실제 시수 불러오기</button><span id="previousStatus" role="status"></span></div>`;
         el('captureArea').before(review);
         const legend=document.createElement('p');legend.id='calendarReceiptLegend';legend.textContent='날짜별 수업은 달력에, 금액 산출 근거는 과목·강사별 내역에 표시합니다.';el('receiptMiniCalGrid').after(legend);
-        const compare=document.createElement('section');compare.id='monthComparison';legend.after(compare);
+        const compare=document.createElement('section');compare.id='monthComparison';el('voucherGuideBox').after(compare);
         const output=preview.querySelector('.image-save-button').parentElement;
         output.id='noticeTools';output.setAttribute('role','complementary');output.setAttribute('aria-label','이미지 출력과 안내 문자');
         const composer=output.querySelector('.bg-gray-100');composer.id='messageComposer';composer.querySelector('.text-xs.font-bold').textContent='안내 문자';
@@ -93,8 +117,8 @@
         const subnav=el('tabNavRow');el('controlColumn').prepend(subnav);el('btn-ai').hidden=true;const aiFields=document.createElement('div');aiFields.hidden=true;while(el('tab-ai').firstChild)aiFields.append(el('tab-ai').firstChild);el('tab-ai').append(aiFields);el('tab-ai').insertAdjacentHTML('beforeend','<p>폐기된 기능의 과거 저장본입니다. 저장 당시 내역만 열람합니다. 새 계산·덮어쓰기는 지원하지 않습니다.</p>');
         el('workspaceTopBar').classList.add('hidden');
         el('calendarGrid').parentElement.classList.add('legacy-calendar');
-        document.addEventListener('input',e=>{const row=e.target.closest('.auto-row,.select-row,.manual-row,.first-reg-row');if(row)row.dataset.legacyAggregate='false';if(e.target.closest('#controlColumn')&&!e.target.closest('#staffAuthPanel'))queue();});
-        document.addEventListener('change',e=>{if(e.target.closest('#controlColumn'))queue();if(['targetYear','targetMonth'].includes(e.target.id))scheduleSourceLookup();});
+        document.addEventListener('input',e=>{const row=e.target.closest('.auto-row,.select-row,.manual-row,.first-reg-row');if(row)row.dataset.legacyAggregate='false';if(e.target.closest('#controlColumn,#adjustmentArea,#workOptionFields')&&!e.target.closest('#staffAuthPanel'))queue();});
+        document.addEventListener('change',e=>{if(e.target.closest('#controlColumn,#adjustmentArea,#workOptionFields'))queue();if(['targetYear','targetMonth'].includes(e.target.id))scheduleSourceLookup();});
         refresh();
     }
     function decorateConditions(){
@@ -102,6 +126,8 @@
             [...el(id).querySelectorAll('.'+mode+'-row')].forEach((row,i)=>{
                 let heading=row.querySelector('.condition-heading');
                 if(!heading){const body=document.createElement('div');body.className='condition-fields';while(row.firstChild)body.append(row.firstChild);heading=document.createElement('button');heading.type='button';heading.className='condition-heading';row.append(heading,body);if(!row.querySelector('.sub-name').value)row.classList.add('condition-expanded');heading.onclick=()=>{selectedExtraId=null;selectedRow=rowList().indexOf(row);const open=!row.classList.contains('condition-expanded');row.classList.toggle('condition-expanded',open);heading.setAttribute('aria-expanded',String(open));updateBatch();renderWork();};}
+                const pristine=!row.querySelector('.sub-name').value&&!Number(row.querySelector('.sub-hours').value)&&!Number(row.querySelector('.sub-rate').value)&&!row.querySelector('.day-chk:checked')&&!(selectRowDates[row.id.replace('srow-','')]?.size);
+                if(pristine&&row.dataset.editing!=='true')row.hidden=true;
                 const name=row.querySelector('.sub-name').value||'새 수업 조건',hours=getBillableDuration(row,name,0),rate=row.querySelector('.sub-rate').value;
                 heading.innerHTML=`<div>${subjectIcon(C.info(name).subject)}${esc(name)}<span>${hours}시간 · ${rate===''?'단가 미확인':money(Number(rate))}</span></div>`;
                 heading.setAttribute('aria-expanded',String(row.classList.contains('condition-expanded')));
@@ -188,6 +214,9 @@
         el('noticeColumn').hidden=!notice;el('calendarWorkspace').hidden=notice;el('controlColumn').hidden=notice;el('controlColumn').inert=!!legacySnapshot;
         el('noticeControls').querySelector('h2').textContent=currentTab==='timetable'?'시간표 검토':'안내서 검토';
         syncHeaderAuth();
+        el('toggleCalendarDetails').setAttribute('aria-pressed',String(el('hideReceiptCalendarDetails').checked));
+        el('toggleSiblingNotice').setAttribute('aria-pressed',String(el('siblingModeToggle').checked));
+        el('toggleSiblingNotice').hidden=!['auto','select','manual','guide','first'].includes(currentTab);
         for(const b of el('productHeader').querySelectorAll('[data-purpose]'))b.setAttribute('aria-pressed',String(b.dataset.purpose===(notice?(currentTab==='timetable'?'timetable':'notice'):currentTab==='progress'||currentTab==='payment'?'progress':currentTab==='history'?'history':currentTab==='timetable'?'timetable':'calculate')));
         el('tabNavRow').querySelectorAll('button').forEach(b=>{const m=b.id.slice(4);b.hidden=currentTab==='ai'||(currentTab==='progress'||currentTab==='payment'?!['progress','payment'].includes(m):currentTab==='timetable'?m!=='timetable':currentTab==='history'?m!=='history':!['auto','select','manual','first','guide'].includes(m));});
         el('captureArea').classList.toggle('portrait-notice',options.layout==='portrait');el('noticeLayout').value=options.layout;el('showMonthComparison').checked=options.showComparison;
@@ -276,10 +305,19 @@
     function renderCandidates(){
         const host=el('sourceCandidates');host.hidden=!candidateGroups.length;
         if(!candidateGroups.length){host.replaceChildren();return;}
+        const subjects=[...new Set(candidateGroups.map(group=>group.subject))];
+        if(!subjects.includes(sourceSubject))sourceSubject=subjects[0];
         const selective=currentTab==='select',weekdayLabels=['일','월','화','수','목','금','토'];
-        host.innerHTML=`<div class="source-candidate-heading"><strong>지난달 수업 ${candidateGroups.length}개</strong><span>수업마다 요일을 누르면 이번 달 달력에 바로 반영됩니다.</span></div><div id="candidateRows" class="source-candidate-grid"></div><p class="source-candidate-note">반복 수업은 한 번에 가져올 수 있습니다. 시간표·학생별 변경 안내를 확인하고, 1회 수업은 필요한 경우에만 선택하세요.</p>`;
+        host.innerHTML=`<div class="source-candidate-heading"><strong>지난달 수업 ${candidateGroups.length}개</strong><span>수업마다 요일을 누르면 이번 달 달력에 바로 반영됩니다.</span></div><div id="sourceSubjectTabs" class="source-subject-tabs" role="tablist" aria-label="지난달 수업 과목"></div><div id="candidateRows" class="source-candidate-grid" role="tabpanel"></div><p class="source-candidate-note">반복 수업은 한 번에 가져올 수 있습니다. 시간표·학생별 변경 안내를 확인하고, 1회 수업은 필요한 경우에만 선택하세요.</p>`;
+        subjects.forEach((subject,i)=>{
+            const button=document.createElement('button');button.type='button';button.role='tab';button.id='sourceSubject-'+i;button.setAttribute('aria-controls','candidateRows');button.dataset.subject=subject;
+            button.innerHTML=subjectIcon(subject)+esc(subject)+` <small>${candidateGroups.filter(group=>group.subject===subject).length}</small>`;
+            button.onclick=()=>{sourceSubject=subject;filterSourceSubjects();};
+            button.onkeydown=event=>{const buttons=[...el('sourceSubjectTabs').children],at=buttons.indexOf(button);const next=event.key==='ArrowRight'?(at+1)%buttons.length:event.key==='ArrowLeft'?(at+buttons.length-1)%buttons.length:-1;if(next>=0){event.preventDefault();buttons[next].click();buttons[next].focus();}};
+            el('sourceSubjectTabs').append(button);
+        });
         candidateGroups.forEach((group,i)=>{
-            const card=document.createElement('section');card.className='source-candidate';card.dataset.sourceGroup=String(i);
+            const card=document.createElement('section');card.className='source-candidate';card.dataset.sourceGroup=String(i);card.dataset.subject=group.subject;
             const suggested=new Set(group.weekdays.filter(w=>w.suggested).map(w=>w.day));
             const linked=candidateRow(group),activeDates=new Set(linked?[...(selectRowDates[linked.id.replace('srow-','')]||[])]:[]);
             const activeDays=new Set(linked?[...linked.querySelectorAll('.day-chk:checked')].map(input=>Number(input.value)):[]);
@@ -309,7 +347,11 @@
             }
             el('candidateRows').append(card);
         });
-        updateCandidateSelection();
+        filterSourceSubjects();updateCandidateSelection();
+    }
+    function filterSourceSubjects(){
+        for(const button of el('sourceSubjectTabs').children){const active=button.dataset.subject===sourceSubject;button.setAttribute('aria-selected',String(active));button.tabIndex=active?0:-1;if(active)el('candidateRows').setAttribute('aria-labelledby',button.id);}
+        for(const card of el('candidateRows').children)card.hidden=card.dataset.subject!==sourceSubject;
     }
     function syncCandidateWeekdays(card){
         for(const button of card.querySelectorAll('[data-source-weekday]')){

@@ -75,11 +75,14 @@ if(typeof document!=='undefined') (()=>{
         if(!rates.length){const empty=document.createElement('span');empty.className='rate-suggestion-empty';empty.textContent=type?'등록된 단가 없음 · 직접 입력':'반명에 수업 유형을 입력하세요';presets.append(empty);}
     }
     function groupList(list) {
-        const rows=[...list.children].filter(row=>row.querySelector('.sub-name'));
+        const allRows=[...list.children].filter(row=>row.querySelector('.sub-name'));
+        const rows=allRows.filter(row=>list.id==='firstRegList'||row.dataset.editing==='true'||row.querySelector('.sub-name').value||Number(row.querySelector('.sub-hours')?.value)||Number(row.querySelector('.sub-rate')?.value)||row.querySelector('.day-chk:checked')||(typeof selectRowDates!=='undefined'&&selectRowDates[row.id.replace('srow-','')]?.size));
+        for(const row of allRows)if(!rows.includes(row))row.hidden=true;
         const subjects=[...new Set(rows.map(row=>FeeWorkspace.subject(row.querySelector('.sub-name').value)))];
         let active=selected.get(list.id)||'전체';if(active!=='전체'&&!subjects.includes(active))active='전체';selected.set(list.id,active);
         let nav=document.getElementById(list.id+'Subjects');
         if(!nav){nav=document.createElement('div');nav.id=list.id+'Subjects';nav.className='subject-tabs';nav.setAttribute('role','tablist');nav.setAttribute('aria-label','과목별 수업');list.before(nav);}
+        nav.hidden=!rows.length;
         const signature=JSON.stringify([active,rows.map(row=>FeeWorkspace.subject(row.querySelector('.sub-name').value))]);
         if(nav.dataset.signature!==signature){
             nav.dataset.signature=signature;nav.replaceChildren();

@@ -58,7 +58,7 @@ const root=path.resolve(__dirname,'..'),evidence=process.env.EVIDENCE_ROOT;
  await check('grouped shared price persistence and per-hour application',async()=>{
  await page.getByRole('button',{name:'설정',exact:true}).click();await page.locator('#settingsTabRates').click();await page.getByRole('button',{name:'단가 편집',exact:true}).click();await page.locator('#pricePresetType').selectOption('컨설팅');await page.locator('#pricePresetUnit').selectOption('perHour');await page.locator('#pricePresetInput').fill('150000');await page.locator('[onclick="addPricePreset()"]').click();await page.evaluate(()=>savePriceLibrary());
  assert.ok(await page.evaluate(()=>testSettings.rateLibrary.some(x=>x.type==='컨설팅'&&x.amount===150000&&x.unit==='perHour')));
- await page.getByRole('button',{name:'닫기',exact:true}).click();await page.locator('.auto-row .sub-name').first().fill('수학-컨설팅(검증)-2h');await page.getByRole('button',{name:'컨설팅 150,000원 · 시간당 적용',exact:true}).click();assert.equal(await page.locator('.auto-row .rate-mode').first().inputValue(),'perHour');assert.equal(await page.locator('.auto-row .sub-rate').first().inputValue(),'150000');
+ await page.getByRole('button',{name:'닫기',exact:true}).click();await page.locator('#tab-auto .new-condition-button').click();await page.locator('.auto-row .sub-name').first().fill('수학-컨설팅(검증)-2h');await page.getByRole('button',{name:'컨설팅 150,000원 · 시간당 적용',exact:true}).click();assert.equal(await page.locator('.auto-row .rate-mode').first().inputValue(),'perHour');assert.equal(await page.locator('.auto-row .sub-rate').first().inputValue(),'150000');
  await page.evaluate(()=>{rateLibrary=[];});await page.evaluate(()=>reloadPriceLibrary());assert.ok(await page.evaluate(()=>rateLibrary.some(x=>x.type==='컨설팅')));
  });
  await check('adjustment type, previous-month rollover, sign and old data roundtrip',async()=>{
@@ -122,6 +122,43 @@ const root=path.resolve(__dirname,'..'),evidence=process.env.EVIDENCE_ROOT;
  assert.equal(await page.locator('#dispTotal').innerText(),before);
  await page.getByRole('button',{name:'설정',exact:true}).click();await page.locator('#settingsTabGuides').click();assert.equal(await page.locator('#voucherGuideExample').inputValue(),'검증 바우처 예시');
  await page.evaluate(()=>resetGuideMessages());await page.getByRole('button',{name:'닫기',exact:true}).click();
+ });
+
+ await check('lesson setup layout, subject tabs and header options retain behavior',async()=>{
+ await page.setViewportSize({width:1920,height:1100});
+ await page.evaluate(()=>{
+ testProgressSnapshot={studentId:'one',month:'2026-08',lessons:[1,8,15,22].flatMap((d,i)=>[{id:'layout-m'+i,date:'2026-08-'+String(d).padStart(2,'0'),className:'수학-개별(검증강사)-3h',teacher:'검증강사',start:'14:00',end:'17:00',minutes:180,amount:87500,kind:'regular'},{id:'layout-k'+i,date:'2026-08-'+String(d+1).padStart(2,'0'),className:'국어-개별(다른강사)-3h',teacher:'다른강사',start:'14:00',end:'17:00',minutes:180,amount:87500,kind:'regular'}])};
+ applyCalculatorState({version:8,currentTab:'auto',studentId:'one',studentName:'검증학생',targetYear:2026,targetMonth:9,autoRows:[],adjustmentItems:[{label:'8월 초과금',amount:380000,kind:'extra'}],calendarWorkspace:{showComparison:true,previous:{studentId:'one',month:'2026-08',hours:{수학:18,국어:15}}}});
+ FeeCalendar.navigate('calculate');
+ });
+ await page.locator('#loadSource').click();await page.locator('#sourceSubjectTabs [role=tab]').first().waitFor();
+ assert.equal(await page.locator('#controlColumn #sourceTools').count(),1);
+ assert.equal(await page.locator('#calendarWorkspace #adjustmentArea').count(),1);
+ assert.equal(await page.locator('#sourceSubjectTabs [role=tab]').count(),2);
+ assert.equal(await page.locator('#sourceCandidates [data-source-group]:visible').count(),1);
+ await page.locator('#sourceSubjectTabs [role=tab]').last().click();
+ await page.locator('#sourceCandidates [data-source-group]:visible [data-source-weekday="3"]').click();
+ assert.equal(await page.locator('#workCalendar .calendar-event').count(),5);
+ const total=await page.locator('#dispTotal').innerText();
+ await page.locator('#toggleCalendarDetails').click();assert.equal(await page.locator('#hideReceiptCalendarDetails').isChecked(),true);
+ assert.equal(await page.locator('#toggleCalendarDetails').getAttribute('aria-pressed'),'true');
+ await page.locator('#toggleCalendarDetails').click();
+ await page.locator('#toggleSiblingNotice').click();assert.equal(await page.locator('#siblingPanel').isVisible(),true);
+ await page.locator('#toggleSiblingNotice').click();assert.equal(await page.locator('#siblingPanel').isVisible(),false);
+ assert.equal(await page.locator('#dispTotal').innerText(),total);
+ await page.locator('#tab-auto .new-condition-button').click();
+ assert.equal(await page.locator('#autoList .condition-expanded .sub-name').last().isVisible(),true);
+ assert.equal(await page.locator('#autoList .condition-expanded .sub-name').last().inputValue(),'');
+ await page.locator('#sourceSubjectTabs [role=tab]').first().click();
+ await page.locator('#sourceCandidates [data-source-group]:visible [data-source-weekday="2"]').click();
+ if(evidence&&!process.env.SKIP_VISUAL){await page.screenshot({path:path.join(evidence,'layout-work-desktop.png'),fullPage:true});await page.setViewportSize({width:390,height:844});await page.screenshot({path:path.join(evidence,'layout-work-mobile.png'),fullPage:true});await page.setViewportSize({width:1920,height:1100});}
+ await page.locator('#viewNotice').click();
+ assert.equal(await page.locator('#voucherGuideBox + #monthComparison').count(),1);
+ assert.equal(await page.locator('#monthComparison').isVisible(),true);
+ assert.ok(await page.locator('#dispName').evaluate(e=>parseFloat(getComputedStyle(e).fontSize)>=26));
+ assert.ok(await page.locator('#dispDate').evaluate(e=>parseFloat(getComputedStyle(e).fontSize)>=16));
+ assert.match(await page.locator('link[rel=icon]').getAttribute('href'),/feecalc-favicon.svg/);
+ if(evidence&&!process.env.SKIP_VISUAL)await page.screenshot({path:path.join(evidence,'layout-notice-desktop.png'),fullPage:true});
  });
 
  if(evidence && !process.env.SKIP_VISUAL){fs.mkdirSync(evidence,{recursive:true});await page.screenshot({path:path.join(evidence,'desktop.png'),fullPage:true});await page.locator('#captureArea').screenshot({path:path.join(evidence,'receipt.png')});}
