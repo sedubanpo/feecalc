@@ -1,7 +1,7 @@
 // Revision 7 shell; existing staff auth, RPC gateway, and calculator modes remain authoritative.
 (() => {
     const C=FeeCalendarCore, el=id=>document.getElementById(id), esc=escapeHtml;
-    const logo='https://raw.githubusercontent.com/whdtjd5294/whdtjd5294.github.io/main/sedu_logo.png';
+    const logo='assets/brand/sedu-warm.svg';
     const money=v=>v===null?'확인 필요':Number(v).toLocaleString('ko-KR')+'원';
     const signed=v=>v===null?'확인 필요':(v>0?'+':v<0?'−':'')+money(Math.abs(v));
     const tone=v=>v>0?'positive':v<0?'negative':'neutral';
@@ -64,7 +64,8 @@
         new MutationObserver(syncHeaderAuth).observe(el('staffAuthStatus'),{childList:true,subtree:true,characterData:true});
         el('serverRecordArea').querySelector('h3').textContent='최근 저장 기록';
         el('serverRecordArea').querySelector('.record-panel-header').parentElement.querySelector('p')?.remove();
-        el('receiptSubTitle').classList.add('receipt-document-title');el('captureArea').querySelector('.receipt-header').append(el('receiptSubTitle'));
+        document.querySelectorAll('#captureArea .watermark-img,#captureArea .receipt-brand img').forEach(img=>img.src=logo);
+        el('receiptSubTitle').classList.add('receipt-document-title');el('captureArea').querySelector('.receipt-header').append(el('receiptSubTitle'),el('receiptContext'));
         el('dispTotal').parentElement.classList.add('receipt-total');
         const preview=el('captureArea').parentElement;preview.id='noticeColumn';
         const memoWidget=el('studentMemoWidget');if(memoWidget)controls.append(memoWidget);
@@ -75,7 +76,7 @@
         const output=preview.querySelector('.image-save-button').parentElement;
         output.id='noticeTools';output.setAttribute('role','complementary');output.setAttribute('aria-label','이미지 출력과 안내 문자');
         const composer=output.querySelector('.bg-gray-100');composer.id='messageComposer';composer.querySelector('.text-xs.font-bold').textContent='안내 문자';
-        output.querySelector('.image-save-button').remove();const outputBar=document.createElement('div');outputBar.className='output-actions';outputBar.innerHTML=`<button type="button" id="saveNoticeImage" class="primary">이미지 저장</button><button type="button" id="copyNoticeImage">이미지 복사</button><button type="button" id="openNoticeImage" hidden>생성 이미지 열기</button><span id="imageOutputStatus" role="status"></span>`;output.prepend(outputBar);const outputTitle=document.createElement('h3');outputTitle.textContent='이미지 출력';output.prepend(outputTitle);
+        output.querySelector('.image-save-button').remove();const outputBar=document.createElement('div');outputBar.className='output-actions';outputBar.innerHTML=`<button type="button" id="saveNoticeImage" class="primary">이미지 저장</button><button type="button" id="copyNoticeImage">이미지 복사</button><button type="button" id="openNoticeImage" hidden>생성 이미지 열기</button><span id="imageOutputStatus" role="status"></span>`;output.prepend(outputBar);const outputTitle=document.createElement('h3');outputTitle.textContent='이미지 출력';output.prepend(outputTitle);const editGuides=document.createElement('button');editGuides.type='button';editGuides.id='editReceiptGuides';editGuides.textContent='안내 문구 편집';editGuides.onclick=()=>{openAppSettings();switchSettingsTab('guides');};output.append(editGuides);
         el('saveNoticeImage').onclick=()=>outputImage('save');el('copyNoticeImage').onclick=()=>outputImage('copy');
         el('undoCalendar').onclick=restoreUndo;el('viewNotice').onclick=()=>{view='notice';refresh();};el('returnWork').onclick=()=>{view='work';refresh();};
         el('calendarSubject').onchange=e=>{selectedSubject=e.target.value;renderWork();};
@@ -165,21 +166,23 @@
     }
     function commitCalendar(){markTouched();updateAll();refresh();}
     function renderGroupedReceipt(lessons){
+        document.querySelector('.receipt-fee-table').classList.toggle('grouped-receipt',['auto','select','history','progress','first'].includes(currentTab));
         if(!['auto','select','history','progress','first'].includes(currentTab)){document.querySelector('.receipt-fee-table thead').innerHTML=originalReceiptHead;return;}
         document.querySelector('.receipt-fee-table thead').innerHTML='<tr><th>과목·강사</th><th>수업 내역</th><th id="thAmount">금액</th></tr>';
         const billingLessons=currentTab==='first'?C.expand(collectFirstRegistrationRows().map(r=>({...r,dates:Array.from({length:getFirstRegistrationBillingCount(r)},(_,i)=>i+1)})),'select',month()):lessons;
-        el('receiptBody').innerHTML=C.groups(billingLessons).map(g=>`<tr><td><strong>${subjectIcon(g.subject)}${esc(g.subject)}</strong><span class="receipt-teacher">${esc(g.teacher||'강사 미기재')}</span></td><td><div class="receipt-variants">${[...g.variants.values()].map(v=>`<span>${esc(v.type==='개별정규'?'개별':v.type)} ${v.hours}h × ${v.count}${currentTab==='history'?'건':'회'}${v.status==='예정'||v.status==='출석'?'':' · '+esc(v.status)}<small>${v.rate!==null&&v.rate!==undefined?money(v.rate)+(v.rateMode==='perHour'?'/시간':'/회'):v.amount===null?'금액 확인 필요':money(v.amount)+'/회'}</small></span>`).join('')}</div></td><td class="${tone(g.total)}">${signed(g.pending?null:g.total)}</td></tr>`).join('');
+        el('receiptBody').innerHTML=C.groups(billingLessons).map(g=>`<tr><td><strong>${subjectIcon(g.subject)}${esc(g.subject)}</strong><span class="receipt-teacher">${esc(g.teacher||'강사 미기재')}</span></td><td><div class="receipt-variants">${[...g.variants.values()].map(v=>`<span class="receipt-variant"><span class="variant-condition">${esc(v.type==='개별정규'?'개별':v.type)} ${v.hours}h × ${v.count}${currentTab==='history'?'건':'회'}${v.status==='예정'||v.status==='출석'?'':' · '+esc(v.status)}</span><small>${v.rate!==null&&v.rate!==undefined?money(v.rate)+(v.rateMode==='perHour'?'/시간':'/회'):v.amount===null?'금액 확인 필요':money(v.amount)+'/회'}</small></span>`).join('')}</div></td><td class="${tone(g.total)}">${signed(g.pending?null:g.total)}</td></tr>`).join('');
         const cal=el('receiptMiniCalGrid');cal.replaceChildren();
         for(let i=0;i<C.weekday(month(),1);i++){const c=document.createElement('div');c.className='receipt-cal-cell outside';cal.append(c);}
         for(let d=1;d<=C.daysInMonth(month());d++){
             const c=document.createElement('div');c.className='receipt-cal-cell';c.innerHTML=`<div class="rc-date">${d}</div>`;
-            if(!isReceiptCalendarDetailsHidden())for(const r of lessons.filter(r=>r.day===d))c.insertAdjacentHTML('beforeend',`<div class="notice-event ${getSubjectColorClass(r.subject,false,false)}${r.status==='예상'?' predicted':''}"><strong>${subjectIcon(r.subject)}${esc(r.subject)}${r.teacher?' <span class="notice-teacher-name">· '+esc(r.teacher)+'</span>':''}</strong><span>${esc(r.start&&r.end?formatCompactTimeRange(r.start,r.end):r.hours+'시간')}${r.status==='예정'||r.status==='출석'?'':' · '+esc(r.status)}</span></div>`);cal.append(c);
+            if(!isReceiptCalendarDetailsHidden())for(const r of lessons.filter(r=>r.day===d))c.insertAdjacentHTML('beforeend',`<div class="notice-event ${getSubjectColorClass(r.subject,false,false)}${r.status==='예상'?' predicted':''}"><strong>${subjectIcon(r.subject)}${esc(r.subject)}</strong><span class="notice-time">${esc(r.start&&r.end?formatCompactTimeRange(r.start,r.end):r.hours+'시간')}</span><small class="notice-meta">${r.teacher?'<span class="notice-teacher-name">'+esc(r.teacher)+'</span>':''}${r.status==='예정'||r.status==='출석'?'':'<span class="notice-status">'+esc(r.status)+'</span>'}</small></div>`);cal.append(c);
         }
     }
     function refresh(){
         if(!el('calendarWorkspace')||applying)return;
         if(draftMonth&&draftMonth!==month()){draftMonth=month();resetAndUpdate();}draftMonth=month();
         if(sourceContext&&sourceContext!==matchedStudent()?.id+'|'+month()){sourceContext='';sourceSnapshot=null;candidateResult=null;fetchToken++;el('sourceCandidates').hidden=true;el('sourceStatus').textContent='학생·월이 바뀌었습니다. 전월 자료를 다시 불러와 주세요.';el('loadSource').disabled=false;}
+        el('receiptContext').hidden=currentTab!=='progress'||!el('receiptContext').textContent;
         const lessons=activeLessons(),editable=['auto','select'].includes(currentTab),notice=view==='notice';
         document.body.dataset.view=notice?'notice':'work';document.body.dataset.mode=currentTab;
         el('noticeColumn').hidden=!notice;el('calendarWorkspace').hidden=notice;el('controlColumn').hidden=notice;el('controlColumn').inert=!!legacySnapshot;
@@ -288,7 +291,7 @@
         // Timetable output is intentionally independent of tuition totals.
         el('receiptSubTitle').textContent=`${el('targetMonth').value}월 수업 시간표`;
         const cal=el('receiptMiniCalGrid');cal.replaceChildren();for(let i=0;i<C.weekday(month(),1);i++)cal.insertAdjacentHTML('beforeend','<div class="receipt-cal-cell outside"></div>');
-        for(let day=1;day<=C.daysInMonth(month());day++)cal.insertAdjacentHTML('beforeend',`<div class="receipt-cal-cell"><div class="rc-date">${day}</div>${placements.filter(r=>r.day===day).map(r=>`<div class="notice-event ${getSubjectColorClass(r.subject,false,false)}"><strong>${subjectIcon(r.subject)}${esc(r.subject)} · ${esc(r.teacher)}</strong><span>${esc(r.start&&r.end?r.start+'–'+r.end:r.hours+'시간 · 시각 미배치')}</span></div>`).join('')}</div>`);
+        for(let day=1;day<=C.daysInMonth(month());day++)cal.insertAdjacentHTML('beforeend',`<div class="receipt-cal-cell"><div class="rc-date">${day}</div>${placements.filter(r=>r.day===day).map(r=>`<div class="notice-event ${getSubjectColorClass(r.subject,false,false)}"><strong>${subjectIcon(r.subject)}${esc(r.subject)} · ${esc(r.teacher)}</strong><span class="notice-time">${esc(r.start&&r.end?r.start+'–'+r.end:r.hours+'시간 · 시각 미배치')}</span></div>`).join('')}</div>`);
     }
     let outputUrl='';
     async function outputImage(action){
@@ -304,8 +307,8 @@
             if(typeof html2canvas!=='function')throw Error('이미지 변환기를 불러오지 못했습니다. 네트워크를 확인한 뒤 재시도하세요.');
             await document.fonts.ready;
             await Promise.all([...target.querySelectorAll('img')].map(img=>img.complete?Promise.resolve():new Promise(resolve=>{img.addEventListener('load',resolve,{once:true});img.addEventListener('error',resolve,{once:true});setTimeout(resolve,8000);}))); 
-            target.style.width='820px';target.style.maxWidth='820px';await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
-            const canvas=await html2canvas(target,{scale:2,useCORS:true,backgroundColor:'#fff',windowWidth:1440,onclone:doc=>{doc.body.classList.add('capture-mode');doc.getElementById('captureArea').style.width='820px';}});
+            target.style.width='1120px';target.style.maxWidth='1120px';await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+            const canvas=await html2canvas(target,{scale:2,useCORS:true,backgroundColor:'#fff',windowWidth:1440,onclone:doc=>{doc.body.classList.add('capture-mode');doc.getElementById('captureArea').style.width='1120px';}});
             if(context!==JSON.stringify(collectCalculatorState()))throw Error('이미지 생성 중 계산 내용이 바뀌었습니다. 다시 출력하세요.');
             const blob=await new Promise((resolve,reject)=>canvas.toBlob(v=>v?resolve(v):reject(Error('이미지 생성에 실패했습니다.')),'image/png'));
             if(outputUrl)URL.revokeObjectURL(outputUrl);outputUrl=URL.createObjectURL(blob);const url=outputUrl;

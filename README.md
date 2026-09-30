@@ -50,3 +50,7 @@ Supabase의 `fee_calc_records`와 `fee_calc_private_settings`는 RLS를 유지�
 - `node --test tests/auth*.mjs`: 모의 인증·세션·오류·동시 요청 검증
 - `node --test ../sedu-intranet/tests/feecalc.test.mjs`: 서버 인증·권한·RPC 허용 목록 검증
 - `node tests/database-access.mjs`: PGlite 로컬 PostgreSQL에서 가상 기록으로 권한·반복 적용·기록 보존 검증. 기본 모듈 경로는 `/tmp/feecalc-sql-test/node_modules/@electric-sql/pglite/dist/index.js`, 다른 설치 위치는 `PGLITE_MODULE`로 지정합니다. 이 검증은 pg_trgm 인덱스만 생략하며 운영 DB에 연결하지 않습니다.
+
+### 안내 문구 설정 (2026-09-30)
+
+`설정 → 안내 문구`에서 취소·보충·결제 안내와 바우처 설명·예시를 수정합니다. 안내서 오른쪽의 `안내 문구 편집`도 같은 설정을 엽니다. 바우처 설정은 선택 필드 `voucherGuide: {text, example}`로 브라우저와 기존 공통 설정 RPC에 저장하고 새 저장본에도 포함합니다. 이전 설정·저장본에 필드가 없으면 기존 기본 문구를 유지합니다. 학생 기록을 저장해도 공통 설정을 갱신하지 않습니다. 안내 문구는 HTML로 실행하지 않습니다.

@@ -2,7 +2,7 @@ const {chromium}=require('playwright');
 const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),assert=require('node:assert/strict');
 const root=path.resolve(__dirname,'..'),evidence=process.env.EVIDENCE_ROOT;
 (async()=>{
- const server=http.createServer((req,res)=>{const file=path.resolve(root,'.'+(req.url==='/'?'/index.html':req.url.split('?')[0]));if(!file.startsWith(root+'/'))return res.writeHead(403).end();try{res.setHeader('Content-Type',file.endsWith('.css')?'text/css':file.endsWith('.js')||file.endsWith('.mjs')?'text/javascript':'text/html');res.end(fs.readFileSync(file));}catch{res.writeHead(404).end();}}).listen(0,'127.0.0.1');
+ const server=http.createServer((req,res)=>{const file=path.resolve(root,'.'+(req.url==='/'?'/index.html':req.url.split('?')[0]));if(!file.startsWith(root+'/'))return res.writeHead(403).end();try{res.setHeader('Content-Type',file.endsWith('.svg')?'image/svg+xml':file.endsWith('.png')?'image/png':file.endsWith('.css')?'text/css':file.endsWith('.js')||file.endsWith('.mjs')?'text/javascript':'text/html');res.end(fs.readFileSync(file));}catch{res.writeHead(404).end();}}).listen(0,'127.0.0.1');
  await new Promise(r=>server.once('listening',r));
  const browser=await chromium.launch({headless:true,executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'});
  const context=await browser.newContext({viewport:{width:1440,height:1000},locale:'ko-KR'});
@@ -15,6 +15,7 @@ const root=path.resolve(__dirname,'..'),evidence=process.env.EVIDENCE_ROOT;
  const gateway={rpc:async(rpc,params)=>{if(window.testFail)return{error:{message:'가상 네트워크 오류'}};
  if(rpc==='feecalc_students')return{data:[{id:'one',name:'검증학생',school:'검증중',grade:'2'},{id:'two',name:'동명학생',school:'가학교',grade:'1'},{id:'three',name:'동명학생',school:'나학교',grade:'2'}]};
  if(rpc==='feecalc_student_memos')return{data:[{memo:'가상 안내 주의 메모 <script>안전한 텍스트</script>',createdAt:'2026-09-07',author:'검증 직원'}]};
+ if(rpc==='feecalc_progress'&&window.testProgressSnapshot)return{data:window.testProgressSnapshot};
  if(rpc==='feecalc_get_app_settings')return{data:window.testSettings};
  if(rpc==='feecalc_save_app_settings'){window.testSettings=params.p_settings;return{data:{}};}
  if(rpc==='feecalc_save_record'||rpc==='feecalc_update_record'){window.testWrites.push(params);return{data:{record_id:'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',saved_at:new Date().toISOString()}};}
@@ -78,6 +79,48 @@ const root=path.resolve(__dirname,'..'),evidence=process.env.EVIDENCE_ROOT;
  await page.waitForFunction(()=>Array.from(document.querySelectorAll('#captureArea .subject-icon')).every(i=>i.naturalWidth>0&&!i.hidden));
  assert.equal(await page.locator('#dispSubtotal').evaluate(e=>getComputedStyle(e).color),'rgb(9, 94, 184)');
  const font=await page.locator('#captureArea #receiptBody td').first().evaluate(e=>getComputedStyle(e).fontSize);assert.equal(font,'12px');
+ });
+
+ await check('compact progress heading, independent variants and horizontal calendar details',async()=>{
+ await page.setViewportSize({width:2236,height:1250});
+ await page.evaluate(()=>{
+ window.testProgressSnapshot={studentId:'one',month:'2026-09',fetchedAt:'2026-09-30T00:00:00Z',lessons:[
+ {id:'p1',date:'2026-09-06',className:'국어-1:1(검증강사)-2h',teacher:'검증강사',start:'20:00',end:'22:00',minutes:120,amount:250000,kind:'regular'},
+ {id:'p2',date:'2026-09-07',className:'국어-개별(검증강사)-2.5h',teacher:'검증강사',start:'18:00',end:'20:30',minutes:150,amount:78125,kind:'regular'},
+ {id:'p3',date:'2026-09-07',className:'국어-1:1(검증강사)-2h',teacher:'검증강사',start:'16:00',end:'18:00',minutes:0,amount:0,kind:'absence'},
+ {id:'p4',date:'2026-09-10',className:'수학-개별(다른강사)-1h',teacher:'다른강사',start:'17:00',end:'18:00',minutes:60,amount:29167,kind:'cancel'}]};
+ applyCalculatorState({currentTab:'progress',studentName:'검증학생',studentId:'one',targetYear:2026,targetMonth:9,progress:{snapshot:testProgressSnapshot,mode:'auto',cutoff:'2026-09-29',endDate:'2026-09-30',manual:[],excluded:[]}});
+ });
+ await page.getByRole('button',{name:'안내서',exact:true}).click();
+ await page.waitForFunction(()=>document.getElementById('receiptBody').textContent.includes('1:1'));
+ assert.equal(await page.locator('#receiptSubTitle').innerText(),'수강료 예상 안내서');
+ assert.match(await page.locator('#receiptContext').innerText(),/2026-09-29 기준.*2026-09-30/);
+ assert.ok(Number(await page.locator('#receiptContext').evaluate(e=>parseFloat(getComputedStyle(e).fontSize)))<=12);
+ const layout=await page.evaluate(()=>{const paper=document.getElementById('captureArea').getBoundingClientRect(),variants=[...document.querySelectorAll('.receipt-variants')][0].children;const buttons=['saveNoticeImage','copyNoticeImage'].map(id=>document.getElementById(id).getBoundingClientRect());const event=document.querySelector('.notice-event'),subject=event.querySelector('strong').getBoundingClientRect(),time=event.querySelector('.notice-time').getBoundingClientRect();return{width:paper.width,variantsSameRow:Math.abs(variants[0].getBoundingClientRect().top-variants[1].getBoundingClientRect().top)<2,buttonsEqual:Math.abs(buttons[0].width-buttons[1].width)<1&&buttons[0].height===buttons[1].height&&buttons[0].top===buttons[1].top,horizontal:time.left>=subject.left&&Math.abs(time.top-subject.top)<3};});
+ assert.equal(layout.width,1120);assert.ok(layout.variantsSameRow);assert.ok(layout.buttonsEqual);assert.ok(layout.horizontal);
+ assert.match(await page.locator('#receiptBody').innerText(),/결석예고/);
+ assert.match(await page.locator('#receiptMiniCalGrid').innerText(),/20:30/);
+ assert.equal(await page.locator('#dispSubtotal').innerText(),'+357,292원');
+ assert.equal(await page.locator('#dispSubtotal').evaluate(e=>getComputedStyle(e).fontWeight),'700');
+ await page.waitForFunction(()=>Array.from(document.querySelectorAll('img[src*="sedu-warm"]')).every(i=>i.naturalWidth>0));
+ if(evidence&&!process.env.SKIP_VISUAL){fs.mkdirSync(evidence,{recursive:true});await page.locator('#captureArea').screenshot({path:path.join(evidence,'progress-notice.png')});await page.screenshot({path:path.join(evidence,'progress-wide.png'),fullPage:true});}
+ await page.evaluate(()=>switchTab('auto'));await page.getByRole('button',{name:'안내서',exact:true}).click();assert.equal(await page.locator('#receiptContext').isVisible(),false);
+ });
+ await check('guide and voucher settings persist safely and keep billing unchanged',async()=>{
+ const before=await page.locator('#dispTotal').innerText();
+ await page.getByRole('button',{name:'안내 문구 편집',exact:true}).click();
+ assert.equal(await page.locator('#settingsPanelGuides').isVisible(),true);
+ await page.locator('.guide-text-input').first().fill('검증 취소 안내');
+ await page.locator('#voucherGuideText').fill('이월금 <img src=x onerror=alert(1)> 검증');
+ await page.locator('#voucherGuideExample').fill('검증 바우처 예시');
+ await page.locator('[onclick="saveAppSettings()"]').click();
+ assert.equal(await page.evaluate(()=>testSettings.voucherGuide.example),'검증 바우처 예시');
+ assert.match(await page.locator('#receiptGuideList').innerText(),/검증 취소 안내/);
+ assert.equal(await page.locator('#voucherGuideBox .voucher-guide-title img').count(),0);
+ assert.match(await page.locator('#voucherGuideBox .voucher-guide-title').innerText(),/<img/);
+ assert.equal(await page.locator('#dispTotal').innerText(),before);
+ await page.getByRole('button',{name:'설정',exact:true}).click();await page.locator('#settingsTabGuides').click();assert.equal(await page.locator('#voucherGuideExample').inputValue(),'검증 바우처 예시');
+ await page.evaluate(()=>resetGuideMessages());await page.getByRole('button',{name:'닫기',exact:true}).click();
  });
 
  if(evidence && !process.env.SKIP_VISUAL){fs.mkdirSync(evidence,{recursive:true});await page.screenshot({path:path.join(evidence,'desktop.png'),fullPage:true});await page.locator('#captureArea').screenshot({path:path.join(evidence,'receipt.png')});}

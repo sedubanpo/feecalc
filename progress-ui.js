@@ -183,7 +183,9 @@ function groupProgressReceipt(rows) {
 }
 function renderProgressReceipt(result,bound) {
     restoreDefaultPriceSummaryArea();
-    progressEl('receiptSubTitle').textContent=`진행형 수강료 예상 안내서${bound?' · '+progressState.cutoff+' 기준 / '+(progressState.endDate || ProgressCore.monthEnd(progressMonth()))+'까지 예상':''}`;progressEl('labelTotal').textContent='예상 납부액';
+    progressEl('receiptSubTitle').textContent='수강료 예상 안내서';
+    progressEl('receiptContext').textContent=bound?`${progressState.cutoff} 기준 · ${progressState.endDate || ProgressCore.monthEnd(progressMonth())}까지 예상`:'';
+    progressEl('receiptContext').hidden=!bound;progressEl('labelTotal').textContent='예상 납부액';
     progressEl('dispTotal').parentElement.classList.add('progress-total');
     progressEl('dispName').textContent=getCurrentStudentName()||'학생명';progressEl('dispDate').textContent=`${progressEl('targetYear').value}년 ${progressEl('targetMonth').value}월분`;
     const tbody=progressEl('receiptBody');tbody.replaceChildren();

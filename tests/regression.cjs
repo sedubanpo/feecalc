@@ -13,7 +13,7 @@ const evidence = process.env.EVIDENCE_ROOT;
     if (req.url === '/baseline') { res.setHeader('Content-Type','text/html'); res.end(execFileSync('git',['show','5571e45:index.html'],{cwd:root})); return; }
     const file = path.join(root, req.url === '/' ? 'index.html' : req.url.split('?')[0]);
     if (!file.startsWith(root + path.sep)) { res.writeHead(403).end(); return; }
-    try { res.end(fs.readFileSync(file)); } catch { res.writeHead(404).end(); }
+    try { if(file.endsWith('.svg'))res.setHeader('Content-Type','image/svg+xml'); if(file.endsWith('.png'))res.setHeader('Content-Type','image/png'); res.end(fs.readFileSync(file)); } catch { res.writeHead(404).end(); }
   }).listen(0, '127.0.0.1');
   await new Promise(resolve => server.once('listening', resolve));
   const browser = await chromium.launch({headless: true, executablePath: process.env.CHROME_PATH || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'});

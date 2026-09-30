@@ -643,6 +643,7 @@
                 <div class="receipt-header relative z-20">
                   <div class="receipt-brand"><img src="https://raw.githubusercontent.com/whdtjd5294/whdtjd5294.github.io/main/sedu_logo.png" crossorigin="anonymous" class="h-12 object-contain" alt="에스에듀 반포관 로고" width="48" height="48"><div>
                     <h1 class="text-xl font-black text-[#004094] mb-0.5 tracking-tight">에스에듀 반포관</h1>
+                    <p id="receiptContext" hidden></p>
                     <p id="receiptSubTitle" class="text-sm text-gray-700 font-bold">수강료 안내서</p>
                   </div></div>
                   <div class="receipt-student"><h2 class="text-2xl font-black text-gray-900" id="dispName">학생명</h2><div id="dateBadge" class="text-sm font-bold"><span id="dispDate">2026년 2월분</span></div></div>
@@ -725,7 +726,7 @@
             <div class="px-5 pt-4">
                 <div class="flex gap-1 rounded-xl bg-slate-100 p-1">
                     <button type="button" id="settingsTabNotices" class="settings-tab-btn active" onclick="switchSettingsTab('notices')">공지사항</button>
-                    <button type="button" id="settingsTabGuides" class="settings-tab-btn" onclick="switchSettingsTab('guides')">안내 메세지</button>
+                    <button type="button" id="settingsTabGuides" class="settings-tab-btn" onclick="switchSettingsTab('guides')">안내 문구</button>
                 </div>
             </div>
             <div class="p-5">
@@ -737,11 +738,16 @@
                     <div id="noticeInputList" class="space-y-2"></div>
                 </div>
                 <div id="settingsPanelGuides" class="hidden">
+                    <p>안내서에 표시할 수업 취소·보충·결제 안내와 바우처 안내를 편집합니다. 저장한 문구는 이후 안내서에 적용됩니다.</p>
                     <div class="flex items-center justify-between gap-3 mb-2">
-                        <label class="block text-xs font-black text-slate-600">우측 안내 박스 문구</label>
+                        <label class="block text-xs font-black text-slate-600">안내서 하단 안내 문구</label>
                         <button type="button" onclick="resetGuideMessages()" class="px-3 py-1.5 rounded-lg bg-slate-100 text-slate-600 text-[11px] font-black hover:bg-slate-200">기본값</button>
                     </div>
                     <div id="guideInputList" class="space-y-2"></div>
+                    <div class="voucher-setting-fields">
+                        <label>바우처 안내<textarea id="voucherGuideText"></textarea></label>
+                        <label>바우처 예시<textarea id="voucherGuideExample"></textarea></label>
+                    </div>
                 </div>
                 <div class="flex justify-between items-center mt-3 gap-2">
                     <button type="button" id="settingsResetButton" onclick="resetCurrentSettingsTab()" class="px-3 py-2 rounded-lg bg-slate-100 text-slate-600 text-xs font-black hover:bg-slate-200">전체 비우기</button>
@@ -843,6 +849,12 @@
         const PRICE_PRESETS_STORAGE_KEY = 'feecalc_price_presets';
         const AD_TEXT_STORAGE_KEY = 'feecalc_ad_text';
         const GUIDE_MESSAGES_STORAGE_KEY = 'feecalc_guide_messages';
+        const VOUCHER_GUIDE_STORAGE_KEY = 'feecalc_voucher_guide';
+        const DEFAULT_VOUCHER_GUIDE = {
+            text: '실제 수업이 적으면 이월금, 많으면 초과금으로 다음 달에 반영됩니다.',
+            example: '예: 100만원 선납 후 97만원 진행시 3만원 차감, 103만원 진행시 3만원 추가'
+        };
+        let voucherGuide = { ...DEFAULT_VOUCHER_GUIDE };
         const DEFAULT_PRICE_PRESETS = [25000, 29167, 28125, 29000, 62500, 87500];
         const DEFAULT_GUIDE_MESSAGES = [
             { title: '수업 취소', text: '전날 저녁 8시 전까지 데스크로 전달 부탁드립니다. (당일 취소는 환불/이월 불가)' },
@@ -948,6 +960,12 @@
                 renderGuideMessages();
                 changed = true;
             }
+            if (payload.voucherGuide && typeof payload.voucherGuide === 'object') {
+                voucherGuide = normalizeVoucherGuide(payload.voucherGuide);
+                persistGuideMessages();
+                renderGuideMessages();
+                changed = true;
+            }
             return changed;
         }
         function collectSharedAppSettings() {
@@ -955,6 +973,7 @@
                 pricePresets: [...pricePresets],
                 adNotices: [...adNotices],
                 guideMessages: normalizeGuideMessages(guideMessages),
+                voucherGuide: { ...voucherGuide },
                 updatedAt: new Date().toISOString()
             };
         }
@@ -1100,10 +1119,18 @@
             } catch (error) {
                 guideMessages = cloneDefaultGuideMessages();
             }
+            try {
+                const saved = localStorage.getItem(VOUCHER_GUIDE_STORAGE_KEY);
+                voucherGuide = saved ? normalizeVoucherGuide(JSON.parse(saved)) : { ...DEFAULT_VOUCHER_GUIDE };
+            } catch (_) { voucherGuide = { ...DEFAULT_VOUCHER_GUIDE }; }
             renderGuideMessages();
+        }
+        function normalizeVoucherGuide(value) {
+            return Object.fromEntries(Object.keys(DEFAULT_VOUCHER_GUIDE).map(key => [key, typeof value?.[key] === 'string' ? value[key].trim().slice(0,2000) : DEFAULT_VOUCHER_GUIDE[key]]));
         }
         function persistGuideMessages() {
             try { localStorage.setItem(GUIDE_MESSAGES_STORAGE_KEY, JSON.stringify(guideMessages)); } catch (error) {}
+            try { localStorage.setItem(VOUCHER_GUIDE_STORAGE_KEY, JSON.stringify(voucherGuide)); } catch (_) {}
         }
         function renderGuideMessages() {
             const list = document.getElementById('receiptGuideList');
@@ -1111,10 +1138,16 @@
             if (!list) return;
             const items = normalizeGuideMessages(guideMessages).filter(item => item.text);
             list.innerHTML = items.map(item => `<li><b>${escapeHtml(item.title)}:</b> ${escapeHtml(item.text)}</li>`).join('');
+            const title = document.querySelector('#voucherGuideBox .voucher-guide-title');
+            if (title) title.innerHTML = escapeHtml(voucherGuide.text).replace(/이월금/g,'<span class="voucher-guide-red">이월금</span>').replace(/초과금/g,'<span class="voucher-guide-blue">초과금</span>');
+            const example = document.querySelector('#voucherGuideBox .voucher-guide-desc');
+            if (example) example.textContent = voucherGuide.example;
         }
         function renderGuideInputs() {
             const list = document.getElementById('guideInputList');
             if (!list) return;
+            document.getElementById('voucherGuideText').value = voucherGuide.text;
+            document.getElementById('voucherGuideExample').value = voucherGuide.example;
             const items = normalizeGuideMessages(guideMessages);
             list.innerHTML = items.map((item, index) => `
                 <div class="guide-setting-row">
@@ -1137,6 +1170,7 @@
         }
         function resetGuideMessages() {
             guideMessages = cloneDefaultGuideMessages();
+            voucherGuide = { ...DEFAULT_VOUCHER_GUIDE };
             persistGuideMessages();
             renderGuideMessages();
             saveSharedAppSettingsToServer();
@@ -1238,6 +1272,7 @@
         async function saveAppSettings() {
             adNotices = readNoticeInputs();
             guideMessages = readGuideInputs();
+            voucherGuide = normalizeVoucherGuide({text:document.getElementById('voucherGuideText').value,example:document.getElementById('voucherGuideExample').value});
             persistAdText();
             persistGuideMessages();
             renderAdText();
@@ -3817,6 +3852,7 @@
                     adNotices: [...adNotices],
                     adText: adNotices.join('\n'),
                     guideMessages: normalizeGuideMessages(guideMessages),
+                    voucherGuide: { ...voucherGuide },
                     excludedDates: Array.from(excludedDates).map(n => parseInt(n, 10)).filter(n => !isNaN(n)),
                     selectCutoffDay: parseInt(document.getElementById('selectCutoffDay')?.value, 10) || null,
                     selectCutoffExcludedDates: Array.from(selectCutoffExcludedDates).map(n => parseInt(n, 10)).filter(n => !isNaN(n)),
@@ -3891,6 +3927,11 @@
                 adNotices = normalizeNoticeTexts(Array.isArray(data.adNotices) ? data.adNotices : data.adText);
                     persistAdText();
                     renderAdText();
+                }
+                if (data.voucherGuide && typeof data.voucherGuide === 'object') {
+                    voucherGuide = normalizeVoucherGuide(data.voucherGuide);
+                    persistGuideMessages();
+                    renderGuideMessages();
                 }
                 if (Array.isArray(data.guideMessages)) {
                     guideMessages = normalizeGuideMessages(data.guideMessages);
@@ -4285,13 +4326,13 @@
     <link rel="stylesheet" href="fee-ui.css?v=20260916-range">
     <script src="fee-ui.js"></script>
     <script src="progress-core.js?v=20260916-range"></script>
-    <script src="progress-ui.js?v=20260916-compact-types"></script>
+    <script src="progress-ui.js?v=20260930-compact"></script>
     <link rel="stylesheet" href="workspace-ui.css?v=20260918">
-    <script src="workspace-ui.js?v=20260918"></script>
-    <script src="subject-icons.js?v=20260930-detail"></script>
+    <script src="workspace-ui.js?v=20260930-compact"></script>
+    <script src="subject-icons.js?v=20260930-compact"></script>
     <script src="school-icons.js?v=20260930"></script>
     <script src="calendar-core.js?v=20260930"></script>
-    <link rel="stylesheet" href="calendar-workspace.css?v=20260930-detail">
-    <script src="calendar-workspace.js?v=20260930-detail"></script>
+    <link rel="stylesheet" href="calendar-workspace.css?v=20260930-compact">
+    <script src="calendar-workspace.js?v=20260930-compact"></script>
 </body>
 </html>

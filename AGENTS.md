@@ -15,3 +15,6 @@
 - Use the approved prototype’s Noto Sans KR typography with clear contrast; do not declare an unloaded font as the primary face.
 - Keep account controls horizontal in the compact header, with no routine login explanation paragraphs. Preserve actual authentication errors.
 - On wide notice screens, place image output and message composition beside the document on the right. Keep these tools outside the exported document.
+
+- Notice documents may use up to 1120px width to reduce height. Place lesson variants side by side when space allows, and calendar subject/time horizontally; preserve long times and teacher/status without splitting Korean subject names.
+- Use the warm brown rendition of the original academy logo; retain its exact source contour and transparency. Keep financial blue/red semantics.

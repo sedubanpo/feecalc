@@ -6,7 +6,7 @@ const FeeWorkspace = (() => {
     }
     function subject(name) { return String(name||'').split('-')[0].trim() || '미분류'; }
     function fingerprint(state) {
-        const {currentTab,pricePresets,adNotices,adText,guideMessages,studentId,...calculation}=state;
+        const {currentTab,pricePresets,adNotices,adText,guideMessages,voucherGuide,studentId,...calculation}=state;
         return JSON.stringify(calculation);
     }
     return {lessonType,subject,fingerprint};
