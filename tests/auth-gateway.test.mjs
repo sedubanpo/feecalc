@@ -156,3 +156,5 @@ test('same UID denial/pending/ready retains loaded identity and settings; signed
     assert.equal(settingsReads,0);
     await context.handleStaffAuthState({state:'signedOut',user:null});assert.equal(context.currentLoadedRecordId,'');
 });
+
+test('financial read scope denial retains calculator authorization',async()=>{let denied=false;const gateway=createGateway({getUser:()=>user('a'),onDenied:()=>{denied=true;},fetcher:async url=>reply(url.endsWith('/session')?{data:{uid:'a'}}:{error:{code:'FINANCIAL_SCOPE_REQUIRED',message:'수납 조회 권한 필요'}},url.endsWith('/session')?200:403)});await gateway.authorize();assert.match((await gateway.rpc('feecalc_intranet_opening')).error.message,/수납/);assert.equal(gateway.actor.uid,'a');assert.equal(denied,false);});

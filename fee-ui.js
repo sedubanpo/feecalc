@@ -212,23 +212,25 @@ function updateAdjustmentTone(row) {
 normalizeAdjustmentItems = function(items = [], legacyAmount = 0) {
     const rows = (Array.isArray(items) ? items : []).map((item,index) => {
         const kind = ['carry','extra'].includes(item?.kind) ? item.kind : 'other', value = Number(item?.amount)||0;
-        return {label:String(item?.label || item?.name || `조정 ${index+1}`), amount:kind === 'carry' ? -Math.abs(value) : kind === 'extra' ? Math.abs(value) : value, kind};
+        return {label:String(item?.label || item?.name || `조정 ${index+1}`), amount:kind === 'carry' ? -Math.abs(value) : kind === 'extra' ? Math.abs(value) : value, kind, ...(window.FeeFinancialSources?.provenance(item?.source)?{source:FeeFinancialSources.provenance(item.source)}:{})};
     });
     if (!rows.length && Number(legacyAmount)) rows.push({label:'이월/초과금 조정', amount:Number(legacyAmount), kind:'other'});
     return rows;
 };
 collectAdjustmentItems = function(includeBlank = false) {
-    return [...document.querySelectorAll('#adjustmentList .adjustment-item')].map(row => ({label:row.querySelector('.adjustment-label').value.trim() || '기타 조정', amount:Number(row.querySelector('.adjustment-amount').value)||0, kind:row.dataset.kind || 'other'})).filter(item=>includeBlank || item.amount!==0);
+    return [...document.querySelectorAll('#adjustmentList .adjustment-item')].map(row => ({label:row.querySelector('.adjustment-label').value.trim() || '기타 조정', amount:Number(row.querySelector('.adjustment-amount').value)||0, kind:row.dataset.kind || 'other', ...(row._financialSource?{source:{...row._financialSource}}:{})})).filter(item=>includeBlank || item.amount!==0);
 };
 addAdjustmentItem = function(label = '', amount = '', options = {}) {
     const id = `adjustment-${++adjustmentItemCounter}`, kind = options.kind || 'other';
     document.getElementById('adjustmentList').insertAdjacentHTML('beforeend', `<div id="${id}" class="adjustment-item" data-kind="${kind}">${adjustmentKindButtons(id,kind)}<div class="adjustment-fields"><input class="adjustment-label" aria-label="조정 내용" value="${escapeHtml(label)}" placeholder="조정 내용" oninput="handleAdjustmentInput()"><div class="adjustment-money"><span class="adjustment-plus" aria-hidden="true">${Number(amount)>0?'+':''}</span><input type="number" class="adjustment-amount" aria-label="조정 금액 (원)" value="${amount === '' ? '' : Number(amount)||0}" placeholder="금액 (원)" oninput="normalizeAdjustmentSign(this)"><span class="adjustment-currency" aria-hidden="true">원</span></div><button type="button" class="ui-button" aria-label="이월·초과금 항목 삭제" onclick="removeAdjustmentItem('${id}')">삭제</button></div></div>`);
-    updateAdjustmentTone(document.getElementById(id));
+    const row=document.getElementById(id),source=window.FeeFinancialSources?.provenance(options.source);
+    if(source){row._financialSource=source;const note=document.createElement('small');note.className='adjustment-source';note.textContent=`${source.provider==='desk'?'데스크 수납':'인트라넷 잔액'} · ${source.month}`;row.append(note);}
+    updateAdjustmentTone(row);
     if (!options.silent) handleAdjustmentInput();
 };
 setAdjustmentItems = function(items = [], legacyAmount = 0) {
     document.getElementById('adjustmentList').replaceChildren();
-    normalizeAdjustmentItems(items,legacyAmount).forEach(item=>addAdjustmentItem(item.label,item.amount,{silent:true,kind:item.kind})); syncLegacyAdjustmentInput();
+    normalizeAdjustmentItems(items,legacyAmount).forEach(item=>addAdjustmentItem(item.label,item.amount,{silent:true,kind:item.kind,source:item.source})); syncLegacyAdjustmentInput();
 };
 function setAdjustmentKind(id, kind) {
     if(!['carry','extra','other'].includes(kind))return;

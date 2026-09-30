@@ -23,7 +23,7 @@ const evidence = process.env.EVIDENCE_ROOT;
   page.on('dialog', dialog => dialog.accept());
   await page.route('**/*.supabase.co/**', route => route.fulfill({status: 200, contentType: 'application/json', body: '[]'}));
   // Exercise calculator regressions with a synthetic authorized session only.
-  await page.route('**/auth-client.mjs', route => route.fulfill({status: 200, contentType: 'text/javascript', body: `
+  await page.route('**/auth-client.mjs*', route => route.fulfill({status: 200, contentType: 'text/javascript', body: `
     export async function initializeAuth(onState) {
       const gateway = {rpc: async name => ({data: name === 'feecalc_students' ? [{id:'qa',name:'검증학생'}] : [], error: null})};
       const notify = () => onState({state:'ready', actor:{uid:'synthetic',name:'검증'}, user:{uid:'synthetic'}, gateway});

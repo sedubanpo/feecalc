@@ -4201,7 +4201,7 @@
         async function initializeServerRecordFlow() {
             renderServerRecordList();
             try {
-                const { initializeAuth } = await import('./auth-client.mjs');
+                const { initializeAuth } = await import('./auth-client.mjs?v=20260930-funds');
                 staffAuth = await initializeAuth(handleStaffAuthState);
                 supabaseClient = staffAuth.gateway;
                 document.getElementById('staffLoginButton').disabled = false;
@@ -4211,6 +4211,7 @@
             }
         }
         async function handleStaffAuthState({state, actor, user, message, gateway}) {
+            document.dispatchEvent?.(new Event('feecalc-auth-change'));
             if (accountSwitchPending) return;
             if (gateway) supabaseClient = gateway;
             const switchedAccount = !!user && !!previousStaffUid && previousStaffUid !== user.uid;
@@ -4326,7 +4327,8 @@
         switchTab = function(tab){ __origSwitchTab(tab); showTabHelp(tab); updateCoreDataArea(tab); };
     </script>
     <link rel="stylesheet" href="fee-ui.css?v=20260916-range">
-    <script src="fee-ui.js?v=20260930-next-month"></script>
+    <script src="financial-sources-core.js?v=20260930-funds"></script>
+    <script src="fee-ui.js?v=20260930-funds"></script>
     <script src="progress-core.js?v=20260930-next-month"></script>
     <script src="progress-ui.js?v=20260930-next-month"></script>
     <link rel="stylesheet" href="workspace-ui.css?v=20260918">
@@ -4338,5 +4340,7 @@
     <script src="calendar-workspace.js?v=20260930-next-month"></script>
     <script src="temporary-lessons.js?v=20260930-next-month"></script>
     <script src="calendar-dialogs.js?v=20260930-next-month"></script>
+    <link rel="stylesheet" href="financial-sources.css?v=20260930-funds">
+    <script src="financial-sources.js?v=20260930-funds"></script>
 </body>
 </html>

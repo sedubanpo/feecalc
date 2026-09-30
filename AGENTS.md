@@ -31,3 +31,9 @@
 - The next-month dialog shares the draft dialog typography, warm paper surface, restrained navy actions, and mobile sizing.
 - Next-month tuition from progress lessons becomes a weekday-fixed draft. Preview and select eligible courses before advancing. Require three distinct weekly occurrences with known duration/fee; do not silently import one-off, makeup, unresolved, or temporary forecast lessons.
 - Clicking a calendar lesson opens occurrence editing/deletion, with an amount preview and undo. Progress edits and exclusions are saved only in the calculator draft; the intranet snapshot remains unchanged.
+
+## Financial source imports — 2026-09-30
+
+- Desk receipts and Intranet saved monthly opening balances are read-only sources. Show a review dialog with all items initially unchecked, source month/date, signed amounts, and adjustment total preview; append only explicitly selected rows.
+- Receipt imports deduct payments and add refunds. Missing or blocked amounts/identity never become zero-valued imports. Intranet imports use directly saved opening balances, not aggregate paid totals or cached computed closing balances.
+- Preserve source IDs, student/month, fingerprint, and original amount in saved adjustment rows to prevent repeated imports. Re-read selected sources before applying; reject changed source records, login changes, and student/month changes. Keep one-step undo. Never update Desk or Intranet source records.
