@@ -5,11 +5,12 @@ const root=path.resolve(__dirname,'..'),evidence=process.env.EVIDENCE_ROOT;
  const server=http.createServer((req,res)=>{const file=path.resolve(root,'.'+(req.url==='/'?'/index.html':req.url.split('?')[0]));if(!file.startsWith(root+'/'))return res.writeHead(403).end();try{res.setHeader('Content-Type',file.endsWith('.css')?'text/css':file.endsWith('.js')||file.endsWith('.mjs')?'text/javascript':'text/html');res.end(fs.readFileSync(file));}catch{res.writeHead(404).end();}}).listen(0,'127.0.0.1');
  await new Promise(r=>server.once('listening',r));
  const browser=await chromium.launch({headless:true,executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'});
- const page=await browser.newPage({viewport:{width:1440,height:1000},locale:'ko-KR'}),errors=[],results=[];
+ const context=await browser.newContext({viewport:{width:1440,height:1000},locale:'ko-KR'});
+ const page=await context.newPage(),errors=[],results=[];
  page.on('pageerror',e=>errors.push(e.message)); page.on('dialog',d=>d.accept());
  // All private service access is synthetic; never use user accounts or write production data.
- await page.route('**/*.cloudfunctions.net/**',r=>r.abort());await page.route('**/*.supabase.co/**',r=>r.abort());
- await page.route('**/auth-client.mjs',r=>r.fulfill({contentType:'text/javascript',body:`export async function initializeAuth(onState){
+ await page.context().route('**/*.cloudfunctions.net/**',r=>r.abort());await page.context().route('**/*.supabase.co/**',r=>r.abort());
+ await page.context().route('**/auth-client.mjs',r=>r.fulfill({contentType:'text/javascript',body:`export async function initializeAuth(onState){
  window.testWrites=[];window.testSettings={rateLibrary:[{type:'개별정규',unit:'perClass',amount:62500},{type:'1:1',unit:'perHour',amount:100000}]};
  const gateway={rpc:async(rpc,params)=>{if(window.testFail)return{error:{message:'가상 네트워크 오류'}};
  if(rpc==='feecalc_students')return{data:[{id:'one',name:'검증학생',school:'검증중',grade:'2'},{id:'two',name:'동명학생',school:'가학교',grade:'1'},{id:'three',name:'동명학생',school:'나학교',grade:'2'}]};
@@ -18,11 +19,33 @@ const root=path.resolve(__dirname,'..'),evidence=process.env.EVIDENCE_ROOT;
  if(rpc==='feecalc_save_app_settings'){window.testSettings=params.p_settings;return{data:{}};}
  if(rpc==='feecalc_save_record'||rpc==='feecalc_update_record'){window.testWrites.push(params);return{data:{record_id:'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',saved_at:new Date().toISOString()}};}
  return{data:[]};}};
- queueMicrotask(()=>onState({state:'ready',actor:{uid:'qa',name:'검증'},user:{uid:'qa'},gateway}));return{gateway};}` }));
+ queueMicrotask(()=>onState({state:'ready',actor:{uid:'qa',name:'검증'},user:{uid:'qa'},gateway}));window.testAuthState=onState;window.testGateway=gateway;return{gateway};}` }));
  const check=async(name,fn)=>{await fn();results.push({name,result:'pass'});console.log('PASS',name);};
  try{
  await page.goto(`http://127.0.0.1:${server.address().port}/`,{waitUntil:'networkidle'});
  await page.waitForFunction(()=>registryState==='ready');
+ await check('horizontal header account, routine copy removed and auth errors visible',async()=>{
+ assert.equal(await page.locator('#productHeader #staffLoginForm').count(),1);
+ assert.equal(await page.locator('#recordsDock #staffAuthPanel').count(),0);
+ assert.equal(await page.locator('#headerStaffName').innerText(),'검증');
+ assert.equal(await page.locator('#staffAuthStatus').isVisible(),false);
+ await page.evaluate(()=>testAuthState({state:'error',message:'합성 로그인 오류',gateway:testGateway}));
+ assert.equal(await page.locator('#staffLoginForm').isVisible(),true);
+ assert.equal(await page.locator('#staffAuthStatus').isVisible(),true);
+ assert.match(await page.locator('#staffAuthStatus').innerText(),/합성 로그인 오류/);
+ await page.evaluate(()=>testAuthState({state:'denied',message:'세션이 만료되었습니다. 다시 로그인해 주세요.',gateway:testGateway}));assert.equal(await page.locator('#staffAuthStatus').isVisible(),true);
+ await page.evaluate(()=>testAuthState({state:'ready',actor:{uid:'qa',name:'검증'},user:{uid:'qa'},gateway:testGateway}));
+ await page.waitForFunction(()=>registryState==='ready');
+ });
+ await check('redesigned record card preserves open and delete actions',async()=>{
+ await page.evaluate(()=>{window.testLateStudents=studentRegistry;studentRegistry=[];serverRecordHistory=[{recordId:'card-qa',studentName:'검증학생',targetYear:2026,targetMonth:9,currentTab:'auto',totalText:'250,000원',savedAt:'2026-09-30',payload:{studentId:'one'}}];renderServerRecordList();window.testOldOpen=window.open;window.testOldDelete=deleteServerRecord;window.open=(url)=>window.testOpened=url;deleteServerRecord=(id)=>window.testDeleted=id;});
+ assert.equal(await page.locator('.record-student').innerText(),'검증학생');
+ assert.equal(await page.locator('.record-amount').innerText(),'250,000원');
+ await page.locator('.record-open-btn').click();assert.match(await page.evaluate(()=>testOpened),/recordId=card-qa/);
+ await page.evaluate(()=>{studentRegistry=testLateStudents;FeeCalendar.refresh();});assert.equal(await page.locator('.school-label').innerText(),'검증중');
+ await page.locator('.record-delete-btn').click();assert.equal(await page.evaluate(()=>testDeleted),'card-qa');
+ await page.evaluate(()=>{window.open=testOldOpen;deleteServerRecord=testOldDelete;serverRecordHistory=[];renderServerRecordList();});
+ });
  await check('deprecated controls removed',async()=>{assert.equal(await page.locator('#recordMemoInput,#coreDataArea').count(),0);});
  await check('temporary name calculates but does not save',async()=>{await page.locator('#studentName').fill('임시학생');await page.evaluate(()=>saveServerRecord());assert.equal(await page.evaluate(()=>testWrites.length),0);assert.match(await page.locator('#studentMatchStatus').innerText(),/임시 학생/);});
  await check('canonical identity, duplicate selection and safe read-only memo',async()=>{
@@ -47,12 +70,41 @@ const root=path.resolve(__dirname,'..'),evidence=process.env.EVIDENCE_ROOT;
  });
  await page.evaluate(()=>{applyCalculatorState({currentTab:'auto',studentName:'검증학생',studentId:'one',targetYear:2026,targetMonth:9,autoRows:[{name:'수학-개별(검증강사)-2h',hours:2,rate:62500,rateMode:'perClass',days:[1,3]}],adjustmentItems:[{label:'8월 이월금',amount:-50000,kind:'carry'}]});});
  await page.waitForTimeout(300);
+ await page.getByRole('button',{name:'안내서',exact:true}).click();
+ await check('receipt tools sit to the right and remain outside image capture',async()=>{
+ assert.equal(await page.locator('#captureArea #noticeTools,#captureArea #staffAuthPanel,#captureArea #generatedTextArea').count(),0);
+ const geometry=await page.evaluate(()=>{const paper=document.getElementById('captureArea').getBoundingClientRect(),tools=document.getElementById('noticeTools').getBoundingClientRect();return{right:paper.right,toolsLeft:tools.left,paperTop:paper.top,toolsTop:tools.top};});
+ assert.ok(geometry.toolsLeft>=geometry.right+20);assert.ok(Math.abs(geometry.paperTop-geometry.toolsTop)<2);
+ await page.waitForFunction(()=>Array.from(document.querySelectorAll('#captureArea .subject-icon')).every(i=>i.naturalWidth>0&&!i.hidden));
+ assert.equal(await page.locator('#dispSubtotal').evaluate(e=>getComputedStyle(e).color),'rgb(9, 94, 184)');
+ const font=await page.locator('#captureArea #receiptBody td').first().evaluate(e=>getComputedStyle(e).fontSize);assert.equal(font,'12px');
+ });
+
  if(evidence && !process.env.SKIP_VISUAL){fs.mkdirSync(evidence,{recursive:true});await page.screenshot({path:path.join(evidence,'desktop.png'),fullPage:true});await page.locator('#captureArea').screenshot({path:path.join(evidence,'receipt.png')});}
  await page.setViewportSize({width:390,height:844});
  if(evidence && !process.env.SKIP_VISUAL)await page.screenshot({path:path.join(evidence,'mobile.png'),fullPage:true});
  await check('mobile no horizontal page overflow',async()=>{assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));});
  await check('intermediate and breakpoint overflow',async()=>{for(const width of [600,601,768,1279,1280]){await page.setViewportSize({width,height:1000});assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),String(width));}});
  await check('IME composition does not match or fetch partial names',async()=>{await page.evaluate(()=>{beginStudentNameComposition();handleStudentNameInput();});assert.equal(await page.evaluate(()=>matchedStudent()),null);await page.evaluate(()=>{studentNameComposing=false;handleStudentNameInput();});assert.equal(await page.evaluate(()=>matchedStudent().id),'one');});
+
+ await check('signed-out account controls fit narrow and intermediate headers',async()=>{
+ await page.evaluate(()=>testAuthState({state:'anonymous',gateway:testGateway}));
+ for(const width of [390,600,768,1050,1440]){await page.setViewportSize({width,height:1000});assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),String(width));assert.equal(await page.locator('#staffLoginForm').isVisible(),true);}
+ await page.evaluate(()=>{document.getElementById('staffAuthStatus').textContent='비밀번호를 다시 확인하세요.';});assert.equal(await page.locator('#staffAuthStatus').isVisible(),true);
+ });
+ if(evidence && !process.env.SKIP_VISUAL){
+ const fixtures=require('./fixtures/calendar.cjs'),a=fixtures.planned(),b=fixtures.historical();
+ await page.evaluate(()=>testAuthState({state:'ready',actor:{uid:'qa',name:'검증'},user:{uid:'qa'},gateway:testGateway}));
+ const makeA={currentTab:'select',studentId:'one',studentName:'검증학생',targetYear:2026,targetMonth:9,selectRows:a.templates.map(t=>({name:`${t.subject}-개별(${t.teacher})-${t.hours}h`,hours:t.hours,rate:t.rate,dates:t.dates,rateMode:'perClass'})),adjustmentItems:a.adjustments};
+ await page.evaluate(f=>applyCalculatorState(f),makeA);await page.getByRole('button',{name:'안내서',exact:true}).click();await page.setViewportSize({width:2236,height:1250});
+ await page.locator('#captureArea').screenshot({path:path.join(evidence,'notice-a.png')});await page.screenshot({path:path.join(evidence,'wide.png'),fullPage:true});
+ const mobile=await page.context().newPage();await mobile.setViewportSize({width:390,height:844});await mobile.goto(`http://127.0.0.1:${server.address().port}/`,{waitUntil:'networkidle'});await mobile.waitForFunction(()=>registryState==='ready');await mobile.evaluate(f=>applyCalculatorState(f),makeA);await mobile.getByRole('button',{name:'안내서',exact:true}).click();await mobile.evaluate(()=>window.scrollTo(0,0));await mobile.screenshot({path:path.join(evidence,'mobile.png')});await mobile.locator('#captureArea').screenshot({path:path.join(evidence,'mobile-notice.png')});await mobile.close();
+ assert.equal(await page.locator('#productHeader').count(),1);assert.equal(await page.locator('#captureArea #productHeader').count(),0);
+ await page.setViewportSize({width:1440,height:1000});
+ await page.evaluate(f=>applyCalculatorState(f),{currentTab:'history',studentId:'one',studentName:'검증학생',targetYear:2026,targetMonth:8,historyData:b.events.map(r=>({year:2026,month:8,day:r.day,subject:`${r.subject}-${r.type}(${r.teacher})-${r.sourceHours||r.hours}h`,teacher:r.teacher,attend:r.status,hours:r.hours,amount:r.amount,originalAmount:r.amount,startTime:r.start+':00',endTime:r.end+':00'})),adjustmentItems:b.adjustments});
+ await page.getByRole('button',{name:'안내서',exact:true}).click();await page.evaluate(()=>FeeCalendar.refresh());await page.locator('#captureArea').screenshot({path:path.join(evidence,'notice-b.png')});
+ await page.getByRole('button',{name:'계산 작업',exact:true}).click();await page.screenshot({path:path.join(evidence,'work-b.png'),fullPage:true});
+ }
  assert.deepEqual(errors,[]);
  if(evidence)fs.writeFileSync(path.join(evidence,'ui-tests.json'),JSON.stringify({browser:browser.version(),results,errors},null,2));
  }finally{await browser.close();server.close();}

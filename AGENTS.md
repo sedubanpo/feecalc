@@ -11,3 +11,7 @@
 - Use blue with + for positive lesson charges/surcharges and red with − for deductions; expected payment is blue. Keep unit rates distinct from transaction amounts.
 - Month-over-month subject comparison uses total lesson hours, with a user-controlled visibility toggle. Never infer a missing prior value as zero or compare different students.
 - Prefer a compact, carefully spaced header over oversized branding: small logo/title on the left, purpose navigation on the right in the same desktop row. Prototype case controls belong below the header. Do not enlarge logos/headlines as a substitute for design refinement.
+
+- Use the approved prototype’s Noto Sans KR typography with clear contrast; do not declare an unloaded font as the primary face.
+- Keep account controls horizontal in the compact header, with no routine login explanation paragraphs. Preserve actual authentication errors.
+- On wide notice screens, place image output and message composition beside the document on the right. Keep these tools outside the exported document.

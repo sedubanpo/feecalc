@@ -1,6 +1,6 @@
 /* Revision 7: an expansive staff workspace and compact parent-facing document. */
-:root{--work-ink:#263c49;--work-muted:#586d7b;--work-blue:#095eb8;--work-red:#bd3340;--work-paper:#fffefa;--work-border:#dce3e2}
-body.calendar-app{padding:0!important;background:#f2f3f1!important;color:var(--work-ink);font-family:Pretendard,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;font-size:13px}
+:root{--work-ink:#18314b;--work-muted:#526777;--work-blue:#095eb8;--work-red:#bd3340;--work-paper:#fffefa;--work-border:#dce3e2}
+body.calendar-app{padding:0!important;background:#f2f3f1!important;color:var(--work-ink);font-family:'Noto Sans KR',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:14px}
 .calendar-app main{max-width:none!important;margin:0!important}
 .calendar-app [hidden]{display:none!important}
 .calendar-app button,.calendar-app input,.calendar-app select{font:inherit;accent-color:#175a8c}
@@ -10,14 +10,14 @@ body.calendar-app{padding:0!important;background:#f2f3f1!important;color:var(--w
 .calendar-app button:hover{filter:none;background-color:#edf2f4}
 .calendar-app ::selection{background:#d9e8f2;color:#1b354b}
 .calendar-app input{caret-color:#175a8c}
-#productHeader{display:flex;justify-content:space-between;align-items:center;gap:28px;min-height:72px;padding:12px 26px;background:var(--work-paper);border-bottom:1px solid var(--work-border)}
+#productHeader{display:flex;justify-content:space-between;align-items:center;gap:22px;min-height:72px;padding:12px 24px;background:var(--work-paper);border-bottom:1px solid var(--work-border)}
 .product-brand{display:flex;gap:11px;align-items:center;flex-shrink:0}
 .product-brand img{width:38px;height:38px;object-fit:contain}
 .product-brand span{display:block;font-size:10px;letter-spacing:.5px;color:#617583;margin-bottom:3px}
-.product-brand strong{display:block;font-size:20px;line-height:1.2;font-weight:650;letter-spacing:-.6px}
-#productHeader nav{display:flex;gap:4px;align-items:center}
-#productHeader button{display:inline-flex;align-items:center;gap:7px;border:0;background:transparent;color:var(--work-muted);min-height:38px;padding:8px 12px;border-radius:7px;font-weight:500;font-size:13px}
-#productHeader button[aria-pressed=true]{background:#eaf0f4;color:#204c73;font-weight:650}
+.product-brand strong{display:block;font-size:20px;line-height:1.2;font-weight:700;letter-spacing:-.6px}
+#productHeader nav{display:flex;gap:3px;align-items:center;margin-left:auto}
+#productHeader nav button{display:inline-flex;align-items:center;gap:7px;border:0;background:transparent;color:#2d485e;min-height:38px;padding:8px 12px;border-radius:6px;font-weight:700;font-size:13px}
+#productHeader button[aria-pressed=true]{background:#eaf0f4;color:#204c73;font-weight:700}
 #productHeader svg{width:17px;height:17px}
 #workspaceTopBar,#tabHelpBubble,.legacy-calendar{display:none!important}
 #workspaceGrid{display:grid!important;grid-template-columns:230px 330px minmax(0,1fr);gap:0!important;align-items:start;margin-top:0!important}
@@ -55,13 +55,13 @@ body.calendar-app{padding:0!important;background:#f2f3f1!important;color:var(--w
 .subject-tabs button[aria-selected=true]{background:#dfeaf1;color:#174f78}
 #calendarWorkspace{grid-column:3;min-width:0;padding:22px 24px}
 .work-heading{display:flex;justify-content:space-between;align-items:start;gap:16px;margin-bottom:22px}
-.work-heading h2,.notice-heading h2{font-size:21px;font-weight:650;letter-spacing:-.4px;margin:0 0 5px}
+.work-heading h2,.notice-heading h2{font-size:21px;font-weight:700;letter-spacing:-.4px;margin:0 0 5px}
 .work-heading p{color:var(--work-muted);margin:0}
 #calendarWorkspace button,#noticeControls button,.output-actions button,#timetablePlacement button,.intranet-history{min-height:38px;padding:8px 11px;border:1px solid #d2dcdf;border-radius:7px;background:#fbfcfa;color:#385567}
 #calendarWorkspace button.primary,.output-actions button.primary,.intranet-history{background:#175a8c;color:#fff;border-color:#175a8c}
 .source-tools{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:14px 0 18px;border-top:1px solid var(--work-border);border-bottom:1px solid var(--work-border);margin-bottom:18px}
 .source-tools>div:first-child{flex:1}
-.source-tools strong{font-weight:650}.source-tools span{display:block;font-size:12px;color:var(--work-muted);margin-top:4px}
+.source-tools strong{font-weight:700}.source-tools span{display:block;font-size:12px;color:var(--work-muted);margin-top:4px}
 #sourceStatus{flex-basis:100%;color:var(--work-muted);font-size:12px;margin:0;line-height:1.6}
 #sourceStatus:empty{display:none}
 #sourceCandidates{flex-basis:100%;max-height:400px;overflow:auto}
@@ -89,7 +89,7 @@ body.calendar-app{padding:0!important;background:#f2f3f1!important;color:var(--w
 .calendar-event strong,.notice-event strong{display:block;font-weight:600}.calendar-event span,.calendar-event small,.notice-event span{display:block;font-size:11px}
 .calendar-event.active-condition{outline:1px solid #7894ac;outline-offset:-1px}
 .day-detail{min-width:0;position:sticky;top:18px}
-.day-detail h3{font-size:14px;font-weight:650;margin:4px 0 12px}
+.day-detail h3{font-size:14px;font-weight:700;margin:4px 0 12px}
 .day-lesson{padding:12px 0;border-top:1px solid var(--work-border)}
 .day-lesson strong,.day-lesson span,.day-lesson b{display:block;margin-bottom:5px;line-height:1.5}
 .day-lesson span{font-size:12px;color:var(--work-muted)}
@@ -101,17 +101,17 @@ body.calendar-app{padding:0!important;background:#f2f3f1!important;color:var(--w
 .calendar-help{font-size:12px;line-height:1.7;color:var(--work-muted)}
 .subject-icon{display:inline-block;width:13px;height:13px;object-fit:contain;vertical-align:-1px;margin-right:4px}
 .positive{color:var(--work-blue)!important}.negative{color:var(--work-red)!important}.neutral{color:var(--work-ink)!important}.expected-total{color:var(--work-blue)!important}
-#noticeColumn{grid-column:2/-1!important;grid-row:1;min-width:0;padding:24px;margin:0!important}
+#noticeColumn{grid-column:2/-1!important;grid-row:1;display:grid;grid-template-columns:minmax(0,820px) minmax(280px,340px);grid-template-areas:"controls controls" "paper tools";align-items:start;justify-content:start;gap:0 28px;min-width:0;padding:24px;margin:0!important}
 .notice-heading{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
-.notice-options{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin:0 auto 20px;max-width:820px;font-size:12px}
+.notice-options{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin:0 0 22px;font-size:13px}
 .notice-options label{display:flex;gap:7px;align-items:center}.notice-options select{border:1px solid #d2dcdf;padding:8px;border-radius:6px;background:#fffefa}
-#captureArea{max-width:820px;margin:0 auto 20px!important;background:#fffefa!important;border:0!important;border-radius:0!important;padding:24px!important;box-shadow:0 8px 24px -15px #66737530!important;position:relative;isolation:isolate;overflow:hidden}
+#captureArea{grid-area:paper;width:100%;max-width:820px;margin:0!important;background:#fffefa!important;border:0!important;border-radius:0!important;padding:24px!important;box-shadow:0 8px 24px -15px #66737530!important;position:relative;isolation:isolate;overflow:hidden}
 #captureArea .watermark-img{left:50%!important;top:50%!important;right:auto!important;bottom:auto!important;transform:translate(-50%,-50%)!important;width:70%!important;height:auto!important;max-height:70%;object-fit:contain;opacity:.045!important;z-index:-1;pointer-events:none}
-#captureArea .receipt-header{padding:0 0 18px;margin:0 0 20px;border-bottom:1px solid var(--work-border);gap:16px;background:transparent}
+#captureArea .receipt-header{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;padding:0 0 20px;margin:0 0 20px;border-bottom:1px solid var(--work-border);gap:16px;background:transparent}
 #captureArea .receipt-brand{gap:10px;align-items:center}
 #captureArea .receipt-brand img{width:40px;height:40px}
 #captureArea .receipt-brand h1{font-size:14px;margin-bottom:3px}
-#captureArea .receipt-brand p{font-size:17px;font-weight:650;line-height:1.4;max-width:400px}
+#captureArea .receipt-brand p{font-size:17px;font-weight:700;line-height:1.4;max-width:400px}
 #captureArea .receipt-student h2{font-size:18px}
 #captureArea #dateBadge{background:transparent;color:#5b6f7a;padding:0;box-shadow:none;font-size:11px;margin-top:5px}
 #captureArea .receipt-content{display:grid!important;grid-template-columns:280px minmax(0,1fr);gap:18px;align-items:start}
@@ -119,19 +119,19 @@ body.calendar-app{padding:0!important;background:#f2f3f1!important;color:var(--w
 #captureArea .receipt-fee-table{table-layout:fixed;margin-bottom:14px}
 #captureArea .receipt-fee-table th{font-size:10px;padding:8px 3px;border:0;color:#627482;white-space:normal}
 #captureArea #thAmount{width:83px!important}
-#captureArea #receiptBody>tr>td{padding:10px 3px;border-bottom:1px solid var(--work-border);font-size:11px;vertical-align:top;overflow-wrap:anywhere}
-#captureArea #receiptBody>tr>td:last-child{font-size:11px;font-weight:550;font-family:inherit;white-space:nowrap;text-align:right}
-#captureArea #receiptBody strong{font-size:12px;font-weight:650}
-.receipt-teacher{display:block;color:var(--work-muted);font-size:10px;margin-top:3px}
-.receipt-variants{display:flex;flex-direction:column;gap:6px;margin-top:7px}.receipt-variants>span{font-size:10px;line-height:1.5}.receipt-variants small{display:block;font-size:10px;color:var(--work-muted)}
+#captureArea #receiptBody>tr>td{padding:10px 3px;border-bottom:1px solid var(--work-border);font-size:12px;vertical-align:top;overflow-wrap:anywhere}
+#captureArea #receiptBody>tr>td:last-child{font-size:12px;font-weight:500;font-family:inherit;white-space:nowrap;text-align:right}
+#captureArea #receiptBody strong{font-size:12px;font-weight:700}
+.receipt-teacher{display:block;color:var(--work-muted);font-size:11px;margin-top:3px}
+.receipt-variants{display:flex;flex-direction:column;gap:6px;margin-top:7px}.receipt-variants>span{font-size:11px;line-height:1.5}.receipt-variants small{display:block;font-size:11px;color:var(--work-muted)}
 #captureArea #priceSummaryArea>div{border:0;background:transparent;box-shadow:none;border-radius:0;padding:8px 0;gap:10px}
 #captureArea #priceSummaryArea .flex{font-size:11px;gap:6px;line-height:1.6}
 #captureArea #dispTotal{font-size:20px!important;line-height:1.3;white-space:nowrap}
 #captureArea #labelTotal{font-size:13px}
-#captureArea #dispTotal.parent{border-top:1px solid #b9c8d1}
+#captureArea #priceSummaryArea .receipt-total{background:#edf1f3;border-radius:5px;padding:12px 8px;margin-top:8px}
 #captureArea #receiptCalendarArea{border:0;padding:0;background:transparent;backdrop-filter:none;box-shadow:none;margin:0}
 #captureArea .receipt-cal-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));border-top:1px solid var(--work-border);border-left:1px solid var(--work-border);border-radius:0;overflow:visible}
-#captureArea .receipt-cal-cell{padding:3px;min-height:66px;border-right:1px solid var(--work-border);border-bottom:1px solid var(--work-border);min-width:0;background:transparent;gap:3px}
+#captureArea .receipt-cal-cell{padding:3px;min-height:78px;border-right:1px solid var(--work-border);border-bottom:1px solid var(--work-border);min-width:0;background:transparent;gap:3px}
 #captureArea .receipt-cal-cell.outside{background:#edf1ef}
 #captureArea .rc-date{font-size:10px;line-height:1.5;padding:0 2px;background:none;color:#2b4658;border:0;min-height:0}
 .notice-event{padding:4px 3px;border-radius:3px;margin:3px 0;overflow-wrap:anywhere;line-height:1.45}
@@ -139,19 +139,19 @@ body.calendar-app{padding:0!important;background:#f2f3f1!important;color:var(--w
 .notice-event.predicted{outline:1px dashed #8696a2;outline-offset:-1px}
 #calendarReceiptLegend,#monthComparison>p{font-size:9px;line-height:1.6;color:#536b7a;margin:8px 0}
 #monthComparison{border-top:1px solid var(--work-border);padding-top:9px;margin-top:10px}
-#monthComparison h3{font-size:11px;font-weight:650}
+#monthComparison h3{font-size:11px;font-weight:700}
 .comparison-line{display:flex;justify-content:space-between;gap:8px;font-size:10px;margin:5px 0}
 #captureArea #infoBox,#captureArea #voucherGuideBox{border:0;box-shadow:none;background:transparent;padding:10px 0;margin-top:12px;border-top:1px solid var(--work-border);font-size:10px}
 #captureArea .voucher-guide-title{font-size:10px;line-height:1.6}#captureArea .voucher-guide-desc{font-size:9px;line-height:1.6}
 #captureArea.portrait-notice .receipt-content{grid-template-columns:minmax(0,1fr)}
 #captureArea.portrait-notice .receipt-fee-table{max-width:none}
 #captureArea.portrait-notice .receipt-cal-cell{min-height:88px}
-#noticeColumn>.w-full{max-width:820px;margin:0 auto}
+#noticeControls{grid-area:controls;min-width:0}#noticeTools{grid-area:tools;min-width:0;max-width:none;margin:0;position:sticky;top:20px}
 .output-actions{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}.output-actions span{flex-basis:100%;font-size:12px;color:var(--work-muted)}
 .calendar-app[data-mode=timetable] #captureArea .receipt-content{grid-template-columns:minmax(0,1fr)}
 .calendar-app[data-mode=timetable] #captureArea .receipt-left{display:none}
 #timetablePlacement{padding:10px 0;border-bottom:1px solid var(--work-border);margin-bottom:14px}
-#timetablePlacement h3{font-size:15px;font-weight:650}#timetablePlacement p{font-size:12px;line-height:1.7;color:var(--work-muted);margin:8px 0}
+#timetablePlacement h3{font-size:15px;font-weight:700}#timetablePlacement p{font-size:12px;line-height:1.7;color:var(--work-muted);margin:8px 0}
 .placement-row{padding:10px 0;border-bottom:1px solid var(--work-border);display:flex;flex-wrap:wrap;gap:8px}
 .placement-row>strong{flex-basis:100%;font-size:12px}.placement-row label{display:flex;align-items:center;gap:5px;font-size:11px}.placement-row input[type=number]{width:50px}.placement-row input[type=time]{width:95px}
 .calendar-app[data-mode=ai] #controlColumn{grid-column:2/-1} .calendar-app[data-mode=ai] #noticeColumn{grid-row:2}
@@ -167,8 +167,6 @@ body.calendar-app{padding:0!important;background:#f2f3f1!important;color:var(--w
 #captureArea .receipt-fee-table th:nth-child(2){text-align:left}
 #captureArea .receipt-variants{margin-top:0}
 #captureArea #receiptBody>tr>td:nth-child(2):not(:last-child){white-space:normal}
-#staffDetails{border-bottom:1px solid var(--work-border);padding:9px 0;margin-bottom:12px;font-size:12px}
-#staffDetails summary{cursor:pointer;min-height:28px;line-height:28px;color:var(--work-muted)}
 #studentMemoWidget{margin-top:18px;box-shadow:none;border:0;background:transparent}
 @media(max-width:760px){#captureArea .receipt-fee-table th:first-child{width:85px}#captureArea #thAmount{width:92px!important}}
 
@@ -182,3 +180,60 @@ body.calendar-app{padding:0!important;background:#f2f3f1!important;color:var(--w
 .global-holiday{display:block;color:var(--work-red);font-size:11px;margin:6px 0}
 #calendarDiff{line-height:1.8}
 .calendar-app[data-mode=ai] #noticeColumn{grid-row:1}
+
+/* Compact account controls preserve the original form, labels and live error status. */
+#productHeader #staffAuthPanel{display:flex;align-items:center;gap:8px;flex-wrap:wrap;position:relative;margin:0;padding:0!important;border:0!important;color:var(--work-ink);max-width:360px;font-size:12px}
+#staffLoginForm{display:flex;align-items:center;gap:6px}
+#staffLoginForm label{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+#staffLoginForm input{width:148px;min-width:0;margin:0;padding:8px 10px;background:#fff;border:1px solid #cdd7dc;border-radius:5px;min-height:36px!important;color:var(--work-ink);font-size:12px}
+#staffLoginForm #staffLoginPassword{width:104px}
+#productHeader #staffLoginButton,#productHeader #staffLogout,#productHeader #staffAuthRetry{width:auto;min-height:36px!important;border:1px solid #cdd7dc;background:#fff;color:var(--work-ink);padding:7px 10px;border-radius:5px;font-size:12px;font-weight:700;text-decoration:none}
+#headerStaffName{font-size:13px;font-weight:700;white-space:nowrap}
+#staffAuthStatus{flex-basis:100%;margin:0;color:var(--work-red);font-size:12px}
+#serverRecordArea .record-panel-header{display:block}
+#serverRecordArea .record-panel-title{font-size:15px;font-weight:700;color:var(--work-ink);margin-bottom:14px}
+#serverRecordArea .record-panel-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}
+#serverRecordArea .record-panel-actions button{background:#fff!important;color:#2d485e;border:1px solid #cdd7dc;border-radius:5px;padding:8px 2px;font-size:12px;font-weight:500;box-shadow:none}
+#serverRecordArea .record-panel-actions button:first-child{background:#204c73!important;color:#fff;border-color:#204c73}
+#serverRecordSearch{margin-top:8px;border-radius:6px;background:#fff;font-size:12px;font-weight:400;min-height:38px}
+#serverRecordStatus{background:transparent!important;border:0;border-radius:0;padding:4px 0;margin:0 0 8px;font-size:11px;line-height:1.6}
+#serverRecordList .record-item{background:#fff!important;border:1px solid transparent;border-radius:8px;padding:0;margin:10px 0;box-shadow:none}
+#serverRecordList .record-item-active{outline:none;border-color:#afbeca}
+#serverRecordList .record-open-btn{display:block;margin:0;width:100%;padding:16px 13px;border:0;border-radius:7px;background:transparent;color:var(--work-ink);text-align:left}
+.record-kind{display:block;padding-right:36px;font-size:11px;font-weight:500;color:var(--work-muted);margin-bottom:10px}
+.record-student{display:block;font-size:18px;line-height:1.4;font-weight:700;letter-spacing:-.35px;overflow-wrap:anywhere}
+#serverRecordList .school-label{margin:6px 0;font-size:11px}
+.record-month{display:block;font-size:12px;margin-top:7px}
+.record-amount{display:block;font-size:21px;font-weight:700;letter-spacing:-.45px;font-variant-numeric:tabular-nums;margin:12px 0 8px;line-height:1.4}
+.record-open-label{display:block;font-size:11px;color:var(--work-muted)}
+.record-saved-at{display:block;margin-top:12px;font-size:10px;color:#617583}
+#serverRecordList .record-delete-btn{position:absolute;top:10px;right:8px;z-index:2;min-height:32px;padding:4px 6px;font-size:11px;font-weight:400;color:#a13240;border:0;border-radius:4px}
+#serverRecordList .school-watermark{width:140px;height:140px;right:-8px;bottom:20px;opacity:.065}
+#captureArea .receipt-document-title{grid-column:1/-1;margin:0;font-size:25px;line-height:1.4;font-weight:700;letter-spacing:-.6px;color:var(--work-ink)}
+#captureArea .receipt-student h2{font-size:20px;font-weight:700;letter-spacing:-.4px}
+#captureArea .receipt-fee-table th{font-size:11px;color:var(--work-muted)}
+#captureArea .receipt-fee-table th:first-child{width:77px}
+#captureArea #receiptBody strong{color:var(--work-ink)}
+#captureArea #priceSummaryArea .flex{font-size:12px;font-weight:500}
+#captureArea #priceSummaryArea #labelTotal{font-size:14px;font-weight:700}
+#captureArea #priceSummaryArea #dispTotal{font-weight:700;font-variant-numeric:tabular-nums}
+#captureArea #receiptCalendarArea>div:first-child{justify-content:flex-start;text-align:left;font-size:13px;color:var(--work-ink);margin-bottom:10px}
+#captureArea #receiptCalendarArea>div:nth-child(2){background:#edf1f3;padding:8px 0;margin:0;border:1px solid var(--work-border);border-bottom:0;color:#526777}
+#calendarReceiptLegend,#monthComparison>p{font-size:10px}#monthComparison h3{font-size:12px}.comparison-line{font-size:11px}
+#noticeTools>h3{font-size:15px;font-weight:700;margin:0 0 12px;color:var(--work-ink)}
+#noticeTools .output-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding-bottom:22px;margin-bottom:22px;border-bottom:1px solid var(--work-border)}
+#noticeTools .output-actions button{font-size:13px;font-weight:500;min-height:40px;background:#fff;color:#254761;border-color:#c9d5dc}
+#noticeTools .output-actions .primary{grid-column:1/-1;background:#204c73;color:#fff;border-color:#204c73;font-weight:700}
+#imageOutputStatus{grid-column:1/-1;line-height:1.7;margin-top:4px;font-size:12px}
+#messageComposer{padding:0;background:transparent;border:0;border-radius:0}
+#messageComposer>div:first-child{margin-bottom:14px;gap:10px}
+#messageComposer>div:first-child>div{font-size:15px;font-weight:700;color:var(--work-ink)}
+#messageComposer button{font:inherit;font-size:12px;padding:7px 10px;min-height:36px;background:#fff;color:#254761;border:1px solid #c9d5dc;border-radius:5px;font-weight:500}
+#messageControlArea select{font-size:12px;font-weight:400;padding:9px 7px;border-color:#c9d5dc;border-radius:5px;color:var(--work-ink)}
+#generatedTextArea{font-family:inherit;font-size:13px!important;font-weight:400;line-height:1.85!important;padding:14px!important;border:1px solid #d2dcdf;border-radius:6px;background:#fff;min-height:420px;color:var(--work-ink);resize:vertical}
+@media(max-width:1350px){#noticeColumn{grid-template-columns:minmax(0,820px);grid-template-areas:"controls" "paper" "tools";gap:24px}#noticeTools{position:static;display:grid;grid-template-columns:230px minmax(0,1fr);gap:0 24px}#noticeTools>h3{grid-column:1}#noticeTools .output-actions{grid-column:1;align-content:start;border:0}#messageComposer{grid-column:2;grid-row:1/3}#productHeader{flex-wrap:wrap;gap:10px 18px}#productHeader #staffAuthPanel{margin-left:auto}}
+@media(max-width:760px){#productHeader nav{order:3;margin:0;width:100%}#productHeader #staffAuthPanel{max-width:100%;margin-left:auto}#staffLoginForm input{width:128px}#staffLoginForm #staffLoginPassword{width:88px}#noticeColumn{display:block;padding:18px 10px}#noticeControls{margin-bottom:20px}#noticeTools{display:block;margin-top:24px}#messageComposer{margin-top:24px}#generatedTextArea{min-height:360px}#captureArea .receipt-document-title{font-size:22px}#captureArea .receipt-fee-table th:first-child{width:85px}#captureArea .receipt-student h2{font-size:17px}#serverRecordList .record-item{flex:0 0 200px;margin:0}#serverRecordArea .record-panel-actions{max-width:300px}#captureArea .receipt-header{gap:14px}#captureArea .receipt-content{gap:22px}}
+
+.notice-event strong .notice-teacher-name{display:inline-block;font:inherit;white-space:nowrap}
+
+#serverRecordList>div:not(.record-item){border:0;border-radius:0;background:transparent;padding:12px 0;font-size:12px;color:var(--work-muted);text-align:left}

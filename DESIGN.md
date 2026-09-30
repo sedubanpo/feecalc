@@ -7,11 +7,11 @@ colors:
   deduction: "#bd3340"
   paper: "#fffefa"
   canvas: "#f2f3f1"
-  ink: "#263c49"
-  muted: "#586d7b"
+  ink: "#18314b"
+  muted: "#526777"
   border: "#dce3e2"
   control-border: "#d2dcdf"
-  record-surface: "#fbfcfa"
+  record-surface: "#fff"
   record-dock: "#eaf0ed"
   selected-surface: "#eaf0f4"
   selected-ink: "#204c73"
@@ -22,37 +22,37 @@ colors:
   social-fill: "#faefc9"
 typography:
   title:
-    fontFamily: "Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif"
+    fontFamily: "'Noto Sans KR', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
     fontSize: "20px"
-    fontWeight: 650
+    fontWeight: 700
     lineHeight: 1.2
     letterSpacing: "-0.6px"
   headline:
-    fontFamily: "Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif"
+    fontFamily: "'Noto Sans KR', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
     fontSize: "21px"
-    fontWeight: 650
+    fontWeight: 700
     letterSpacing: "-0.4px"
   body:
-    fontFamily: "Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif"
-    fontSize: "13px"
+    fontFamily: "'Noto Sans KR', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
+    fontSize: "14px"
   label:
-    fontFamily: "Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif"
+    fontFamily: "'Noto Sans KR', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
     fontSize: "12px"
   navigation:
-    fontFamily: "Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif"
+    fontFamily: "'Noto Sans KR', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
     fontSize: "13px"
-    fontWeight: 500
+    fontWeight: 700
   notice-detail:
-    fontFamily: "Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif"
-    fontSize: "11px"
+    fontFamily: "'Noto Sans KR', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
+    fontSize: "12px"
   total:
-    fontFamily: "Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif"
+    fontFamily: "'Noto Sans KR', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
     fontSize: "20px"
     lineHeight: 1.3
 rounded:
   control: "7px"
   field: "6px"
-  record: "10px"
+  record: "8px"
   lesson: "4px"
   notice-lesson: "3px"
 spacing:
@@ -89,7 +89,7 @@ components:
   record-card:
     backgroundColor: "{colors.record-surface}"
     rounded: "{rounded.record}"
-    padding: "13px"
+    padding: "16px 13px"
   lesson:
     rounded: "{rounded.lesson}"
     padding: "7px 6px"
@@ -149,7 +149,7 @@ components:
 
 ## Typography
 
-**Display / Body Font:** Pretendard, Apple SD Gothic Neo, Malgun Gothic, sans-serif. 현행 앱은 이 우선순위를 선언한다. Pretendard 로딩을 별도로 보장하지 않으므로 설치·플랫폼에 따라 후순위 글꼴로 렌더된다. `index.html`에 남은 Noto Sans KR 규칙은 기존 영역의 호환성을 위한 것으로 신규 셸의 기본 글꼴이 아니다.
+**Display / Body Font:** Noto Sans KR. 승인 시안과 같은 글꼴을 전체 셸과 안내서에서 사용하며 index.html의 기존 웹폰트 로딩을 재사용한다. 플랫폼 기본 산세리프는 로딩 실패 시 대체 글꼴이다.
 
 브랜드는 작은 서명처럼, 작업 제목은 업무 이름처럼 읽힌다. 본문은 좁은 조건열과 달력에서도 짧은 한국어 레이블을 유지한다.
 
@@ -157,8 +157,8 @@ components:
 
 - **Title**: 헤더 제품명은 frontmatter의 title 역할. 학원명은 그 위의 작은 보조 줄(10px, 자간 .5px)이다.
 - **Headline**: 작업·안내서 제목은 headline 역할. 모바일 작업 제목은 (18px), 안내서 제목은 (19px)이다.
-- **Body / Label**: 직원 기본 본문은 body, 입력·출처·도움말은 label 역할이다. 날짜 상세 제목은 (14px, 650)이다.
-- **Notice detail**: 안내서 내역은 notice-detail 역할, 과목 제목은 (12px, 650), 강사·유형·단가는 (10px)이다. 모바일 내역 셀은 (12px), 과목 제목은 (13px)로 바뀐다.
+- **Body / Label**: 직원 기본 본문은 body, 입력·출처·도움말은 label 역할이다. 날짜 상세 제목은 (14px, 700)이다.
+- **Notice detail**: 안내서 내역은 notice-detail 역할, 과목 제목은 (12px, 700), 강사·유형·단가는 (11px)이다. 모바일 내역 셀은 (12px), 과목 제목은 (13px)로 바뀐다.
 - **Calendar detail**: 직원 수업 하위 줄은 (11px), 모바일은 (9px). 안내서 수업 제목은 (11px), 하위 시간·출결 줄은 (10px, 줄높이 1.45)이다. 출력 시 수업 줄높이는 (1.6)과 아래 여백(1px)을 적용한다.
 - **Total**: 예상 납부액은 total 역할을 사용하며 줄바꿈하지 않는다. 금액 입력·소계·할인·조정·합계는 `tabular-nums`, 안내서 금액은 오른쪽 정렬을 유지한다.
 
@@ -166,7 +166,7 @@ components:
 
 ### 직원 작업 화면
 
-직원 화면은 최대 폭 제한 없이 전체 너비를 사용한다. 데스크톱 헤더는 최소 높이(72px), 안쪽 여백(12px 26px), 브랜드·메뉴 간격(28px)이다. 왼쪽 로고는 (38px), 제품명은 title 역할, 오른쪽 목적 메뉴는 한 줄로 정렬한다. 프로토타입의 사례 선택·초기화 도구는 운영 헤더에 넣지 않는다.
+직원 화면은 최대 폭 제한 없이 전체 너비를 사용한다. 데스크톱 헤더는 최소 높이(72px), 안쪽 여백(12px 24px), 영역 간격(22px)이다. 왼쪽 로고는 (38px), 제품명은 title 역할, 오른쪽 목적 메뉴와 직원 계정은 한 줄로 정렬한다. 로그인 폼은 이메일·휴대전화, 비밀번호, 로그인 버튼의 가로 배열이며 로그인 후에는 직원명·로그아웃을 표시한다. 로그인 설명 문구는 제거하고 실제 인증 오류만 상태 영역에 표시한다. 프로토타입의 사례 선택·초기화 도구는 운영 헤더에 넣지 않는다.
 
 기본 열은 최근 기록(230px) / 수업 조건(330px) / 가변 월간 달력이다. 기록 도크는 상단(0)에 sticky, 최대 높이는 `calc(100vh - 72px)`로 내부 스크롤한다. 조건열은 안쪽 여백(18px), 달력 영역은 (22px 24px)이다. 달력과 날짜 상세는 가변 폭 / (220px), 간격(18px)으로 나란히 배치한다.
 
@@ -185,9 +185,9 @@ components:
 
 ### 학부모 안내서·출력
 
-안내서 작업 영역은 기록 오른쪽 두 열을 사용하고 문서는 중앙 최대 폭(820px), 내부 여백(24px)으로 제한한다. 금액·근거 영역(280px)과 전체 월간 달력은 간격(18px)으로 나란히 놓는다. 이 금액열은 최종 CSS 값이며 이전 인계안의 268px보다 우선한다.
+안내서 작업 영역은 기록 오른쪽 두 열을 사용하고 문서는 최대 폭(820px), 내부 여백(24px)으로 제한하고 기록 오른쪽부터 정렬한다. 이미지 출력·안내 문자 도구는 문서 오른쪽의 별도 열(280–340px)에 간격(28px)으로 배치한다. 1350px 이하에서는 도구가 문서 아래로 이동한다. 금액·근거 영역(280px)과 전체 월간 달력은 간격(18px)으로 나란히 놓는다. 이 금액열은 최종 CSS 값이며 이전 인계안의 268px보다 우선한다.
 
-세로 배치 옵션과 모바일(760px 이하)에서는 금액 요약 아래 전체 달력이 이어진다. 기본 안내서 달력 셀 최소 높이는 (66px), 세로 옵션은 (88px), 모바일은 최종 미디어 규칙에 따라 (75px)이다. 모바일 문서 여백은 (18px 12px)이다. 같은 날의 모든 표시 수업을 담아 자연스럽게 길어지고 `+N`으로 숨기지 않는다. 사용자가 기존 ‘캘린더 숨김’을 켜면 상세 수업 표시를 생략하는 기존 옵션 의미를 유지한다.
+세로 배치 옵션과 모바일(760px 이하)에서는 금액 요약 아래 전체 달력이 이어진다. 기본 안내서 달력 셀 최소 높이는 (78px), 세로 옵션은 (88px), 모바일은 최종 미디어 규칙에 따라 (75px)이다. 모바일 문서 여백은 (18px 12px)이다. 같은 날의 모든 표시 수업을 담아 자연스럽게 길어지고 `+N`으로 숨기지 않는다. 사용자가 기존 ‘캘린더 숨김’을 켜면 상세 수업 표시를 생략하는 기존 옵션 의미를 유지한다.
 
 PNG 생성은 CSS 기준 폭(820px), 배율(2), 렌더 viewport(1440px)를 사용한다. 캡처 시 병렬 배치는 (280px + 가변폭), 세로 옵션·시간표는 한 열로 고정한다. 화면에서 선택한 모바일 폭을 그대로 출력 폭으로 쓰지 않는다. 고밀도 출력은 세로로 길어질 수 있으며 현재 자동 분할 출력은 문서화하지 않는다.
 
@@ -195,7 +195,7 @@ PNG 생성은 CSS 기준 폭(820px), 배율(2), 렌더 viewport(1440px)를 사�
 
 계산·조건·기록 영역은 그림자보다 전체 표면색과 가는 구조선으로 나뉜다. 기록 카드와 조건 목록에 그림자를 반복하지 않는다. 안내서 종이에만 약한 주변 그림자(`0 8px 24px -15px #66737530`)를 둔다. 달력의 구조선과 키보드 포커스는 허용하며 선택 상태를 왼쪽 장식선으로 바꾸지 않는다.
 
-학원 워터마크는 계산 달력과 안내서 각각의 중심(50% / 50%, `translate(-50%,-50%)`)에 배치한다. 계산 워터마크 폭은 (55%), 안내서 폭은 (70%)·최대 높이(70%), 불투명도는 둘 다 (.045)다. 장식 이미지는 `pointer-events:none`, 빈 alt와 `aria-hidden`을 사용해 읽기와 조작을 방해하지 않는다. 학교 엠블럼은 기록 카드 오른쪽 아래(134px, 불투명도 .075)에 놓고 읽을 수 있는 학교명은 별도로 남긴다.
+학원 워터마크는 계산 달력과 안내서 각각의 중심(50% / 50%, `translate(-50%,-50%)`)에 배치한다. 계산 워터마크 폭은 (55%), 안내서 폭은 (70%)·최대 높이(70%), 불투명도는 둘 다 (.045)다. 장식 이미지는 `pointer-events:none`, 빈 alt와 `aria-hidden`을 사용해 읽기와 조작을 방해하지 않는다. 학교 엠블럼은 기록 카드 오른쪽 아래(140px, 불투명도 .065)에 놓고 읽을 수 있는 학교명은 별도로 남긴다.
 
 ## Shapes
 
@@ -211,13 +211,13 @@ PNG 생성은 CSS 기준 폭(820px), 배율(2), 렌더 viewport(1440px)를 사�
 
 ### Navigation and condition list
 
-목적 메뉴는 수강료 계산 / 진행·정산 / 수업 이력 / 안내서 / 시간표 / 설정이다. 선형 SVG(17px, stroke 1.5)와 레이블을 함께 사용하고 선택은 `aria-pressed`, 옅은 전체 표면·650 굵기로 표시한다. 목적 메뉴 아래 기존 계산 방식 버튼은 현재 업무에 맞는 항목만 보여 주며 `aria-current`로 상태를 알린다. 조건 제목은 최소 높이(48px), 과목 아이콘·반명과 시수·단가 보조 줄을 사용한다. 펼침 여부는 `aria-expanded`로 전달한다.
+목적 메뉴는 수강료 계산 / 진행·정산 / 수업 이력 / 안내서 / 시간표 / 설정이다. 선형 SVG(17px, stroke 1.75)와 레이블을 함께 사용하고 선택은 `aria-pressed`, 옅은 전체 표면·700 굵기로 표시한다. 목적 메뉴 아래 기존 계산 방식 버튼은 현재 업무에 맞는 항목만 보여 주며 `aria-current`로 상태를 알린다. 조건 제목은 최소 높이(48px), 과목 아이콘·반명과 시수·단가 보조 줄을 사용한다. 펼침 여부는 `aria-expanded`로 전달한다.
 
 ### Recent records and real assets
 
-기록은 데스크톱 계산·안내서 전환 동안 왼쪽에 남는다. 카드 안에는 학생·월·계산 방식·금액과 읽을 수 있는 학교명을 둔다. 학생 ID를 우선하고 유일한 이름 매칭만 대체로 사용한다. 학교 연결이 불확실하거나 등록 엠블럼이 없으면 임의 로고를 만들지 않는다. 로딩 실패는 장식 이미지만 숨기고 텍스트를 유지한다. 선택 카드에는 전체 외곽선(1px)을 사용한다.
+기록은 데스크톱 계산·안내서 전환 동안 왼쪽에 남는다. 카드 안에는 학생·월·계산 방식·금액·저장 시각과 읽을 수 있는 학교명을 둔다. 학생명(18px)과 금액(21px)을 강조하고 카드 전체를 여는 버튼으로 사용한다. 삭제 버튼은 별도 동작이며 기존 이벤트를 보존한다. 새 기록·덮어쓰기·새로고침은 작은 가로 도구로 정리한다. 학생 ID를 우선하고 유일한 이름 매칭만 대체로 사용한다. 카드 모서리는 (8px)이며 내용 버튼 여백은 (16px 13px)이다. 학교 연결이 불확실하거나 등록 엠블럼이 없으면 임의 로고를 만들지 않는다. 로딩 실패는 장식 이미지만 숨기고 텍스트를 유지한다. 선택 카드에는 전체 외곽선(1px)을 사용한다.
 
-등록된 실제 과목 아이콘은 직원 화면(13px)과 안내서 달력(9px)에서 과목명 앞에 놓는다. 사탐·사회계열은 사회 자산, 물리·화학·생명·지학은 과학 자산으로 매핑한다. 이미지 실패 시 과목명은 남긴다. 목적 메뉴 SVG와 과목의 등록 이미지 자산을 서로 대체하지 않는다.
+등록된 실제 과목 아이콘 5개를 로컬 PNG로 포함하고 원본 주소는 assets/subjects/sources.json에 기록한다. 외부 이미지의 CORS 실패 때문에 아이콘이 사라지는 문제를 방지한다. 아이콘은 직원 화면(13px)과 안내서 달력(9px)에서 과목명 앞에 놓는다. 사탐·사회계열은 사회 자산, 물리·화학·생명·지학은 과학 자산으로 매핑한다. 이미지 실패 시 과목명은 남긴다. 목적 메뉴 SVG와 과목의 등록 이미지 자산을 서로 대체하지 않는다.
 
 ### Independent calendar lessons
 
@@ -233,9 +233,9 @@ PNG 생성은 CSS 기준 폭(820px), 배율(2), 렌더 viewport(1440px)를 사�
 
 ### Grouped receipt and image output
 
-요일고정·선택형·이력확인·진행형·첫등록 안내서는 과목·강사별 한 행 안에서 유형·시수·단가·상태가 다른 산식을 나열한다. 열은 과목·강사 / 수업 내역 / 금액이며 이력 집계 단위는 ‘건’이다. 월간 달력은 과목·강사와 시간·출결을 남기고 매 회차 금액 반복과 편집 선택 외곽선을 생략한다. 예상 수업은 점선 외곽선으로 표시한다. 실제·예상·결석 의미와 확정 원본 금액은 보존하며 내부 메모·원본 대조용 편집 정보는 학부모 안내서에 넣지 않는다. 납부/차액·안내형 등은 기존 산출 표를 유지한다.
+요일고정·선택형·이력확인·진행형·첫등록 안내서는 과목·강사별 한 행 안에서 유형·시수·단가·상태가 다른 산식을 나열한다. 열은 과목·강사 / 수업 내역 / 금액이며 이력 집계 단위는 ‘건’이다. 정규 개별 수업의 표시 유형은 승인 시안의 ‘개별’로 줄이고, 저장·단가용 정규 유형 값은 그대로 보존한다. 안내서 시간 구간은 기존 축약 시간 표시 함수를 사용해 분 정보를 유지하며 압축한다. 월간 달력은 과목·강사와 시간·출결을 남기고 매 회차 금액 반복과 편집 선택 외곽선을 생략한다. 예상 수업은 점선 외곽선으로 표시한다. 실제·예상·결석 의미와 확정 원본 금액은 보존하며 내부 메모·원본 대조용 편집 정보는 학부모 안내서에 넣지 않는다. 납부/차액·안내형 등은 기존 산출 표를 유지한다.
 
-이미지 저장·복사는 문서 밖에 놓고 생성 상태를 표시한다. 폰트 준비와 이미지 load/error를 기다린 후 렌더하며, 생성 중 계산이 바뀌면 재출력을 안내한다. 복사 실패는 파일 저장으로 전환하고 다운로드 제한 시 생성 이미지 열기를 제공한다. 실패해도 입력은 유지한다. 금액 미확인과 학생·월 불일치는 저장·출력 전에 확인하도록 표시한다.
+이미지 저장·복사·생성 이미지 열기와 안내 문자 생성은 문서 우측 도구 영역에 놓고 생성 상태를 표시한다. 이 도구와 로그인 영역은 출력 이미지에 포함하지 않는다. 폰트 준비와 이미지 load/error를 기다린 후 렌더하며, 생성 중 계산이 바뀌면 재출력을 안내한다. 복사 실패는 파일 저장으로 전환하고 다운로드 제한 시 생성 이미지 열기를 제공한다. 실패해도 입력은 유지한다. 금액 미확인과 학생·월 불일치는 저장·출력 전에 확인하도록 표시한다.
 
 ### Optional previous-month hours
 
@@ -265,3 +265,5 @@ PNG 생성은 CSS 기준 폭(820px), 배율(2), 렌더 viewport(1440px)를 사�
 - Don't 누락 전월 자료와 미확인 단가를 0으로 표시하거나 서로 다른 학생을 비교한다.
 - Don't 인트라넷 원본 금액을 표시 단가로 다시 계산하거나 미확인 후보를 자동 적용한다.
 - Don't 프로토타입의 가상 자료·설명 메뉴를 운영 기능으로 기록하거나 실제 메신저 수신 가독성이 검증됐다고 주장한다.
+
+2026-09-30 디테일 보완 검증: `.impeccable/review/20260930-detail/`의 안내서 A/B, wide·mobile, UI·회귀 결과를 기준으로 비교한다. 실제 학부모 메신저 전송 검증은 수행하지 않았다.

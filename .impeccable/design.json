@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-09-30T12:41:18+09:00",
+  "generatedAt": "2026-09-30T04:16:08+00:00",
   "title": "Design System: 에스에듀 반포관 수강료 계산기",
   "extensions": {
     "colorMeta": {
@@ -337,7 +337,7 @@
       "refersTo": "button-primary",
       "description": "선택 날짜 적용·이미지 저장의 명시적 실행",
       "html": "<button class=\"ds-button ds-primary\">선택 날짜에 적용</button>",
-      "css": ".ds-button{font-family:Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;font-size:13px;color:var(--work-ink,#263c49);min-height:38px;padding:8px 11px;border:1px solid #d2dcdf;border-radius:7px;background:#fbfcfa;color:#385567;cursor:pointer;transition:background-color .15s,color .15s}.ds-button:hover{background-color:#edf2f4}.ds-button:focus-visible{outline:2px solid #175a8c;outline-offset:2px}.ds-button:active{transform:scale(.96)}.ds-button:disabled{opacity:.5;cursor:not-allowed}@media(prefers-reduced-motion:reduce){.ds-button{transition:none}}.ds-primary,.ds-primary:hover{background:#175a8c;color:#fff;border-color:#175a8c}"
+      "css": ".ds-button{font-family:'Noto Sans KR', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;font-size:13px;color:var(--work-ink,#18314b);min-height:38px;padding:8px 11px;border:1px solid #d2dcdf;border-radius:7px;background:#fbfcfa;color:#385567;cursor:pointer;transition:background-color .15s,color .15s}.ds-button:hover{background-color:#edf2f4}.ds-button:focus-visible{outline:2px solid #175a8c;outline-offset:2px}.ds-button:active{transform:scale(.96)}.ds-button:disabled{opacity:.5;cursor:not-allowed}@media(prefers-reduced-motion:reduce){.ds-button{transition:none}}.ds-primary,.ds-primary:hover{background:#175a8c;color:#fff;border-color:#175a8c}"
     },
     {
       "name": "보조 작업 버튼",
@@ -345,7 +345,7 @@
       "refersTo": "button-secondary",
       "description": "선택 수업 제외·계산 작업 복귀",
       "html": "<button class=\"ds-button\">선택 수업 제외</button>",
-      "css": ".ds-button{font-family:Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;font-size:13px;color:var(--work-ink,#263c49);min-height:38px;padding:8px 11px;border:1px solid #d2dcdf;border-radius:7px;background:#fbfcfa;color:#385567;cursor:pointer;transition:background-color .15s,color .15s}.ds-button:hover{background-color:#edf2f4}.ds-button:focus-visible{outline:2px solid #175a8c;outline-offset:2px}.ds-button:active{transform:scale(.96)}.ds-button:disabled{opacity:.5;cursor:not-allowed}@media(prefers-reduced-motion:reduce){.ds-button{transition:none}}"
+      "css": ".ds-button{font-family:'Noto Sans KR', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;font-size:13px;color:var(--work-ink,#18314b);min-height:38px;padding:8px 11px;border:1px solid #d2dcdf;border-radius:7px;background:#fbfcfa;color:#385567;cursor:pointer;transition:background-color .15s,color .15s}.ds-button:hover{background-color:#edf2f4}.ds-button:focus-visible{outline:2px solid #175a8c;outline-offset:2px}.ds-button:active{transform:scale(.96)}.ds-button:disabled{opacity:.5;cursor:not-allowed}@media(prefers-reduced-motion:reduce){.ds-button{transition:none}}"
     },
     {
       "name": "일괄 시수 입력",
@@ -353,7 +353,7 @@
       "refersTo": "input",
       "description": "명시적 레이블과 0.25시간 단위의 직원 입력",
       "html": "<label class=\"ds-field\">시수<input type=\"number\" min=\"0\" step=\"0.25\" value=\"3\"></label>",
-      "css": ".ds-field{font-family:Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;font-size:13px;color:var(--work-ink,#263c49);display:flex;flex-direction:column;gap:5px;font-size:12px}.ds-field input{font:inherit;color:inherit;min-height:38px;padding:8px;border:1px solid #d2dcdf;background:#fbfcfa;border-radius:6px;max-width:100%;font-variant-numeric:tabular-nums;caret-color:#175a8c}.ds-field input:focus-visible{outline:2px solid #175a8c;outline-offset:2px}"
+      "css": ".ds-field{font-family:'Noto Sans KR', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;font-size:13px;color:var(--work-ink,#18314b);display:flex;flex-direction:column;gap:5px;font-size:12px}.ds-field input{font:inherit;color:inherit;min-height:38px;padding:8px;border:1px solid #d2dcdf;background:#fbfcfa;border-radius:6px;max-width:100%;font-variant-numeric:tabular-nums;caret-color:#175a8c}.ds-field input:focus-visible{outline:2px solid #175a8c;outline-offset:2px}"
     },
     {
       "name": "목적 메뉴",
@@ -361,14 +361,14 @@
       "refersTo": "navigation",
       "description": "작은 선형 SVG와 한국어 업무 이름; 활성 전체 표면",
       "html": "<nav class=\"ds-nav\" aria-label=\"수강료 업무 메뉴\"><button aria-pressed=\"true\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M4 3h16v18H4zM7 7h10M7 11h2m4 0h4M7 15h2m4 0h4\"/></svg>수강료 계산</button><button aria-pressed=\"false\">안내서</button></nav>",
-      "css": ".ds-nav{display:flex;gap:4px;align-items:center}.ds-nav button{font-family:Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;font-size:13px;color:var(--work-ink,#263c49);display:inline-flex;align-items:center;gap:7px;border:0;background:transparent;color:var(--work-muted,#586d7b);min-height:38px;padding:8px 12px;border-radius:7px;font-weight:500;cursor:pointer;transition:background-color .15s,color .15s}.ds-nav button:hover{background:#edf2f4}.ds-nav button[aria-pressed=true]{background:#eaf0f4;color:#204c73;font-weight:650}.ds-nav svg{width:17px;height:17px}.ds-nav button:focus-visible{outline:2px solid #175a8c;outline-offset:2px}.ds-nav button:active{transform:scale(.96)}@media(prefers-reduced-motion:reduce){.ds-nav button{transition:none}}"
+      "css": ".ds-nav{display:flex;gap:4px;align-items:center}.ds-nav button{font-family:'Noto Sans KR', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;font-size:13px;color:var(--work-ink,#18314b);display:inline-flex;align-items:center;gap:7px;border:0;background:transparent;color:#2d485e;min-height:38px;padding:8px 12px;border-radius:6px;font-weight:700;cursor:pointer;transition:background-color .15s,color .15s}.ds-nav button:hover{background:#edf2f4}.ds-nav button[aria-pressed=true]{background:#eaf0f4;color:#204c73;font-weight:700}.ds-nav svg{width:17px;height:17px}.ds-nav button:focus-visible{outline:2px solid #175a8c;outline-offset:2px}.ds-nav button:active{transform:scale(.96)}@media(prefers-reduced-motion:reduce){.ds-nav button{transition:none}}"
     },
     {
       "name": "과목 표시 탭",
       "kind": "chip",
       "description": "기존 조건 목록의 과목 필터; 계산 합계와 별개",
       "html": "<div class=\"ds-subject-tabs\" role=\"tablist\" aria-label=\"과목\"><button role=\"tab\" aria-selected=\"true\">전체</button><button role=\"tab\" aria-selected=\"false\">수학</button></div>",
-      "css": ".ds-subject-tabs{display:flex;gap:5px}.ds-subject-tabs button{font-family:Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;font-size:13px;color:var(--work-ink,#263c49);min-height:34px;font-size:11px;padding:8px;border:0;background:#eef1ee;color:#536775;cursor:pointer}.ds-subject-tabs button:hover{background:#edf2f4}.ds-subject-tabs button[aria-selected=true]{background:#dfeaf1;color:#174f78}.ds-subject-tabs button:focus-visible{outline:2px solid #175a8c;outline-offset:2px}.ds-subject-tabs button:active{transform:scale(.96)}"
+      "css": ".ds-subject-tabs{display:flex;gap:5px}.ds-subject-tabs button{font-family:'Noto Sans KR', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;font-size:13px;color:var(--work-ink,#18314b);min-height:34px;font-size:11px;padding:8px;border:0;background:#eef1ee;color:#536775;cursor:pointer}.ds-subject-tabs button:hover{background:#edf2f4}.ds-subject-tabs button[aria-selected=true]{background:#dfeaf1;color:#174f78}.ds-subject-tabs button:focus-visible{outline:2px solid #175a8c;outline-offset:2px}.ds-subject-tabs button:active{transform:scale(.96)}"
     },
     {
       "name": "최근 저장 기록",
@@ -376,7 +376,7 @@
       "refersTo": "record-card",
       "description": "학생·학교명·월·저장액을 읽는 왼쪽 기록; 실제 학교 엠블럼은 등록 자산으로만 연결",
       "html": "<article class=\"ds-record\"><strong>검증 학생</strong><p>2026년 9월</p><span>학교명</span><button class=\"ds-open\">저장본 열기 <b>2,900,000원</b></button></article>",
-      "css": ".ds-record{font-family:Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;font-size:13px;color:var(--work-ink,#263c49);position:relative;isolation:isolate;overflow:hidden;background:#fbfcfa;border:0;box-shadow:none;border-radius:10px;margin:12px 0;padding:13px}.ds-record p{font-size:11px}.ds-record>span{display:block;font-size:11px;color:var(--work-muted,#586d7b);margin:6px 0}.ds-open{display:flex;justify-content:space-between;gap:12px;min-height:36px;width:100%;padding:10px 0;border:0;border-radius:0;background:transparent;color:inherit;cursor:pointer;font:inherit;font-size:11px;font-variant-numeric:tabular-nums}.ds-open:hover{background:#edf2f4}.ds-open:focus-visible{outline:2px solid #175a8c;outline-offset:2px}.ds-open:active{transform:scale(.96)}"
+      "css": ".ds-record{font-family:'Noto Sans KR', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;font-size:13px;color:var(--work-ink,#18314b);position:relative;isolation:isolate;overflow:hidden;background:#fff;border:0;box-shadow:none;border-radius:8px;margin:12px 0;padding:16px 13px}.ds-record p{font-size:11px}.ds-record>span{display:block;font-size:11px;color:var(--work-muted,#526777);margin:6px 0}.ds-open{display:flex;justify-content:space-between;gap:12px;min-height:36px;width:100%;padding:10px 0;border:0;border-radius:0;background:transparent;color:inherit;cursor:pointer;font:inherit;font-size:11px;font-variant-numeric:tabular-nums}.ds-open:hover{background:#edf2f4}.ds-open:focus-visible{outline:2px solid #175a8c;outline-offset:2px}.ds-open:active{transform:scale(.96)}"
     },
     {
       "name": "독립 수업 항목",
@@ -384,21 +384,21 @@
       "refersTo": "lesson",
       "description": "직원 달력에서 같은 날의 별도 수업을 모두 표현",
       "html": "<button class=\"ds-lesson\"><strong>수학 · 강사</strong><span>3시간</span><small>+87,500원</small></button>",
-      "css": ".ds-lesson{font-family:Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;font-size:13px;color:var(--work-ink,#263c49);display:block;text-align:left;width:100%;padding:7px 6px;min-height:0;border:0;border-radius:4px;margin-bottom:5px;line-height:1.5;overflow-wrap:anywhere;background:#d9e8ff;color:#355c9a;cursor:pointer;transition:background-color .15s,color .15s}.ds-lesson strong{display:block;font-weight:600}.ds-lesson span,.ds-lesson small{display:block;font-size:11px}.ds-lesson small{color:var(--work-blue,#095eb8)}.ds-lesson:hover{background:#d9e8ff}.ds-lesson:focus-visible{outline:2px solid #175a8c;outline-offset:2px}.ds-lesson:active{transform:scale(.96)}@media(prefers-reduced-motion:reduce){.ds-lesson{transition:none}}"
+      "css": ".ds-lesson{font-family:'Noto Sans KR', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;font-size:13px;color:var(--work-ink,#18314b);display:block;text-align:left;width:100%;padding:7px 6px;min-height:0;border:0;border-radius:4px;margin-bottom:5px;line-height:1.5;overflow-wrap:anywhere;background:#d9e8ff;color:#355c9a;cursor:pointer;transition:background-color .15s,color .15s}.ds-lesson strong{display:block;font-weight:600}.ds-lesson span,.ds-lesson small{display:block;font-size:11px}.ds-lesson small{color:var(--work-blue,#095eb8)}.ds-lesson:hover{background:#d9e8ff}.ds-lesson:focus-visible{outline:2px solid #175a8c;outline-offset:2px}.ds-lesson:active{transform:scale(.96)}@media(prefers-reduced-motion:reduce){.ds-lesson{transition:none}}"
     },
     {
       "name": "과목·강사별 안내서 행",
       "kind": "custom",
       "description": "부호 없는 단가와 파란 청구 합계를 구분한 실제 문서 구조",
       "html": "<table class=\"ds-fee\"><tbody><tr><td><strong>수학</strong><span>강사</span></td><td><div>개별정규 3h × 8회<small>87,500원/회</small></div></td><td>+700,000원</td></tr></tbody></table>",
-      "css": ".ds-fee{font-family:Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;font-size:13px;color:var(--work-ink,#263c49);width:100%;border-collapse:collapse;table-layout:fixed;background:var(--work-paper,#fffefa)}.ds-fee td{padding:10px 3px;border-bottom:1px solid var(--work-border,#dce3e2);font-size:11px;vertical-align:top;overflow-wrap:anywhere}.ds-fee td:first-child{width:74px}.ds-fee strong{font-size:12px;font-weight:650}.ds-fee span{display:block;color:var(--work-muted,#586d7b);font-size:10px;margin-top:3px}.ds-fee td:nth-child(2){font-size:10px;line-height:1.5}.ds-fee small{display:block;font-size:10px;color:var(--work-muted,#586d7b)}.ds-fee td:last-child{width:83px;font-weight:550;white-space:nowrap;text-align:right;color:var(--work-blue,#095eb8);font-variant-numeric:tabular-nums}"
+      "css": ".ds-fee{font-family:'Noto Sans KR', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;font-size:13px;color:var(--work-ink,#18314b);width:100%;border-collapse:collapse;table-layout:fixed;background:var(--work-paper,#fffefa)}.ds-fee td{padding:10px 3px;border-bottom:1px solid var(--work-border,#dce3e2);font-size:12px;vertical-align:top;overflow-wrap:anywhere}.ds-fee td:first-child{width:77px}.ds-fee strong{font-size:12px;font-weight:700}.ds-fee span{display:block;color:var(--work-muted,#526777);font-size:11px;margin-top:3px}.ds-fee td:nth-child(2){font-size:11px;line-height:1.5}.ds-fee small{display:block;font-size:11px;color:var(--work-muted,#526777)}.ds-fee td:last-child{width:83px;font-weight:500;white-space:nowrap;text-align:right;color:var(--work-blue,#095eb8);font-variant-numeric:tabular-nums}"
     },
     {
       "name": "전월 원본 후보",
       "kind": "custom",
       "description": "직원이 출처 날짜와 변경 사유를 확인하고 선택하는 조건",
       "html": "<label class=\"ds-candidate\"><input type=\"checkbox\"><span><strong>수학 · 강사 · 화 · 3h · 87,500원/회</strong><small>근거: 09-08, 09-15 · 다음 달 시간표·변경 안내 대조</small></span></label>",
-      "css": ".ds-candidate{font-family:Pretendard, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;font-size:13px;color:var(--work-ink,#263c49);display:flex;align-items:start;gap:9px;padding:10px 0;border-bottom:1px solid var(--work-border,#dce3e2)}.ds-candidate input{width:16px;height:16px;accent-color:#175a8c}.ds-candidate small{display:block;font-size:11px;color:var(--work-muted,#586d7b);line-height:1.6;margin-top:4px}.ds-candidate input:focus-visible{outline:2px solid #175a8c;outline-offset:2px}"
+      "css": ".ds-candidate{font-family:'Noto Sans KR', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;font-size:13px;color:var(--work-ink,#18314b);display:flex;align-items:start;gap:9px;padding:10px 0;border-bottom:1px solid var(--work-border,#dce3e2)}.ds-candidate input{width:16px;height:16px;accent-color:#175a8c}.ds-candidate small{display:block;font-size:11px;color:var(--work-muted,#526777);line-height:1.6;margin-top:4px}.ds-candidate input:focus-visible{outline:2px solid #175a8c;outline-offset:2px}"
     }
   ],
   "narrative": {

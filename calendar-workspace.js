@@ -14,7 +14,7 @@
     const originalReceiptHead=document.querySelector('.receipt-fee-table thead').innerHTML;
     let sourceSnapshot=null,sourceContext='',candidateResult=null,fetchToken=0,outputPending=false,legacySnapshot=null,draftMonth=null;
     const iconPaths={calculate:'M4 3h16v18H4zM7 7h10M7 11h2m4 0h4M7 15h2m4 0h4',progress:'M4 20V10m8 10V4m8 16v-7',history:'M4 8a9 9 0 1 1-1 7M4 3v5h5m3 0v5l3 2',notice:'M6 3h8l4 4v14H6zM14 3v5h4M9 12h6m-6 4h6',timetable:'M5 3v4m14-4v4M3 10h18M5 5h14v16H5z',settings:'M4 7h16M4 17h16M8 4v6m8 4v6'};
-    const svg=key=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${iconPaths[key]||iconPaths.calculate}"/></svg>`;
+    const svg=key=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${iconPaths[key]||iconPaths.calculate}"/></svg>`;
     const subjectIcon=s=>{const key=/사탐|사회|역사|지리|윤리/.test(s)?'사회':/물리|화학|생명|지학/.test(s)?'과학':s;const url=SUBJECT_ICONS[key];return url?`<img class="subject-icon" src="${esc(url)}" crossorigin="anonymous" alt="" aria-hidden="true" onerror="this.hidden=true">`:'';};
     function scheduleOf(row){try{return JSON.parse(row.dataset.schedule||'{}');}catch{return {};}}
     function readRows(){return rowList().map(row=>({name:row.querySelector('.sub-name').value,hours:getBillableDuration(row,row.querySelector('.sub-name').value,0),rate:row.querySelector('.sub-rate').value===''?null:Number(row.querySelector('.sub-rate').value),rateKnown:row.querySelector('.sub-rate').value!=='',rateMode:getRowRateMode(row),days:[...row.querySelectorAll('.day-chk:checked')].map(c=>Number(c.value)),dates:[...(selectRowDates[row.id.replace('srow-','')]||[])],excludedDates:[...(autoRowExcludedDates[row.id.replace('arow-','')]||[])],schedule:scheduleOf(row),legacyAggregate:row.dataset.legacyAggregate==='true'}));}
@@ -56,7 +56,16 @@
           <div id="calendarBatch" class="calendar-batch"><label>적용할 수업 조건<select id="calendarTemplate"></select></label><label>시수<input id="calendarHours" type="number" min="0" step="0.25"></label><label>단가<input id="calendarRate" type="number" min="0" step="any"></label><span id="calendarDiff" role="status"></span><div><button type="button" id="applyCalendar" class="primary">선택 날짜에 적용</button><button type="button" id="removeCalendar">선택 수업 제외</button></div></div>
           <p class="calendar-help">날짜의 체크 상자는 여러 날짜 선택, 날짜 제목은 당일 내역 확인입니다. 수업을 누르면 해당 조건을 선택합니다.</p>`;
         controls.after(work);
-        const authDetails=document.createElement('details');authDetails.id='staffDetails';authDetails.innerHTML='<summary>직원 계정</summary>';el('staffAuthPanel').before(authDetails);authDetails.append(el('staffAuthPanel'));el('serverRecordArea').querySelector('h3').textContent='최근 저장 기록';
+        const auth=el('staffAuthPanel');header.append(auth);auth.setAttribute('aria-label','직원 계정');
+        auth.querySelectorAll(':scope > p:not(#staffAuthStatus)').forEach(p=>p.remove());
+        const staffName=document.createElement('span');staffName.id='headerStaffName';auth.prepend(staffName);
+        el('staffLoginId').placeholder='이메일·휴대전화';el('staffLoginPassword').placeholder='비밀번호';
+        el('staffLogout').textContent='로그아웃';el('staffLogout').title='로그아웃 및 입력 초기화';
+        new MutationObserver(syncHeaderAuth).observe(el('staffAuthStatus'),{childList:true,subtree:true,characterData:true});
+        el('serverRecordArea').querySelector('h3').textContent='최근 저장 기록';
+        el('serverRecordArea').querySelector('.record-panel-header').parentElement.querySelector('p')?.remove();
+        el('receiptSubTitle').classList.add('receipt-document-title');el('captureArea').querySelector('.receipt-header').append(el('receiptSubTitle'));
+        el('dispTotal').parentElement.classList.add('receipt-total');
         const preview=el('captureArea').parentElement;preview.id='noticeColumn';
         const memoWidget=el('studentMemoWidget');if(memoWidget)controls.append(memoWidget);
         const review=document.createElement('div');review.id='noticeControls';review.innerHTML=`<div class="notice-heading"><h2>안내서 검토</h2><button type="button" id="returnWork">계산 작업</button></div><div class="notice-options"><label>출력 배치<select id="noticeLayout"><option value="compact">금액 요약 + 전체 달력</option><option value="portrait">세로 배치</option></select></label><label><input type="checkbox" id="showMonthComparison"> 전월 대비 시수 표시</label><button type="button" id="loadPreviousHours">전월 실제 시수 불러오기</button><span id="previousStatus" role="status"></span></div>`;
@@ -64,7 +73,9 @@
         const legend=document.createElement('p');legend.id='calendarReceiptLegend';legend.textContent='날짜별 수업은 달력에, 금액 산출 근거는 과목·강사별 내역에 표시합니다.';el('receiptMiniCalGrid').after(legend);
         const compare=document.createElement('section');compare.id='monthComparison';legend.after(compare);
         const output=preview.querySelector('.image-save-button').parentElement;
-        output.querySelector('.image-save-button').remove();const outputBar=document.createElement('div');outputBar.className='output-actions';outputBar.innerHTML=`<button type="button" id="saveNoticeImage" class="primary">이미지 저장</button><button type="button" id="copyNoticeImage">이미지 복사</button><button type="button" id="openNoticeImage" hidden>생성 이미지 열기</button><span id="imageOutputStatus" role="status"></span>`;output.prepend(outputBar);
+        output.id='noticeTools';output.setAttribute('role','complementary');output.setAttribute('aria-label','이미지 출력과 안내 문자');
+        const composer=output.querySelector('.bg-gray-100');composer.id='messageComposer';composer.querySelector('.text-xs.font-bold').textContent='안내 문자';
+        output.querySelector('.image-save-button').remove();const outputBar=document.createElement('div');outputBar.className='output-actions';outputBar.innerHTML=`<button type="button" id="saveNoticeImage" class="primary">이미지 저장</button><button type="button" id="copyNoticeImage">이미지 복사</button><button type="button" id="openNoticeImage" hidden>생성 이미지 열기</button><span id="imageOutputStatus" role="status"></span>`;output.prepend(outputBar);const outputTitle=document.createElement('h3');outputTitle.textContent='이미지 출력';output.prepend(outputTitle);
         el('saveNoticeImage').onclick=()=>outputImage('save');el('copyNoticeImage').onclick=()=>outputImage('copy');
         el('undoCalendar').onclick=restoreUndo;el('viewNotice').onclick=()=>{view='notice';refresh();};el('returnWork').onclick=()=>{view='work';refresh();};
         el('calendarSubject').onchange=e=>{selectedSubject=e.target.value;renderWork();};
@@ -157,12 +168,12 @@
         if(!['auto','select','history','progress','first'].includes(currentTab)){document.querySelector('.receipt-fee-table thead').innerHTML=originalReceiptHead;return;}
         document.querySelector('.receipt-fee-table thead').innerHTML='<tr><th>과목·강사</th><th>수업 내역</th><th id="thAmount">금액</th></tr>';
         const billingLessons=currentTab==='first'?C.expand(collectFirstRegistrationRows().map(r=>({...r,dates:Array.from({length:getFirstRegistrationBillingCount(r)},(_,i)=>i+1)})),'select',month()):lessons;
-        el('receiptBody').innerHTML=C.groups(billingLessons).map(g=>`<tr><td><strong>${subjectIcon(g.subject)}${esc(g.subject)}</strong><span class="receipt-teacher">${esc(g.teacher||'강사 미기재')}</span></td><td><div class="receipt-variants">${[...g.variants.values()].map(v=>`<span>${esc(v.type)} ${v.hours}h × ${v.count}${currentTab==='history'?'건':'회'}${v.status==='예정'||v.status==='출석'?'':' · '+esc(v.status)}<small>${v.rate!==null&&v.rate!==undefined?money(v.rate)+(v.rateMode==='perHour'?'/시간':'/회'):v.amount===null?'금액 확인 필요':money(v.amount)+'/회'}</small></span>`).join('')}</div></td><td class="${tone(g.total)}">${signed(g.pending?null:g.total)}</td></tr>`).join('');
+        el('receiptBody').innerHTML=C.groups(billingLessons).map(g=>`<tr><td><strong>${subjectIcon(g.subject)}${esc(g.subject)}</strong><span class="receipt-teacher">${esc(g.teacher||'강사 미기재')}</span></td><td><div class="receipt-variants">${[...g.variants.values()].map(v=>`<span>${esc(v.type==='개별정규'?'개별':v.type)} ${v.hours}h × ${v.count}${currentTab==='history'?'건':'회'}${v.status==='예정'||v.status==='출석'?'':' · '+esc(v.status)}<small>${v.rate!==null&&v.rate!==undefined?money(v.rate)+(v.rateMode==='perHour'?'/시간':'/회'):v.amount===null?'금액 확인 필요':money(v.amount)+'/회'}</small></span>`).join('')}</div></td><td class="${tone(g.total)}">${signed(g.pending?null:g.total)}</td></tr>`).join('');
         const cal=el('receiptMiniCalGrid');cal.replaceChildren();
         for(let i=0;i<C.weekday(month(),1);i++){const c=document.createElement('div');c.className='receipt-cal-cell outside';cal.append(c);}
         for(let d=1;d<=C.daysInMonth(month());d++){
             const c=document.createElement('div');c.className='receipt-cal-cell';c.innerHTML=`<div class="rc-date">${d}</div>`;
-            if(!isReceiptCalendarDetailsHidden())for(const r of lessons.filter(r=>r.day===d))c.insertAdjacentHTML('beforeend',`<div class="notice-event ${getSubjectColorClass(r.subject,false,false)}${r.status==='예상'?' predicted':''}"><strong>${subjectIcon(r.subject)}${esc(r.subject)}${r.teacher?' · '+esc(r.teacher):''}</strong><span>${esc(r.start&&r.end?`${r.start}–${r.end}`:r.hours+'시간')}${r.status==='예정'||r.status==='출석'?'':' · '+esc(r.status)}</span></div>`);cal.append(c);
+            if(!isReceiptCalendarDetailsHidden())for(const r of lessons.filter(r=>r.day===d))c.insertAdjacentHTML('beforeend',`<div class="notice-event ${getSubjectColorClass(r.subject,false,false)}${r.status==='예상'?' predicted':''}"><strong>${subjectIcon(r.subject)}${esc(r.subject)}${r.teacher?' <span class="notice-teacher-name">· '+esc(r.teacher)+'</span>':''}</strong><span>${esc(r.start&&r.end?formatCompactTimeRange(r.start,r.end):r.hours+'시간')}${r.status==='예정'||r.status==='출석'?'':' · '+esc(r.status)}</span></div>`);cal.append(c);
         }
     }
     function refresh(){
@@ -173,7 +184,7 @@
         document.body.dataset.view=notice?'notice':'work';document.body.dataset.mode=currentTab;
         el('noticeColumn').hidden=!notice;el('calendarWorkspace').hidden=notice;el('controlColumn').hidden=notice;el('controlColumn').inert=!!legacySnapshot;
         el('noticeControls').querySelector('h2').textContent=currentTab==='timetable'?'시간표 검토':'안내서 검토';
-        el('staffDetails').open=!isServerConfigured();
+        syncHeaderAuth();
         for(const b of el('productHeader').querySelectorAll('[data-purpose]'))b.setAttribute('aria-pressed',String(b.dataset.purpose===(notice?(currentTab==='timetable'?'timetable':'notice'):currentTab==='progress'||currentTab==='payment'?'progress':currentTab==='history'?'history':currentTab==='timetable'?'timetable':'calculate')));
         el('tabNavRow').querySelectorAll('button').forEach(b=>{const m=b.id.slice(4);b.hidden=currentTab==='ai'||(currentTab==='progress'||currentTab==='payment'?!['progress','payment'].includes(m):currentTab==='timetable'?m!=='timetable':currentTab==='history'?m!=='history':!['auto','select','manual','first','guide'].includes(m));});
         el('captureArea').classList.toggle('portrait-notice',options.layout==='portrait');el('noticeLayout').value=options.layout;el('showMonthComparison').checked=options.showComparison;
@@ -189,8 +200,14 @@
         document.querySelectorAll('[onclick="copyGeneratedText()"]').forEach(b=>b.disabled=currentTab==='history'&&!!historyMismatch());
         if(currentTab==='history'&&lessons.some(r=>r.amount===null))el('dispTotal').textContent='금액 확인 필요';
         decorateConditions();renderGroupedReceipt(lessons);renderWork();renderComparison(lessons);renderPlacements();
-        for(const id of ['dispSubtotal','dispDiscount','dispAdj']){const n=el(id);if(!n)continue;const num=Number(n.textContent.replace(/[^\d.-]/g,''))*(n.textContent.includes('−')?-1:1);n.textContent=signed(num);n.classList.remove('positive','negative');n.classList.add(tone(num));}
+        for(const id of ['dispSubtotal','dispDiscount','dispAdj']){const n=el(id);if(!n)continue;const num=Number(n.textContent.replace(/[^\d.-]/g,''))*(n.textContent.includes('−')?-1:1);n.textContent=signed(num);n.classList.remove('positive','negative','neutral');n.classList.add(tone(num));}
         el('dispTotal')?.classList.add('expected-total');
+        el('dispTotal')?.parentElement.classList.add('receipt-total');
+        for(const row of el('priceSummaryArea').querySelectorAll('.flex,.payment-summary-row')){
+            const label=row.firstElementChild,value=row.lastElementChild;
+            if(!label||!value||label===value||!['수업 누계','수강료 소계'].includes(label.textContent.trim()))continue;
+            const amount=Number(value.textContent.replace(/[^\d.-]/g,''));value.textContent=signed(amount);value.classList.remove('positive','negative','neutral');value.classList.add(tone(amount));
+        }
         if(currentTab==='ai'){el('calendarWorkspace').hidden=true;view='notice';document.body.dataset.view='notice';el('noticeColumn').hidden=false;el('controlColumn').hidden=true;el('calendarBatch').hidden=true;}
         updateServerSaveModeUi();decorateRecords();
     }
@@ -344,11 +361,36 @@
     const oldRecords=renderServerRecordList;renderServerRecordList=function(){oldRecords();decorateRecords();};
     const knownSchools=typeof SCHOOL_ICONS==='undefined'?{}:SCHOOL_ICONS;
     function decorateRecords(){
-        const cards=[...document.querySelectorAll('#serverRecordList .record-item')];cards.forEach((card,i)=>{
-            if(card.querySelector('.school-label'))return;const record=serverRecordHistory[i];if(!record)return;
+        if(!isServerConfigured()&&!document.querySelector('#serverRecordList .record-item')){el('serverRecordList').textContent='';return;}
+        [...document.querySelectorAll('#serverRecordList .record-item')].forEach((card,i)=>{
+            const record=serverRecordHistory[i];if(!record)return;
             const byName=studentRegistry.filter(s=>s.name===record.studentName),student=record.payload?.studentId?studentRegistry.find(s=>s.id===record.payload.studentId):byName.length===1?byName[0]:null;
-            if(!student?.school)return;const label=document.createElement('span');label.className='school-label';label.textContent=student.school;card.querySelector('.record-open-btn').before(label);
-            const url=student.schoolLogoUrl||student.schoolEmblemUrl||knownSchools[student.school];if(url&&/^https:\/\//.test(url)){const img=document.createElement('img');img.className='school-watermark';img.src=url;img.alt='';img.setAttribute('aria-hidden','true');img.onerror=()=>img.hidden=true;card.prepend(img);}
+            const open=card.querySelector('.record-open-btn'),remove=card.querySelector('.record-delete-btn');if(!open||!remove)return;
+            if(!card.querySelector('.record-student')){
+                open.innerHTML=`<span class="record-kind">${esc(TAB_LABELS[record.currentTab]||'수강료 기록')}</span><strong class="record-student">${esc(record.studentName||'학생명')}</strong><span class="record-month">${esc(record.targetYear||'—')}년 ${esc(record.targetMonth||'—')}월</span><b class="record-amount">${esc(record.totalText||'0원')}</b><span class="record-open-label">저장본 열기 <span aria-hidden="true">↗</span></span><time class="record-saved-at">${esc(formatSavedAt(record.savedAt))}</time>`;
+                remove.title=`${record.studentName||'학생'} 저장 기록 삭제`;card.replaceChildren(open,remove);
+            }
+            // Registry and records arrive independently; enrich an existing card once school data arrives.
+            if(!student?.school)return;
+            let label=card.querySelector('.school-label');if(!label){label=document.createElement('span');label.className='school-label';card.querySelector('.record-month').before(label);}label.textContent=student.school;
+            const url=student.schoolLogoUrl||student.schoolEmblemUrl||knownSchools[student.school];
+            if(url&&/^https:\/\//.test(url)){
+                let img=card.querySelector('.school-watermark');if(!img){img=document.createElement('img');img.className='school-watermark';img.alt='';img.setAttribute('aria-hidden','true');img.onerror=()=>img.hidden=true;card.prepend(img);}
+                if(img.getAttribute('src')!==url){img.hidden=false;img.src=url;}
+            }else card.querySelector('.school-watermark')?.remove();
         });
     }
+    let headerAuth={state:'loading',actor:null};
+    function syncHeaderAuth(){
+        if(!el('headerStaffName'))return;
+        const name=headerAuth.state==='ready'?headerAuth.actor?.name:'';
+        el('headerStaffName').textContent=name||'';el('headerStaffName').hidden=!name;
+        const status=el('staffAuthStatus'),routine=!['error','denied'].includes(headerAuth.state)&&/^(로그인 기능을 준비하고 있습니다\.|로그인하고 있습니다\.|직원 계정으로 로그인해 주세요\.|.+님으로 로그인했습니다\.|직원 권한을 확인하고 있습니다\.)$/.test(status.textContent.trim());
+        status.hidden=!status.textContent.trim()||routine;
+    }
+    const oldAuthState=handleStaffAuthState;
+    handleStaffAuthState=async function(state){headerAuth=state;const pending=oldAuthState(state);syncHeaderAuth();await pending;syncHeaderAuth();};
+    const oldRecordStatus=setServerRecordStatus;
+    setServerRecordStatus=function(message,tone='info'){oldRecordStatus(message,tone);el('serverRecordStatus').hidden=tone==='info'&&/직원 로그인|로그인 후|로그인해 주세요/.test(message);};
+
 })();
