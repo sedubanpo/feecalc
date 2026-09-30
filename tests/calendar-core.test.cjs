@@ -14,3 +14,16 @@ test('comparison preserves missing, zero, new and removed subjects',()=>{const r
 test('schedule validation rejects invalid dates and markup before state changes',()=>{assert.throws(()=>C.validateSchedule({overrides:{32:{hours:2,rate:100}}},'2026-09'));assert.throws(()=>C.validateSchedule({overrides:{2:{hours:'<img>',rate:100}}},'2026-09'));assert.throws(()=>C.validateSchedule({additional:[{id:'bad',day:2,hours:2,rate:-1}]},'2026-09'));});
 
 test('legacy aggregate rounding remains stable while new calculations round per lesson',()=>{const r={name:'수학',hours:1.25,rate:10000.5,rateMode:'perHour',dates:[1,2,3],legacyAggregate:true};assert.equal(C.expand([r],'select','2026-09').reduce((n,r)=>n+r.amount,0),37502);r.legacyAggregate=false;assert.equal(C.expand([r],'select','2026-09').reduce((n,r)=>n+r.amount,0),37503);});
+
+test('next month needs three distinct weekly occurrences and excludes unknown/one-off terms',()=>{
+ const row=(id,date,extra={})=>({id,date,className:'수학-개별(검증)-2h',teacher:'검증',minutes:120,amount:62500,start:'16:00',end:'18:00',kind:'regular',...extra});
+ const lessons=[1,8,15].map((d,i)=>row('stable'+i,'2026-09-'+String(d).padStart(2,'0')));
+ lessons.push(row('dup','2026-09-15'),row('once','2026-09-02'),...['03','10','17'].map((d,i)=>row('unknown'+i,'2026-09-'+d,{amount:null})),row('makeup','2026-09-22',{kind:'cancelMakeup'}),row('note','2026-09-29',{note:'오늘만 대체'}));
+ const p=C.nextMonthPlan({month:'2026-09',lessons},'2026-10');assert.equal(p.groups.length,1);assert.deepEqual(p.groups[0].days,[2]);assert.deepEqual(p.groups[0].dates,[6,13,20,27]);assert.equal(p.groups[0].total,250000);assert.equal(p.groups[0].schedule.overrides[6].start,'16:00');assert.equal(p.skipped,6);
+ assert.equal(C.nextMonthPlan({month:'2026-09',lessons:lessons.slice(0,2)},'2026-10').groups.length,0);
+});
+test('next-month rollover keeps independent sessions and valid February dates',()=>{
+ const lessons=[1,8,15].flatMap(d=>['10:00','16:00'].map((start,i)=>({id:d+start,date:'2026-12-'+String(d).padStart(2,'0'),className:'수학-개별(검증)-2h',teacher:'검증',minutes:120,amount:50000,start,end:i?'18:00':'12:00',kind:'regular'})));
+ const p=C.nextMonthPlan({month:'2026-12',lessons},'2027-01');assert.equal(p.groups.length,2);assert.equal(p.groups.reduce((n,g)=>n+g.total,0),400000);
+ assert.ok(C.nextMonthPlan({month:'2026-12',lessons},'2027-02').groups.every(g=>g.dates.every(d=>d<=28)));
+});

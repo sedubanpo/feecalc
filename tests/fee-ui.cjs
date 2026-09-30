@@ -195,7 +195,7 @@ const root=path.resolve(__dirname,'..'),evidence=process.env.EVIDENCE_ROOT;
  assert.equal(await page.evaluate(()=>testWrites.length),writes);
  assert.match(await page.locator('#workCalendar [data-day="2"] .calendar-event').innerText(),/임시/);
  await page.locator('#workCalendar [data-day="2"] .calendar-event').click();
- await page.locator('#dayDetail').getByRole('button',{name:'임시 수업 삭제'}).click();
+ await page.locator('#lessonEditDelete').click();
  assert.equal(await page.evaluate(()=>progressState.temporary.length),8);
  await page.locator('#undoCalendar').click();await page.waitForFunction(()=>progressVerified&&!progressLoading);
  assert.equal(await page.evaluate(()=>progressState.temporary.length),9);
@@ -224,6 +224,56 @@ const root=path.resolve(__dirname,'..'),evidence=process.env.EVIDENCE_ROOT;
  await page.evaluate(()=>{document.getElementById('targetMonth').value=9;applyCalculatorState({currentTab:'auto',studentName:'검증학생',studentId:'one',targetYear:2026,targetMonth:9,autoRows:[]});});
  });
  await check('IME composition does not match or fetch partial names',async()=>{await page.evaluate(()=>{beginStudentNameComposition();handleStudentNameInput();});assert.equal(await page.evaluate(()=>matchedStudent()),null);await page.evaluate(()=>{studentNameComposing=false;handleStudentNameInput();});assert.equal(await page.evaluate(()=>matchedStudent().id),'one');});
+
+ await check('progress edits and next-month drafts preserve source, confirmation, totals and undo',async()=>{
+ await page.setViewportSize({width:1440,height:1000});
+ await page.evaluate(()=>{
+ const source=(id,day,name,teacher,hours,amount,start,end)=>({id,date:'2026-09-'+String(day).padStart(2,'0'),className:name,teacher,minutes:hours*60,amount,start,end,kind:'regular'});
+ testProgressSnapshot={studentId:'one',month:'2026-09',fetchedAt:'2026-09-30T00:00:00Z',lessons:[...[1,8,15,22].map((d,i)=>source('next-m'+i,d,'수학-개별(검증강사)-2h','검증강사',2,62500,'16:00','18:00')),...[3,10,17].map((d,i)=>source('next-k'+i,d,'국어-개별(다른강사)-3h','다른강사',3,87500,'18:00','21:00')),source('one-off',25,'영어-개별(검증강사)-2h','검증강사',2,62500,'16:00','18:00')]};
+ applyCalculatorState({currentTab:'progress',studentId:'one',studentName:'검증학생',targetYear:2026,targetMonth:9,progress:{snapshot:testProgressSnapshot,mode:'auto',cutoff:'2026-09-29',endDate:'2026-09-30'},adjustmentItems:[{label:'8월 이월금',amount:-50000,kind:'carry'}]});FeeCalendar.navigate('progress');
+ });
+ await page.waitForFunction(()=>progressVerified&&!progressLoading);
+ const original=await page.evaluate(()=>JSON.stringify(progressState.snapshot)),writes=await page.evaluate(()=>testWrites.length);
+ await page.locator('#workCalendar [data-day="15"] .calendar-event').click();
+ assert.equal(await page.locator('#calendarLessonDialog').evaluate(n=>n.open),true);
+ await page.locator('#lessonEditHours').fill('1.5');await page.locator('#lessonEditRate').fill('50000');await page.locator('#lessonEditEnd').fill('17:30');
+ if(evidence&&process.env.NEXT_VISUAL){fs.mkdirSync(evidence,{recursive:true});await page.screenshot({path:path.join(evidence,'edit-desktop.png')});await page.setViewportSize({width:390,height:844});await page.screenshot({path:path.join(evidence,'edit-mobile.png')});assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));await page.setViewportSize({width:1440,height:1000});}
+ await page.locator('#lessonEditSave').click();
+ assert.equal(await page.evaluate(()=>progressResult().actual.find(r=>r.id==='next-m2').amount),50000);
+ assert.equal(await page.evaluate(()=>JSON.stringify(progressState.snapshot)),original);
+ const saved=await page.evaluate(()=>collectCalculatorState());await page.evaluate(s=>applyCalculatorState(s),saved);await page.waitForFunction(()=>progressVerified&&!progressLoading);
+ assert.equal(await page.evaluate(()=>progressResult().actual.find(r=>r.id==='next-m2').minutes),90);
+ await page.locator('#workCalendar [data-day="22"] .calendar-event').click();await page.locator('#lessonEditDelete').click();
+ assert.equal(await page.evaluate(()=>progressResult().actual.length),7);
+ assert.equal(await page.evaluate(()=>JSON.stringify(progressState.snapshot)),original);
+ await page.locator('#undoCalendar').click();await page.waitForFunction(()=>progressVerified&&!progressLoading);
+ assert.equal(await page.evaluate(()=>progressResult().actual.length),8);
+ await page.locator('[onclick="openNextMonthWizard()"]').click();
+ assert.equal(await page.locator('#nextMonthModal').evaluate(n=>n.open),true);
+ assert.equal(await page.locator('#nextMonthRows [data-group]').count(),2);
+ assert.match(await page.locator('#nextMonthTotal').innerText(),/9회.*687,500원/);
+ assert.match(await page.locator('#nextMonthSkipped').innerText(),/2건/);
+ await page.locator('#nextMonthRows [data-group]').last().uncheck();assert.ok(!/687,500/.test(await page.locator('#nextMonthTotal').innerText()));await page.locator('#nextMonthRows [data-group]').last().check();
+ if(evidence&&process.env.NEXT_VISUAL){await page.screenshot({path:path.join(evidence,'next-month-desktop.png')});await page.setViewportSize({width:390,height:844});await page.waitForTimeout(250);await page.locator('#nextMonthConfirm').scrollIntoViewIfNeeded();await page.screenshot({path:path.join(evidence,'next-month-mobile.png')});assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));await page.setViewportSize({width:1440,height:1000});}
+ await page.keyboard.press('Escape');assert.equal(await page.evaluate(()=>currentTab),'progress');assert.equal(await page.evaluate(()=>progressMonth()),'2026-09');
+ await page.locator('[onclick="openNextMonthWizard()"]').click();await page.locator('#nextMonthConfirm').click();
+ assert.equal(await page.evaluate(()=>currentTab),'auto');assert.equal(await page.locator('#targetMonth').inputValue(),'10');
+ assert.equal(await page.locator('#autoList .auto-row').count(),2);assert.equal(await page.locator('#workCalendar .calendar-event').count(),9);
+ assert.equal(await page.locator('#dispTotal').innerText(),'687,500원');assert.equal(await page.evaluate(()=>collectCalculatorState().progress),null);
+ assert.equal(await page.evaluate(()=>collectAdjustmentItems().length),0);assert.equal(await page.evaluate(()=>testWrites.length),writes);
+ assert.match(await page.locator('#workCalendar [data-day="6"] .calendar-event').innerText(),/16:00–18:00/);
+ await page.locator('#workCalendar [data-day="6"] .calendar-event').click();await page.locator('#lessonEditRate').fill('40000');await page.locator('#lessonEditHours').fill('1');await page.locator('#lessonEditEnd').fill('17:00');await page.locator('#lessonEditSave').click();
+ assert.equal(await page.locator('#dispTotal').innerText(),'665,000원');
+ await page.locator('#loadSource').click();assert.equal(await page.locator('#autoList .auto-row').count(),2);
+ const autoSaved=await page.evaluate(()=>collectCalculatorState());await page.evaluate(s=>applyCalculatorState(s),autoSaved);assert.equal(await page.locator('#dispTotal').innerText(),'665,000원');
+ await page.locator('#workCalendar [data-day="6"] .calendar-event').click();await page.locator('#lessonEditDelete').click();
+ assert.equal(await page.locator('#workCalendar .calendar-event').count(),8);assert.equal(await page.locator('#dispTotal').innerText(),'625,000원');
+ await page.locator('#undoCalendar').click();assert.equal(await page.locator('#dispTotal').innerText(),'665,000원');
+ // An unverified or insufficient month must leave the current draft intact.
+ await page.evaluate(()=>{switchTab('progress');window.nextInsufficient=collectCalculatorState();prepareNextMonthCalculation();});
+ assert.equal(await page.locator('#targetMonth').inputValue(),'10');assert.equal(await page.evaluate(()=>currentTab),'progress');assert.equal(await page.evaluate(()=>testWrites.length),writes);
+ await page.evaluate(()=>{switchTab('auto');openNextMonthWizard();});await page.keyboard.press('Escape');
+ });
 
  await check('signed-out account controls fit narrow and intermediate headers',async()=>{
  await page.evaluate(()=>testAuthState({state:'anonymous',gateway:testGateway}));

@@ -92,3 +92,17 @@ test('temporary draft validation rejects wrong month, identity, unknown/negative
  for(const extra of [{id:'source'},{date:'2026-10-01'},{amount:null},{amount:-1},{minutes:null},{minutes:0},{start:'25:00'},{end:'17:00'},{teacher:''},{className:''}])assert.throws(()=>core.validateTemporary([{...valid,...extra}],'2026-09'));
  assert.throws(()=>core.validateTemporary([valid,valid],'2026-09'));assert.deepEqual(core.validateTemporary(undefined,'2026-09'),[]);
 });
+
+test('local actual edits/exclusions change totals without changing the source or other sessions',()=>{
+ const s=state([row('one','2026-09-09'),row('two','2026-09-09',2,{start:'19:00',end:'21:00'})]);s.endDate=s.cutoff;
+ const before=JSON.stringify(s.snapshot);s.edits=[{id:'one',minutes:90,amount:50000,start:'16:00',end:'17:30'}];s.removedActual=['two'];
+ const r=core.calculate(s);assert.equal(r.actual.length,1);assert.equal(r.actualAmount,50000);assert.equal(r.actual[0].minutes,90);assert.equal(r.actual[0].edited,true);assert.equal(JSON.stringify(s.snapshot),before);
+ assert.equal(core.calculate(JSON.parse(JSON.stringify(s))).actualAmount,50000);
+ s.edits=[];s.removedActual=[];assert.equal(core.calculate(s).actualAmount,120000);
+ assert.throws(()=>core.validateEdits([{id:'one',minutes:NaN,amount:5,start:'',end:''}]));
+ assert.throws(()=>core.validateEdits([{id:'one',minutes:120,amount:-5,start:'',end:''}]));
+});
+test('local forecast edit applies once and cannot change identity/date',()=>{
+ const s=state([row('one','2026-09-09')]);s.edits=[{id:'one@2026-09-23',minutes:60,amount:30000,start:'16:00',end:'17:00',date:'2026-10-01',className:'other'}];
+ const r=core.calculate(s);assert.equal(r.predictedAmount,90000);assert.equal(r.predicted[0].date,'2026-09-23');assert.equal(r.predicted[0].className,s.snapshot.lessons[0].className);assert.equal(r.actualAmount,60000);
+});

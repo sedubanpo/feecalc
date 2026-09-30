@@ -102,6 +102,22 @@
         }
         return groups;
     }
+    // Three distinct weekly occurrences with known terms can seed a next-month draft.
+    function nextMonthPlan(snapshot,targetMonth){
+        const result=candidates(snapshot);
+        const stable=result.rows.filter(r=>{
+            const dates=[...new Set(r.sourceDates)].sort();
+            return dates.length>=3 && (Date.parse(dates.at(-1))-Date.parse(dates[0]))/86400000>=14 && finite(r.amount);
+        });
+        const groups=groupCandidates(stable).map(group=>{
+            const members=stable.filter(r=>group.sourceIds.some(id=>r.sourceIds.includes(id)));
+            const days=group.weekdays.map(w=>w.day),dates=Array.from({length:daysInMonth(targetMonth)},(_,i)=>i+1).filter(d=>days.includes(weekday(targetMonth,d)));
+            const overrides={};
+            for(const day of dates){const r=members.find(r=>r.weekday===weekday(targetMonth,day));if(/^([01]\d|2[0-3]):[0-5]\d$/.test(r?.start)&&/^([01]\d|2[0-3]):[0-5]\d$/.test(r?.end)&&r.end>r.start)overrides[day]={start:r.start,end:r.end};}
+            return {...group,days,dates,count:dates.length,total:dates.length*Math.round(group.amount),schedule:{overrides}};
+        });
+        return {groups,skipped:normalizeSnapshot(snapshot).filter(r=>!groups.some(g=>g.sourceIds.includes(r.id))).length};
+    }
     function validateSchedule(value,month){
         const s=value||{},last=daysInMonth(month),valid=d=>Number.isInteger(d)&&d>=1&&d<=last;
         for(const key of ['extraDates','removed'])if(s[key]!==undefined&&(!Array.isArray(s[key])||s[key].some(d=>!valid(d))))throw Error('달력 추가·제외 날짜를 확인해 주세요.');
@@ -109,8 +125,10 @@
             if(!valid(Number(day))||!v||['hours','rate'].some(k=>v[k]!==undefined&&(!finite(v[k])||Number(v[k])<0)))throw Error('회차별 시수·단가를 확인해 주세요.');
         }
         if(s.additional!==undefined&&(!Array.isArray(s.additional)||s.additional.some(v=>!valid(v.day)||typeof v.id!=='string'||!finite(v.hours)||v.hours<0||!finite(v.rate)||v.rate<0)))throw Error('추가 회차를 확인해 주세요.');
+        const clock=v=>typeof v==='string'&&/^([01]\d|2[0-3]):[0-5]\d$/.test(v);
+        for(const v of [...Object.values(s.overrides||{}),...(s.additional||[])])if((v.start||v.end)&&(!clock(v.start)||!clock(v.end)||v.end<=v.start))throw Error('회차별 시작·종료 시각을 확인해 주세요.');
         return JSON.parse(JSON.stringify(s));
     }
-    const api={info,expand,groups,hoursBySubject,compareHours,candidates,groupCandidates,normalizeSnapshot,daysInMonth,weekday,validateSchedule};
+    const api={nextMonthPlan,info,expand,groups,hoursBySubject,compareHours,candidates,groupCandidates,normalizeSnapshot,daysInMonth,weekday,validateSchedule};
     if(typeof module!=='undefined')module.exports=api;else root.FeeCalendarCore=api;
 })(typeof window==='undefined'?{}:window);

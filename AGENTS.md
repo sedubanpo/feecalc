@@ -25,3 +25,9 @@
 - Use the loaded Noto Sans KR weights consistently: 400/500 for body and labels, 700 for headings, amounts, and action buttons. Action buttons share the restrained navy palette and rounded geometry.
 - Financial adjustment rows use one type selector with a matching SVG icon, description, signed amount, and delete action. Avoid repeating three type buttons on every row. Negative deductions are red; positive amounts display + in blue.
 - Progress calendar blank areas and per-date + buttons open temporary lesson entry, with single-date or weekday repetition and a count/amount preview. Temporary lessons live in the calculation draft, are clearly marked, and support removal/undo and saved draft restoration. Never write them into intranet source lessons. Reject student/month mismatches and exclude overlapping occurrences of the same course.
+
+## Progress next-month planning — 2026-09-30
+
+- The next-month dialog shares the draft dialog typography, warm paper surface, restrained navy actions, and mobile sizing.
+- Next-month tuition from progress lessons becomes a weekday-fixed draft. Preview and select eligible courses before advancing. Require three distinct weekly occurrences with known duration/fee; do not silently import one-off, makeup, unresolved, or temporary forecast lessons.
+- Clicking a calendar lesson opens occurrence editing/deletion, with an amount preview and undo. Progress edits and exclusions are saved only in the calculator draft; the intranet snapshot remains unchanged.
