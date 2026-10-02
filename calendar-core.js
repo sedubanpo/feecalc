@@ -36,13 +36,14 @@
         });
         return out.sort((a,b)=>a.day-b.day||(a.start||'').localeCompare(b.start||'')||a.subject.localeCompare(b.subject,'ko'));
     }
-    function groups(lessons) {
+    function groups(lessons,byTeacher=false) {
         const map=new Map();
         for(const r of lessons){
-            const key=JSON.stringify([r.subject,r.teacher]);
-            if(!map.has(key))map.set(key,{subject:r.subject,teacher:r.teacher,total:0,pending:false,variants:new Map()});
-            const g=map.get(key);g.total+=r.amount||0;g.pending ||= r.amount===null;
-            const vkey=JSON.stringify([r.type,r.hours,r.rate,r.rateMode,r.amount,r.status]);
+            const teacher=String(r.teacher||'').trim().replace(/T$/i,'').trim();
+            const key=JSON.stringify(byTeacher&&teacher?[teacher]:[r.subject,teacher]);
+            if(!map.has(key))map.set(key,{subject:r.subject,teacher,subjects:[],total:0,pending:false,variants:new Map()});
+            const g=map.get(key);if(!g.subjects.includes(r.subject))g.subjects.push(r.subject);g.total+=r.amount||0;g.pending ||= r.amount===null;
+            const vkey=JSON.stringify([byTeacher?r.subject:null,r.type,r.hours,r.rate,r.rateMode,r.amount,r.status]);
             if(!g.variants.has(vkey))g.variants.set(vkey,{...r,count:0,totalHours:0});
             const v=g.variants.get(vkey);v.count++;v.totalHours+=r.hours||0;
         }

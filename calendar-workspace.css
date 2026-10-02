@@ -112,51 +112,51 @@ body.calendar-app{padding:0!important;background:#f2f3f1!important;color:var(--w
 .notice-heading{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
 .notice-options{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin:0 0 22px;font-size:13px}
 .notice-options label{display:flex;gap:7px;align-items:center}.notice-options select{border:1px solid #d2dcdf;padding:8px;border-radius:6px;background:#fffefa}
-#captureArea{grid-area:paper;width:100%;max-width:1120px;margin:0!important;background:#fffefa!important;border:0!important;border-radius:0!important;padding:24px!important;box-shadow:0 8px 24px -15px #66737530!important;position:relative;isolation:isolate;overflow:hidden}
-#captureArea .watermark-img{left:50%!important;top:50%!important;right:auto!important;bottom:auto!important;transform:translate(-50%,-50%)!important;width:70%!important;height:auto!important;max-height:70%;object-fit:contain;opacity:.045!important;z-index:-1;pointer-events:none}
-#captureArea .receipt-header{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;padding:0 0 20px;margin:0 0 20px;border-bottom:1px solid var(--work-border);gap:16px;background:transparent}
-#captureArea .receipt-brand{gap:10px;align-items:center}
-#captureArea .receipt-brand img{width:40px;height:40px}
-#captureArea .receipt-brand h1{font-size:14px;margin-bottom:3px}
-#captureArea .receipt-brand p{font-size:17px;font-weight:700;line-height:1.4;max-width:400px}
-#captureArea .receipt-student h2{font-size:18px}
-#captureArea #dateBadge{background:transparent;color:#5b6f7a;padding:0;box-shadow:none;font-size:11px;margin-top:5px}
-#captureArea .receipt-content{display:grid!important;grid-template-columns:minmax(300px,420px) minmax(0,1fr);gap:18px;align-items:start}
-#captureArea .receipt-left,#captureArea .receipt-right{width:auto!important;order:0!important;min-width:0;flex:auto;background:transparent}
-#captureArea .receipt-fee-table{table-layout:fixed;margin-bottom:14px}
-#captureArea .receipt-fee-table th{font-size:10px;padding:8px 3px;border:0;color:#627482;white-space:normal}
-#captureArea #thAmount{width:83px!important}
-#captureArea #receiptBody>tr>td{padding:10px 3px;border-bottom:1px solid var(--work-border);font-size:12px;vertical-align:top;overflow-wrap:anywhere}
-#captureArea #receiptBody>tr>td:last-child{font-size:12px;font-weight:700;font-family:inherit;white-space:nowrap;text-align:right}
-#captureArea #receiptBody strong{font-size:12px;font-weight:700}
+:is(#captureArea,#priorNoticePaper){grid-area:paper;width:100%;max-width:1120px;margin:0!important;background:#fffefa!important;border:0!important;border-radius:0!important;padding:24px!important;box-shadow:0 8px 24px -15px #66737530!important;position:relative;isolation:isolate;overflow:hidden}
+:is(#captureArea,#priorNoticePaper) .watermark-img{left:50%!important;top:50%!important;right:auto!important;bottom:auto!important;transform:translate(-50%,-50%)!important;width:70%!important;height:auto!important;max-height:70%;object-fit:contain;opacity:.045!important;z-index:-1;pointer-events:none}
+:is(#captureArea,#priorNoticePaper) .receipt-header{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;padding:0 0 20px;margin:0 0 20px;border-bottom:1px solid var(--work-border);gap:16px;background:transparent}
+:is(#captureArea,#priorNoticePaper) .receipt-brand{gap:10px;align-items:center}
+:is(#captureArea,#priorNoticePaper) .receipt-brand img{width:40px;height:40px}
+:is(#captureArea,#priorNoticePaper) .receipt-brand h1{font-size:14px;margin-bottom:3px}
+:is(#captureArea,#priorNoticePaper) .receipt-brand p{font-size:17px;font-weight:700;line-height:1.4;max-width:400px}
+:is(#captureArea,#priorNoticePaper) .receipt-student h2{font-size:18px}
+:is(#captureArea,#priorNoticePaper) :is(#dateBadge,[data-receipt-part="dateBadge"]){background:transparent;color:#5b6f7a;padding:0;box-shadow:none;font-size:11px;margin-top:5px}
+:is(#captureArea,#priorNoticePaper) .receipt-content{display:grid!important;grid-template-columns:minmax(300px,420px) minmax(0,1fr);gap:18px;align-items:start}
+:is(#captureArea,#priorNoticePaper) .receipt-left,:is(#captureArea,#priorNoticePaper) .receipt-right{width:auto!important;order:0!important;min-width:0;flex:auto;background:transparent}
+:is(#captureArea,#priorNoticePaper) .receipt-fee-table{table-layout:fixed;margin-bottom:14px}
+:is(#captureArea,#priorNoticePaper) .receipt-fee-table th{font-size:10px;padding:8px 3px;border:0;color:#627482;white-space:normal}
+:is(#captureArea,#priorNoticePaper) :is(#thAmount,[data-receipt-part="thAmount"]){width:83px!important}
+:is(#captureArea,#priorNoticePaper) :is(#receiptBody,[data-receipt-part="receiptBody"])>tr>td{padding:10px 3px;border-bottom:1px solid var(--work-border);font-size:12px;vertical-align:top;overflow-wrap:anywhere}
+:is(#captureArea,#priorNoticePaper) :is(#receiptBody,[data-receipt-part="receiptBody"])>tr>td:last-child{font-size:12px;font-weight:700;font-family:inherit;white-space:nowrap;text-align:right}
+:is(#captureArea,#priorNoticePaper) :is(#receiptBody,[data-receipt-part="receiptBody"]) strong{font-size:12px;font-weight:700}
 .receipt-teacher{display:block;color:var(--work-muted);font-size:11px;margin-top:3px}
 .receipt-variants{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,105px),1fr));gap:9px 10px;margin-top:7px}.receipt-variants>span{font-size:11px;line-height:1.55}.variant-condition{display:block;font-weight:600;word-break:keep-all}.receipt-variants small{display:block;font-size:11px;color:var(--work-muted)}
-#captureArea #priceSummaryArea>div{border:0;background:transparent;box-shadow:none;border-radius:0;padding:8px 0;gap:10px}
-#captureArea #priceSummaryArea .flex{font-size:11px;gap:6px;line-height:1.6}
-#captureArea #dispTotal{font-size:20px!important;line-height:1.3;white-space:nowrap}
-#captureArea #labelTotal{font-size:13px}
-#captureArea #priceSummaryArea .receipt-total{background:#edf1f3;border-radius:5px;padding:12px 8px;margin-top:8px}
-#captureArea #receiptCalendarArea{border:0;padding:0;background:transparent;backdrop-filter:none;box-shadow:none;margin:0}
-#captureArea .receipt-cal-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));border-top:1px solid var(--work-border);border-left:1px solid var(--work-border);border-radius:0;overflow:visible}
-#captureArea .receipt-cal-cell{padding:3px;min-height:62px;border-right:1px solid var(--work-border);border-bottom:1px solid var(--work-border);min-width:0;background:transparent;gap:3px}
-#captureArea .receipt-cal-cell.outside{background:#edf1ef}
-#captureArea .rc-date{font-size:10px;line-height:1.5;padding:0 2px;background:none;color:#2b4658;border:0;min-height:0}
+:is(#captureArea,#priorNoticePaper) :is(#priceSummaryArea,[data-receipt-part="priceSummaryArea"])>div{border:0;background:transparent;box-shadow:none;border-radius:0;padding:8px 0;gap:10px}
+:is(#captureArea,#priorNoticePaper) :is(#priceSummaryArea,[data-receipt-part="priceSummaryArea"]) .flex{font-size:11px;gap:6px;line-height:1.6}
+:is(#captureArea,#priorNoticePaper) :is(#dispTotal,[data-receipt-part="dispTotal"]){font-size:20px!important;line-height:1.3;white-space:nowrap}
+:is(#captureArea,#priorNoticePaper) :is(#labelTotal,[data-receipt-part="labelTotal"]){font-size:13px}
+:is(#captureArea,#priorNoticePaper) :is(#priceSummaryArea,[data-receipt-part="priceSummaryArea"]) .receipt-total{background:#edf1f3;border-radius:5px;padding:12px 8px;margin-top:8px}
+:is(#captureArea,#priorNoticePaper) :is(#receiptCalendarArea,[data-receipt-part="receiptCalendarArea"]){border:0;padding:0;background:transparent;backdrop-filter:none;box-shadow:none;margin:0}
+:is(#captureArea,#priorNoticePaper) .receipt-cal-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));border-top:1px solid var(--work-border);border-left:1px solid var(--work-border);border-radius:0;overflow:visible}
+:is(#captureArea,#priorNoticePaper) .receipt-cal-cell{padding:3px;min-height:62px;border-right:1px solid var(--work-border);border-bottom:1px solid var(--work-border);min-width:0;background:transparent;gap:3px}
+:is(#captureArea,#priorNoticePaper) .receipt-cal-cell.outside{background:#edf1ef}
+:is(#captureArea,#priorNoticePaper) .rc-date{font-size:10px;line-height:1.5;padding:0 2px;background:none;color:#2b4658;border:0;min-height:0}
 .notice-event{width:100%;display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:1px 4px;padding:4px 3px;border-radius:3px;margin:2px 0;overflow-wrap:anywhere;line-height:1.4}
 .notice-event strong{flex:1 0 auto;min-width:0;font-size:11px;white-space:nowrap}.notice-event .notice-time{flex:0 1 auto;font-size:10px;font-weight:500}.notice-event .notice-meta{display:flex;flex-wrap:wrap;gap:1px 4px;flex-basis:100%;font-size:9px;line-height:1.45;word-break:keep-all}.notice-event .notice-meta span{display:inline;font-size:9px}.notice-event .notice-time{white-space:nowrap}.notice-event .subject-icon{width:9px;height:9px;margin-right:2px}
 .notice-event.predicted{outline:1px dashed #8696a2;outline-offset:-1px}
-#calendarReceiptLegend,#monthComparison>p{font-size:9px;line-height:1.6;color:#536b7a;margin:8px 0}
-#monthComparison{border-top:1px solid var(--work-border);padding-top:9px;margin-top:10px}
-#monthComparison h3{font-size:11px;font-weight:700}
+#calendarReceiptLegend,:is(#monthComparison,[data-receipt-part="monthComparison"])>p{font-size:9px;line-height:1.6;color:#536b7a;margin:8px 0}
+:is(#monthComparison,[data-receipt-part="monthComparison"]){border-top:1px solid var(--work-border);padding-top:9px;margin-top:10px}
+:is(#monthComparison,[data-receipt-part="monthComparison"]) h3{font-size:11px;font-weight:700}
 .comparison-line{display:flex;justify-content:space-between;gap:8px;font-size:10px;margin:5px 0}
-#captureArea #infoBox,#captureArea #voucherGuideBox{border:0;box-shadow:none;background:transparent;padding:10px 0;margin-top:12px;border-top:1px solid var(--work-border);font-size:10px}
-#captureArea .voucher-guide-title{font-size:10px;line-height:1.6}#captureArea .voucher-guide-desc{font-size:9px;line-height:1.6}
-#captureArea.portrait-notice .receipt-content{grid-template-columns:minmax(0,1fr)}
-#captureArea.portrait-notice .receipt-fee-table{max-width:none}
-#captureArea.portrait-notice .receipt-cal-cell{min-height:88px}
+:is(#captureArea,#priorNoticePaper) :is(#infoBox,[data-receipt-part="infoBox"]),:is(#captureArea,#priorNoticePaper) #voucherGuideBox{border:0;box-shadow:none;background:transparent;padding:10px 0;margin-top:12px;border-top:1px solid var(--work-border);font-size:10px}
+:is(#captureArea,#priorNoticePaper) .voucher-guide-title{font-size:10px;line-height:1.6}:is(#captureArea,#priorNoticePaper) .voucher-guide-desc{font-size:9px;line-height:1.6}
+:is(#captureArea,#priorNoticePaper).portrait-notice .receipt-content{grid-template-columns:minmax(0,1fr)}
+:is(#captureArea,#priorNoticePaper).portrait-notice .receipt-fee-table{max-width:none}
+:is(#captureArea,#priorNoticePaper).portrait-notice .receipt-cal-cell{min-height:88px}
 #noticeControls{grid-area:controls;min-width:0}#noticeTools{grid-area:tools;min-width:0;max-width:none;margin:0;position:sticky;top:20px}
 .output-actions{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}.output-actions span{flex-basis:100%;font-size:12px;color:var(--work-muted)}
-.calendar-app[data-mode=timetable] #captureArea .receipt-content{grid-template-columns:minmax(0,1fr)}
-.calendar-app[data-mode=timetable] #captureArea .receipt-left{display:none}
+.calendar-app[data-mode=timetable] :is(#captureArea,#priorNoticePaper) .receipt-content{grid-template-columns:minmax(0,1fr)}
+.calendar-app[data-mode=timetable] :is(#captureArea,#priorNoticePaper) .receipt-left{display:none}
 #timetablePlacement{padding:10px 0;border-bottom:1px solid var(--work-border);margin-bottom:14px}
 #timetablePlacement h3{font-size:15px;font-weight:700}#timetablePlacement p{font-size:12px;line-height:1.7;color:var(--work-muted);margin:8px 0}
 .placement-row{padding:10px 0;border-bottom:1px solid var(--work-border);display:flex;flex-wrap:wrap;gap:8px}
@@ -165,17 +165,17 @@ body.calendar-app{padding:0!important;background:#f2f3f1!important;color:var(--w
 @media(min-width:1900px){#workspaceGrid{grid-template-columns:230px 340px minmax(0,1fr)}.calendar-body{grid-template-columns:minmax(0,1fr) 260px}.calendar-day{min-height:135px}}
 @media(max-width:1350px){#workspaceGrid{grid-template-columns:210px 300px minmax(0,1fr)}#calendarWorkspace{padding:18px}.calendar-body{grid-template-columns:minmax(0,1fr)}.day-detail{position:static;display:flex;flex-wrap:wrap;gap:12px}.day-detail h3{flex-basis:100%}.day-lesson{min-width:180px}.calendar-day{min-height:112px}.calendar-toolbar{gap:8px}}
 @media(max-width:1050px){#productHeader{gap:12px;padding:12px 18px}#productHeader button{padding:8px 9px;font-size:12px}#workspaceGrid{grid-template-columns:190px minmax(250px,300px) minmax(0,1fr)}#controlColumn{padding:14px}.calendar-event strong{font-size:11px}.calendar-event span,.calendar-event small{font-size:10px}#calendarWorkspace{grid-column:2/-1;grid-row:2}#controlColumn{grid-column:2/-1;display:block;border:0;max-height:470px;overflow:auto}#recordsDock{grid-row:1/3}.calendar-batch{grid-template-columns:minmax(0,1fr) 80px 100px}#noticeColumn{grid-row:1}}
-@media(max-width:760px){#productHeader{flex-wrap:wrap;padding:12px 14px;gap:10px}.product-brand img{width:34px;height:34px}.product-brand strong{font-size:19px}#productHeader nav{width:100%;overflow:auto;gap:0}#productHeader button{flex-shrink:0;min-height:38px;padding:8px 10px}#workspaceGrid{display:block!important}#recordsDock{position:static;max-height:none;padding:12px}#serverRecordArea h3{font-size:13px}#serverRecordList{display:flex;overflow-x:auto;gap:10px}#serverRecordList .record-item{flex:0 0 200px;margin:0}#staffAuthPanel{max-width:none}#controlColumn{padding:16px;max-height:560px;overflow:auto;border-bottom:1px solid var(--work-border)}#calendarWorkspace,#noticeColumn{padding:16px 10px}.work-heading h2{font-size:18px}.work-heading>div:last-child{display:flex;flex-direction:column;gap:5px}.source-tools{gap:10px}.calendar-day{padding:2px;min-height:100px}.calendar-event strong{font-size:10px}.calendar-event span,.calendar-event small{font-size:9px}#calendarWorkspace .calendar-event{padding:4px 2px}.calendar-day-head input{width:12px;height:12px}.calendar-day-head{gap:0}.calendar-toolbar{font-size:11px}#calendarWorkspace #weekdaySelect button{min-width:30px}#captureArea{width:100%;padding:18px 12px!important}#captureArea .receipt-content{grid-template-columns:minmax(0,1fr)}#captureArea .receipt-header{gap:10px}#captureArea .receipt-brand p{font-size:14px}#captureArea .receipt-brand h1{font-size:12px}#captureArea .receipt-brand img{width:32px;height:32px}#captureArea .receipt-student h2{font-size:16px}#captureArea .receipt-cal-cell{min-height:62px}#captureArea #receiptBody strong{font-size:13px}#captureArea #receiptBody>tr>td{font-size:12px}#captureArea #thAmount{width:105px!important}.notice-options{gap:10px}.notice-heading h2{font-size:19px}.calendar-batch{grid-template-columns:minmax(0,1fr) 68px 90px;gap:8px}.calendar-batch input{width:100%}.calendar-app[data-mode=ai] #controlColumn{max-height:none}}
+@media(max-width:760px){#productHeader{flex-wrap:wrap;padding:12px 14px;gap:10px}.product-brand img{width:34px;height:34px}.product-brand strong{font-size:19px}#productHeader nav{width:100%;overflow:auto;gap:0}#productHeader button{flex-shrink:0;min-height:38px;padding:8px 10px}#workspaceGrid{display:block!important}#recordsDock{position:static;max-height:none;padding:12px}#serverRecordArea h3{font-size:13px}#serverRecordList{display:flex;overflow-x:auto;gap:10px}#serverRecordList .record-item{flex:0 0 200px;margin:0}#staffAuthPanel{max-width:none}#controlColumn{padding:16px;max-height:560px;overflow:auto;border-bottom:1px solid var(--work-border)}#calendarWorkspace,#noticeColumn{padding:16px 10px}.work-heading h2{font-size:18px}.work-heading>div:last-child{display:flex;flex-direction:column;gap:5px}.source-tools{gap:10px}.calendar-day{padding:2px;min-height:100px}.calendar-event strong{font-size:10px}.calendar-event span,.calendar-event small{font-size:9px}#calendarWorkspace .calendar-event{padding:4px 2px}.calendar-day-head input{width:12px;height:12px}.calendar-day-head{gap:0}.calendar-toolbar{font-size:11px}#calendarWorkspace #weekdaySelect button{min-width:30px}:is(#captureArea,#priorNoticePaper){width:100%;padding:18px 12px!important}:is(#captureArea,#priorNoticePaper) .receipt-content{grid-template-columns:minmax(0,1fr)}:is(#captureArea,#priorNoticePaper) .receipt-header{gap:10px}:is(#captureArea,#priorNoticePaper) .receipt-brand p{font-size:14px}:is(#captureArea,#priorNoticePaper) .receipt-brand h1{font-size:12px}:is(#captureArea,#priorNoticePaper) .receipt-brand img{width:32px;height:32px}:is(#captureArea,#priorNoticePaper) .receipt-student h2{font-size:16px}:is(#captureArea,#priorNoticePaper) .receipt-cal-cell{min-height:62px}:is(#captureArea,#priorNoticePaper) :is(#receiptBody,[data-receipt-part="receiptBody"]) strong{font-size:13px}:is(#captureArea,#priorNoticePaper) :is(#receiptBody,[data-receipt-part="receiptBody"])>tr>td{font-size:12px}:is(#captureArea,#priorNoticePaper) :is(#thAmount,[data-receipt-part="thAmount"]){width:105px!important}.notice-options{gap:10px}.notice-heading h2{font-size:19px}.calendar-batch{grid-template-columns:minmax(0,1fr) 68px 90px;gap:8px}.calendar-batch input{width:100%}.calendar-app[data-mode=ai] #controlColumn{max-height:none}}
 @media(prefers-reduced-motion:reduce){.calendar-app button{transition:none}}
-.capture-mode #captureArea .receipt-content{grid-template-columns:minmax(300px,420px) minmax(0,1fr)!important}.capture-mode #captureArea.portrait-notice .receipt-content,.capture-mode[data-mode=timetable] #captureArea .receipt-content{grid-template-columns:minmax(0,1fr)!important}
+.capture-mode :is(#captureArea,#priorNoticePaper) .receipt-content{grid-template-columns:minmax(300px,420px) minmax(0,1fr)!important}.capture-mode :is(#captureArea,#priorNoticePaper).portrait-notice .receipt-content,.capture-mode[data-mode=timetable] :is(#captureArea,#priorNoticePaper) .receipt-content{grid-template-columns:minmax(0,1fr)!important}
 .capture-mode .notice-event{break-inside:avoid;line-height:1.6!important}.capture-mode .notice-event span{padding-bottom:1px}
-#captureArea .receipt-cal-grid{gap:0;background:transparent!important}
-#captureArea .receipt-fee-table th:first-child{width:74px;text-align:left}
-#captureArea .receipt-fee-table th:nth-child(2){text-align:left}
-#captureArea .receipt-variants{margin-top:0}
-#captureArea #receiptBody>tr>td:nth-child(2):not(:last-child){white-space:normal}
+:is(#captureArea,#priorNoticePaper) .receipt-cal-grid{gap:0;background:transparent!important}
+:is(#captureArea,#priorNoticePaper) .receipt-fee-table th:first-child{width:74px;text-align:left}
+:is(#captureArea,#priorNoticePaper) .receipt-fee-table th:nth-child(2){text-align:left}
+:is(#captureArea,#priorNoticePaper) .receipt-variants{margin-top:0}
+:is(#captureArea,#priorNoticePaper) :is(#receiptBody,[data-receipt-part="receiptBody"])>tr>td:nth-child(2):not(:last-child){white-space:normal}
 #studentMemoWidget{margin-top:18px;box-shadow:none;border:0;background:transparent}
-@media(max-width:760px){#captureArea .receipt-fee-table th:first-child{width:85px}#captureArea #thAmount{width:92px!important}}
+@media(max-width:760px){:is(#captureArea,#priorNoticePaper) .receipt-fee-table th:first-child{width:85px}:is(#captureArea,#priorNoticePaper) :is(#thAmount,[data-receipt-part="thAmount"]){width:92px!important}}
 
 /* Subject fills identify lessons without decorative edge accents. */
 .calendar-app .subj-kor{color:#256544}.calendar-app .subj-eng{color:#8b3e4a}.calendar-app .subj-soc{color:#765426}
@@ -216,17 +216,17 @@ body.calendar-app{padding:0!important;background:#f2f3f1!important;color:var(--w
 .record-saved-at{display:block;margin-top:12px;font-size:10px;color:#617583}
 #serverRecordList .record-delete-btn{position:absolute;top:10px;right:8px;z-index:2;min-height:32px;padding:4px 6px;font-size:11px;font-weight:400;color:#a13240;border:0;border-radius:4px}
 #serverRecordList .school-watermark{width:140px;height:140px;right:-8px;bottom:20px;opacity:.065}
-#captureArea .receipt-document-title{grid-column:1/-1;margin:0;font-size:25px;line-height:1.4;font-weight:700;letter-spacing:-.6px;color:var(--work-ink)}
-#captureArea .receipt-student h2{font-size:20px;font-weight:700;letter-spacing:-.4px}
-#captureArea .receipt-fee-table th{font-size:11px;color:var(--work-muted)}
-#captureArea .receipt-fee-table th:first-child{width:77px}
-#captureArea #receiptBody strong{color:var(--work-ink)}
-#captureArea #priceSummaryArea .flex{font-size:12px;font-weight:700}
-#captureArea #priceSummaryArea #labelTotal{font-size:14px;font-weight:700}
-#captureArea #priceSummaryArea #dispTotal{font-weight:700;font-variant-numeric:tabular-nums}
-#captureArea #receiptCalendarArea>div:first-child{justify-content:flex-start;text-align:left;font-size:13px;color:var(--work-ink);margin-bottom:10px}
-#captureArea #receiptCalendarArea>div:nth-child(2){background:#edf1f3;padding:8px 0;margin:0;border:1px solid var(--work-border);border-bottom:0;color:#526777}
-#calendarReceiptLegend,#monthComparison>p{font-size:10px}#monthComparison h3{font-size:12px}.comparison-line{font-size:11px}
+:is(#captureArea,#priorNoticePaper) .receipt-document-title{grid-column:1/-1;margin:0;font-size:25px;line-height:1.4;font-weight:700;letter-spacing:-.6px;color:var(--work-ink)}
+:is(#captureArea,#priorNoticePaper) .receipt-student h2{font-size:20px;font-weight:700;letter-spacing:-.4px}
+:is(#captureArea,#priorNoticePaper) .receipt-fee-table th{font-size:11px;color:var(--work-muted)}
+:is(#captureArea,#priorNoticePaper) .receipt-fee-table th:first-child{width:77px}
+:is(#captureArea,#priorNoticePaper) :is(#receiptBody,[data-receipt-part="receiptBody"]) strong{color:var(--work-ink)}
+:is(#captureArea,#priorNoticePaper) :is(#priceSummaryArea,[data-receipt-part="priceSummaryArea"]) .flex{font-size:12px;font-weight:700}
+:is(#captureArea,#priorNoticePaper) :is(#priceSummaryArea,[data-receipt-part="priceSummaryArea"]) :is(#labelTotal,[data-receipt-part="labelTotal"]){font-size:14px;font-weight:700}
+:is(#captureArea,#priorNoticePaper) :is(#priceSummaryArea,[data-receipt-part="priceSummaryArea"]) :is(#dispTotal,[data-receipt-part="dispTotal"]){font-weight:700;font-variant-numeric:tabular-nums}
+:is(#captureArea,#priorNoticePaper) :is(#receiptCalendarArea,[data-receipt-part="receiptCalendarArea"])>div:first-child{justify-content:flex-start;text-align:left;font-size:13px;color:var(--work-ink);margin-bottom:10px}
+:is(#captureArea,#priorNoticePaper) :is(#receiptCalendarArea,[data-receipt-part="receiptCalendarArea"])>div:nth-child(2){background:#edf1f3;padding:8px 0;margin:0;border:1px solid var(--work-border);border-bottom:0;color:#526777}
+#calendarReceiptLegend,:is(#monthComparison,[data-receipt-part="monthComparison"])>p{font-size:10px}:is(#monthComparison,[data-receipt-part="monthComparison"]) h3{font-size:12px}.comparison-line{font-size:11px}
 #noticeTools>h3{font-size:15px;font-weight:700;margin:0 0 12px;color:var(--work-ink)}
 #noticeTools .output-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding-bottom:22px;margin-bottom:22px;border-bottom:1px solid var(--work-border)}
 #noticeTools .output-actions button{font-size:13px;font-weight:500;min-height:40px;background:#fff;color:#254761;border-color:#c9d5dc}
@@ -239,17 +239,17 @@ body.calendar-app{padding:0!important;background:#f2f3f1!important;color:var(--w
 #messageControlArea select{font-size:12px;font-weight:400;padding:9px 7px;border-color:#c9d5dc;border-radius:5px;color:var(--work-ink)}
 #generatedTextArea{font-family:inherit;font-size:13px!important;font-weight:400;line-height:1.85!important;padding:14px!important;border:1px solid #d2dcdf;border-radius:6px;background:#fff;min-height:420px;color:var(--work-ink);resize:vertical}
 @media(max-width:1350px){#noticeColumn{grid-template-columns:minmax(0,1120px);grid-template-areas:"controls" "paper" "tools";gap:24px}#noticeTools{position:static;display:grid;grid-template-columns:230px minmax(0,1fr);gap:0 24px}#noticeTools>h3{grid-column:1}#noticeTools .output-actions{grid-column:1;align-content:start;border:0}#messageComposer{grid-column:2;grid-row:1/3}#productHeader{flex-wrap:wrap;gap:10px 18px}#productHeader #staffAuthPanel{margin-left:auto}}
-@media(max-width:760px){#productHeader nav{order:3;margin:0;width:100%}#productHeader #staffAuthPanel{max-width:100%;margin-left:auto}#staffLoginForm input{width:128px}#staffLoginForm #staffLoginPassword{width:88px}#noticeColumn{display:block;padding:18px 10px}#noticeControls{margin-bottom:20px}#noticeTools{display:block;margin-top:24px}#messageComposer{margin-top:24px}#generatedTextArea{min-height:360px}#captureArea .receipt-document-title{font-size:22px}#captureArea .receipt-fee-table th:first-child{width:85px}#captureArea .receipt-student h2{font-size:17px}#serverRecordList .record-item{flex:0 0 200px;margin:0}#serverRecordArea .record-panel-actions{max-width:300px}#captureArea .receipt-header{gap:14px}#captureArea .receipt-content{gap:22px}}
+@media(max-width:760px){#productHeader nav{order:3;margin:0;width:100%}#productHeader #staffAuthPanel{max-width:100%;margin-left:auto}#staffLoginForm input{width:128px}#staffLoginForm #staffLoginPassword{width:88px}#noticeColumn{display:block;padding:18px 10px}#noticeControls{margin-bottom:20px}#noticeTools{display:block;margin-top:24px}#messageComposer{margin-top:24px}#generatedTextArea{min-height:360px}:is(#captureArea,#priorNoticePaper) .receipt-document-title{font-size:22px}:is(#captureArea,#priorNoticePaper) .receipt-fee-table th:first-child{width:85px}:is(#captureArea,#priorNoticePaper) .receipt-student h2{font-size:17px}#serverRecordList .record-item{flex:0 0 200px;margin:0}#serverRecordArea .record-panel-actions{max-width:300px}:is(#captureArea,#priorNoticePaper) .receipt-header{gap:14px}:is(#captureArea,#priorNoticePaper) .receipt-content{gap:22px}}
 
 .notice-event .notice-teacher-name{font-weight:500}
 
 #serverRecordList>div:not(.record-item){border:0;border-radius:0;background:transparent;padding:12px 0;font-size:12px;color:var(--work-muted);text-align:left}
 
 /* A quieter document heading and denser horizontal lesson information. */
-#captureArea #receiptContext{grid-column:1/-1;margin:-10px 0 0;font-size:11px;font-weight:500;line-height:1.5;color:var(--work-muted)}
-#captureArea #receiptContext[hidden]{display:none}
-#captureArea #dispSubtotal,#captureArea #dispDiscount,#captureArea #dispAdj,#captureArea .comparison-line b{font-weight:700;font-variant-numeric:tabular-nums}
-#captureArea .receipt-brand h1{color:#725d47}
+:is(#captureArea,#priorNoticePaper) :is(#receiptContext,[data-receipt-part="receiptContext"]){grid-column:1/-1;margin:-10px 0 0;font-size:11px;font-weight:500;line-height:1.5;color:var(--work-muted)}
+:is(#captureArea,#priorNoticePaper) :is(#receiptContext,[data-receipt-part="receiptContext"])[hidden]{display:none}
+:is(#captureArea,#priorNoticePaper) :is(#dispSubtotal,[data-receipt-part="dispSubtotal"]),:is(#captureArea,#priorNoticePaper) :is(#dispDiscount,[data-receipt-part="dispDiscount"]),:is(#captureArea,#priorNoticePaper) :is(#dispAdj,[data-receipt-part="dispAdj"]),:is(#captureArea,#priorNoticePaper) .comparison-line b{font-weight:700;font-variant-numeric:tabular-nums}
+:is(#captureArea,#priorNoticePaper) .receipt-brand h1{color:#725d47}
 #noticeTools #openNoticeImage{grid-column:1/-1}
 #editReceiptGuides{margin-top:16px;font-size:12px}
 #appSettingsModal .settings-modal{max-height:90vh;overflow-y:auto}
@@ -257,15 +257,15 @@ body.calendar-app{padding:0!important;background:#f2f3f1!important;color:var(--w
 .voucher-setting-fields{display:grid;gap:12px;margin-top:20px;padding-top:16px;border-top:1px solid var(--work-border)}
 .voucher-setting-fields label{display:grid;gap:6px;font-size:12px;font-weight:600}
 .voucher-setting-fields textarea{border:1px solid #d2dcdf;border-radius:6px;padding:10px;font:inherit;line-height:1.6;min-height:65px;resize:vertical}
-@media(max-width:1550px) and (min-width:761px){#captureArea .receipt-content{grid-template-columns:minmax(0,.85fr) minmax(0,1fr)}}
-@media(max-width:760px){#captureArea .receipt-variants{grid-template-columns:repeat(auto-fit,minmax(min(100%,110px),1fr))}#captureArea .receipt-document-title{font-size:22px}#captureArea #receiptContext{font-size:10px;margin-top:-8px}.notice-event strong{font-size:10px}.notice-event .notice-time{font-size:9px}}
-.capture-mode #captureArea .receipt-content{grid-template-columns:420px minmax(0,1fr)!important}
-.capture-mode #captureArea .receipt-document-title{font-size:25px}
-.capture-mode #captureArea .receipt-variants{grid-template-columns:repeat(2,minmax(0,1fr))}
-.capture-mode #captureArea .notice-event strong{font-size:11px}
-.capture-mode #captureArea .notice-event .notice-time{font-size:10px}
+@media(max-width:1550px) and (min-width:761px){:is(#captureArea,#priorNoticePaper) .receipt-content{grid-template-columns:minmax(0,.85fr) minmax(0,1fr)}}
+@media(max-width:760px){:is(#captureArea,#priorNoticePaper) .receipt-variants{grid-template-columns:repeat(auto-fit,minmax(min(100%,110px),1fr))}:is(#captureArea,#priorNoticePaper) .receipt-document-title{font-size:22px}:is(#captureArea,#priorNoticePaper) :is(#receiptContext,[data-receipt-part="receiptContext"]){font-size:10px;margin-top:-8px}.notice-event strong{font-size:10px}.notice-event .notice-time{font-size:9px}}
+.capture-mode :is(#captureArea,#priorNoticePaper) .receipt-content{grid-template-columns:420px minmax(0,1fr)!important}
+.capture-mode :is(#captureArea,#priorNoticePaper) .receipt-document-title{font-size:25px}
+.capture-mode :is(#captureArea,#priorNoticePaper) .receipt-variants{grid-template-columns:repeat(2,minmax(0,1fr))}
+.capture-mode :is(#captureArea,#priorNoticePaper) .notice-event strong{font-size:11px}
+.capture-mode :is(#captureArea,#priorNoticePaper) .notice-event .notice-time{font-size:10px}
 
-#captureArea .grouped-receipt>thead{display:table-header-group}
+:is(#captureArea,#priorNoticePaper) .grouped-receipt>thead{display:table-header-group}
 
 /* Keep lesson setup beside the calendar and financial adjustments above it. */
 .work-actions{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:6px;max-width:620px}
@@ -315,15 +315,15 @@ body.calendar-app{padding:0!important;background:#f2f3f1!important;color:var(--w
 #sourceTools .source-weekdays{gap:3px}
 #sourceTools .source-selection-count{font-size:11px;font-weight:500}
 #sourceTools .source-candidate-note{font-size:10px}
-#captureArea #monthComparison{margin-top:18px;padding:16px;background:#f0f4ef;border:0;border-radius:10px}
-#monthComparison .comparison-line{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid #dce4dd}
-#monthComparison .comparison-line:last-child{border-bottom:0}
-#captureArea .receipt-student h2{font-size:27px;line-height:1.4;font-weight:700}
-#captureArea #dateBadge,#captureArea #dispDate{font-size:16px;font-weight:700;color:#4a6070}
-#captureArea .receipt-content{grid-template-columns:minmax(0,.6fr) minmax(0,1fr)}
-.capture-mode #captureArea .receipt-content{grid-template-columns:380px minmax(0,1fr)!important}
-@media(max-width:1100px) and (min-width:761px){.work-heading{flex-wrap:wrap}.work-actions{justify-content:flex-start}#captureArea .receipt-content{grid-template-columns:minmax(0,.8fr) minmax(0,1fr)}}
-@media(max-width:760px){#controlColumn{max-height:none;overflow:visible}.work-heading{flex-direction:column}.work-heading>.work-actions{flex-direction:row;justify-content:flex-start}#calendarWorkspace #adjustmentArea{padding:14px}#captureArea .receipt-content{grid-template-columns:minmax(0,1fr)}#captureArea .receipt-student h2{font-size:23px}#captureArea #dateBadge,#captureArea #dispDate{font-size:14px}#sourceTools .source-candidate-grid{max-height:440px}}
+:is(#captureArea,#priorNoticePaper) :is(#monthComparison,[data-receipt-part="monthComparison"]){margin-top:18px;padding:16px;background:#f0f4ef;border:0;border-radius:10px}
+:is(#monthComparison,[data-receipt-part="monthComparison"]) .comparison-line{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid #dce4dd}
+:is(#monthComparison,[data-receipt-part="monthComparison"]) .comparison-line:last-child{border-bottom:0}
+:is(#captureArea,#priorNoticePaper) .receipt-student h2{font-size:27px;line-height:1.4;font-weight:700}
+:is(#captureArea,#priorNoticePaper) :is(#dateBadge,[data-receipt-part="dateBadge"]),:is(#captureArea,#priorNoticePaper) :is(#dispDate,[data-receipt-part="dispDate"]){font-size:16px;font-weight:700;color:#4a6070}
+:is(#captureArea,#priorNoticePaper) .receipt-content{grid-template-columns:minmax(0,.6fr) minmax(0,1fr)}
+.capture-mode :is(#captureArea,#priorNoticePaper) .receipt-content{grid-template-columns:380px minmax(0,1fr)!important}
+@media(max-width:1100px) and (min-width:761px){.work-heading{flex-wrap:wrap}.work-actions{justify-content:flex-start}:is(#captureArea,#priorNoticePaper) .receipt-content{grid-template-columns:minmax(0,.8fr) minmax(0,1fr)}}
+@media(max-width:760px){#controlColumn{max-height:none;overflow:visible}.work-heading{flex-direction:column}.work-heading>.work-actions{flex-direction:row;justify-content:flex-start}#calendarWorkspace #adjustmentArea{padding:14px}:is(#captureArea,#priorNoticePaper) .receipt-content{grid-template-columns:minmax(0,1fr)}:is(#captureArea,#priorNoticePaper) .receipt-student h2{font-size:23px}:is(#captureArea,#priorNoticePaper) :is(#dateBadge,[data-receipt-part="dateBadge"]),:is(#captureArea,#priorNoticePaper) :is(#dispDate,[data-receipt-part="dispDate"]){font-size:14px}#sourceTools .source-candidate-grid{max-height:440px}}
 
 #controlColumn .editor-body{min-height:0!important}
 @media(max-width:760px){#calendarWorkspace .work-heading>.work-actions{flex-direction:row;justify-content:flex-start;gap:6px}}
@@ -437,12 +437,18 @@ body.calendar-app{padding:0!important;background:#f2f3f1!important;color:var(--w
 @media(max-width:600px){.draft-dialog{padding:20px}.draft-dialog .temporary-heading h2{font-size:19px}.draft-dialog .temporary-footer button{min-width:0;padding:10px 12px}.next-pattern{gap:9px}.next-pattern-heading{gap:8px}}
 
 /* Notice identity labels follow S-LMS's compact teacher chips. */
-#captureArea .notice-teacher-badge{display:inline-flex;align-items:center;width:fit-content;max-width:100%;padding:2px 5px;border:1px solid #cbd8dd;border-radius:5px;background:#edf3f3;color:#345261;font-weight:500;line-height:1.4;white-space:normal;overflow-wrap:anywhere}
-#captureArea .notice-event.notice-private{border:2px solid #b88b2f}
-#captureArea .notice-private-label{display:inline-block;color:#765416;font-weight:700;margin-right:4px}
-#captureArea .notice-meta{display:flex;flex-wrap:wrap;align-items:center;gap:3px}
+:is(#captureArea,#priorNoticePaper) .notice-teacher-badge{display:inline-flex;align-items:center;width:fit-content;max-width:100%;padding:2px 5px;border:1px solid #cbd8dd;border-radius:5px;background:#edf3f3;color:#345261;font-weight:500;line-height:1.4;white-space:normal;overflow-wrap:anywhere}
+:is(#captureArea,#priorNoticePaper) .notice-event.notice-private{border:2px solid #b88b2f}
+:is(#captureArea,#priorNoticePaper) .notice-private-label{display:inline-block;color:#765416;font-weight:700;margin-right:4px}
+:is(#captureArea,#priorNoticePaper) .notice-meta{display:flex;flex-wrap:wrap;align-items:center;gap:3px}
 
-#captureArea.hide-notice-times .notice-time{display:none!important}
-#captureArea .notice-event.notice-absence,#captureArea .receipt-variant.notice-absence{background:#edf0f1!important;color:#687078!important;border-color:#c9ced1;filter:grayscale(1)}
-#captureArea .notice-absence strong,#captureArea .notice-absence .notice-time,#captureArea .notice-absence .notice-teacher-badge,#captureArea .notice-absence .variant-condition,#captureArea .notice-absence small{color:#687078!important;text-decoration:line-through}
-#captureArea .notice-absence .notice-teacher-badge{background:#e4e7e9;border-color:#c9ced1}
+:is(#captureArea,#priorNoticePaper).hide-notice-times .notice-time{display:none!important}
+:is(#captureArea,#priorNoticePaper) .notice-event.notice-absence,:is(#captureArea,#priorNoticePaper) .receipt-variant.notice-absence{background:#edf0f1!important;color:#687078!important;border-color:#c9ced1;filter:grayscale(1)}
+:is(#captureArea,#priorNoticePaper) .notice-absence strong,:is(#captureArea,#priorNoticePaper) .notice-absence .notice-time,:is(#captureArea,#priorNoticePaper) .notice-absence .notice-teacher-badge,:is(#captureArea,#priorNoticePaper) .notice-absence .variant-condition,:is(#captureArea,#priorNoticePaper) .notice-absence small{color:#687078!important;text-decoration:line-through}
+:is(#captureArea,#priorNoticePaper) .notice-absence .notice-teacher-badge{background:#e4e7e9;border-color:#c9ced1}
+/* A stable two-column event avoids flex text wrapping during PNG capture. */
+.notice-event{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:start}
+.notice-event strong{white-space:normal;word-break:keep-all}
+.notice-event .notice-meta{grid-column:1/-1}
+:is(#captureArea,#priorNoticePaper) .receipt-fee-table td:first-child strong{word-break:keep-all}
+[data-receipt-part="calendarReceiptLegend"]{font-size:10px;color:var(--work-muted)}

@@ -42,7 +42,7 @@
         if(purpose==='timetable')switchTab('timetable');
         refresh();
     }
-    window.FeeCalendar={exportNotice:(target,action)=>outputImage(action,target),navigate,refresh,activeLessons,changeLesson,seedNextMonth,remember:saveUndo,commit:commitCalendar,focusDay:day=>{detailDay=day;renderDay(activeLessons());}};
+    window.FeeCalendar={noticeRows,noticeCalendar,exportNotice:(target,action)=>outputImage(action,target),navigate,refresh,activeLessons,changeLesson,seedNextMonth,remember:saveUndo,commit:commitCalendar,focusDay:day=>{detailDay=day;renderDay(activeLessons());}};
     function setup(){
         if(el('productHeader'))return;
         document.title='에스에듀 반포관 · 수강료 계산기';document.body.classList.add('calendar-app');
@@ -256,14 +256,27 @@
         if(!['auto','select','history','progress','first'].includes(currentTab)){document.querySelector('.receipt-fee-table thead').innerHTML=originalReceiptHead;return;}
         document.querySelector('.receipt-fee-table thead').innerHTML='<tr><th>과목·강사</th><th>수업 내역</th><th id="thAmount">금액</th></tr>';
         const billingLessons=currentTab==='first'?C.expand(collectFirstRegistrationRows().map(r=>({...r,dates:Array.from({length:getFirstRegistrationBillingCount(r)},(_,i)=>i+1)})),'select',month()):lessons;
-        el('receiptBody').innerHTML=C.groups(billingLessons).map(g=>`<tr><td><strong>${subjectIcon(g.subject)}${esc(g.subject)}</strong><span class="receipt-teacher notice-teacher-badge">${esc(g.teacher||'강사 미기재')}</span></td><td><div class="receipt-variants">${[...g.variants.values()].map(v=>`<span class="receipt-variant${v.status.includes('결석예고')?' notice-absence':''}"><span class="variant-condition">${esc(v.type==='개별정규'?'개별':v.type)} ${v.hours}h × ${v.count}${currentTab==='history'?'건':'회'}${v.status==='예정'||(v.status==='출석'&&!options.cancelAsAttendance)?'':' · '+esc(v.status)}</span><small>${v.rate!==null&&v.rate!==undefined?money(v.rate)+(v.rateMode==='perHour'?'/시간':'/회'):v.amount===null?'금액 확인 필요':money(v.amount)+'/회'}</small></span>`).join('')}</div></td><td class="${tone(g.total)}">${signed(g.pending?null:g.total)}</td></tr>`).join('');
-        const cal=el('receiptMiniCalGrid');cal.replaceChildren();
-        for(let i=0;i<C.weekday(month(),1);i++){const c=document.createElement('div');c.className='receipt-cal-cell outside';cal.append(c);}
-        for(let d=1;d<=C.daysInMonth(month());d++){
-            const c=document.createElement('div');c.className='receipt-cal-cell';c.innerHTML=`<div class="rc-date">${d}</div>`;
-            if(!isReceiptCalendarDetailsHidden())for(const r of lessons.filter(r=>r.day===d))c.insertAdjacentHTML('beforeend',`<div class="notice-event ${getSubjectColorClass(r.subject,false,false)}${r.predicted?' predicted':''}${r.type==='1:1'?' notice-private':''}${r.status.includes('결석예고')?' notice-absence':''}"><strong>${subjectIcon(r.subject)}${esc(r.subject)}</strong><span class="notice-time">${esc(r.start&&r.end?formatCompactTimeRange(r.start,r.end):r.hours+'시간')}</span><small class="notice-meta">${r.type==='1:1'?'<span class="notice-private-label">1:1</span>':''}${r.teacher?'<span class="notice-teacher-name notice-teacher-badge">'+esc(r.teacher)+'</span>':''}${r.status==='예정'||(r.status==='출석'&&!options.cancelAsAttendance)?'':'<span class="notice-status">'+esc(r.status)+'</span>'}</small></div>`);cal.append(c);
-        }
+        el('receiptBody').innerHTML=noticeRows(billingLessons,currentTab==='history'?'건':'회');
+        el('receiptMiniCalGrid').innerHTML=noticeCalendar(lessons,month(),isReceiptCalendarDetailsHidden());
     }
+    // Both months use the same presentation; edits remain in their own draft.
+    function noticeRows(lessons,unit='회'){
+        if(options.cancelAsAttendance)lessons=lessons.map(r=>({...r,status:r.status.replace(/당일취소/g,'출석')}));
+        return C.groups(lessons,true).map(g=>`<tr><td><strong>${g.subjects.map(subject=>subjectIcon(subject)+esc(subject)).join(' · ')}</strong><span class="receipt-teacher notice-teacher-badge">${esc(g.teacher||'강사 미기재')}</span></td><td><div class="receipt-variants">${[...g.variants.values()].map(v=>`<span class="receipt-variant${v.status.includes('결석예고')?' notice-absence':''}"><span class="variant-condition">${g.subjects.length>1?esc(v.subject)+' · ':''}${esc(v.type==='개별정규'?'개별':v.type)} ${v.hours===null?'?':v.hours}h × ${v.count}${unit}${v.status==='예정'||(v.status==='출석'&&!options.cancelAsAttendance)?'':' · '+esc(v.status)}</span><small>${v.rate!==null&&v.rate!==undefined?money(v.rate)+(v.rateMode==='perHour'?'/시간':'/회'):v.amount===null?'금액 확인 필요':money(v.amount)+'/회'}</small></span>`).join('')}</div></td><td class="${tone(g.total)}">${signed(g.pending?null:g.total)}</td></tr>`).join('');
+    }
+    function noticeCalendar(lessons,whichMonth,hideDetails=false){
+        let html='<div class="receipt-cal-cell outside"></div>'.repeat(C.weekday(whichMonth,1));
+        for(let d=1;d<=C.daysInMonth(whichMonth);d++){
+            html+=`<div class="receipt-cal-cell"><div class="rc-date">${d}</div>`;
+            if(!hideDetails)for(const r of lessons.filter(r=>r.day===d)){
+                const status=options.cancelAsAttendance?r.status.replace(/당일취소/g,'출석'):r.status;
+                html+=`<div class="notice-event ${getSubjectColorClass(r.subject,false,false)}${r.predicted?' predicted':''}${r.type==='1:1'?' notice-private':''}${status.includes('결석예고')?' notice-absence':''}"><strong>${subjectIcon(r.subject)}${esc(r.subject)}</strong><span class="notice-time">${esc(r.start&&r.end?formatCompactTimeRange(r.start,r.end):(r.hours===null?'시간 확인 필요':r.hours+'시간'))}</span><small class="notice-meta">${r.type==='1:1'?'<span class="notice-private-label">1:1</span>':''}${r.teacher?'<span class="notice-teacher-name notice-teacher-badge">'+esc(r.teacher)+'</span>':''}${status==='예정'||(status==='출석'&&!options.cancelAsAttendance)?'':'<span class="notice-status">'+esc(status)+'</span>'}</small></div>`;
+            }
+            html+='</div>';
+        }
+        return html+'<div class="receipt-cal-cell outside"></div>'.repeat((7-(C.weekday(whichMonth,1)+C.daysInMonth(whichMonth))%7)%7);
+    }
+
     function refresh(){
         if(!el('calendarWorkspace')||applying)return;
         if(draftMonth&&draftMonth!==month()){draftMonth=month();resetAndUpdate();}draftMonth=month();
@@ -526,7 +539,7 @@
                 // Resolve the watermark after export layout, without transform or negative stacking.
                 const watermark=area.querySelector('.watermark-img');
                 if(watermark){
-                    const bounds=area.getBoundingClientRect(),grid=(area.querySelector('.prior-calendar-grid')||doc.getElementById('receiptMiniCalGrid')).getBoundingClientRect();
+                    const bounds=area.getBoundingClientRect(),grid=(area.querySelector('[data-receipt-part=receiptMiniCalGrid]')||doc.getElementById('receiptMiniCalGrid')).getBoundingClientRect();
                     const width=Math.min(grid.width*.95,grid.height*.85),height=width*(watermark.naturalHeight/watermark.naturalWidth||1);
                     for(const [key,value] of Object.entries({left:(grid.left-bounds.left+(grid.width-width)/2)+'px',top:(grid.top-bounds.top+(grid.height-height)/2)+'px',width:width+'px',height:height+'px',transform:'none','max-height':'none','z-index':'0'}))watermark.style.setProperty(key,value,'important');
                 }

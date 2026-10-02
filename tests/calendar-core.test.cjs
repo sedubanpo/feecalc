@@ -35,3 +35,9 @@ test('Saturday recurrence survives a clock shift without merging geography or ot
  assert.equal(result.groups.length,1);const g=result.groups[0];assert.equal(g.subject,'사회');assert.deepEqual(g.days,[6]);assert.equal(g.count,5);assert.equal(g.total,1875000);assert.equal(g.schedule.overrides[3].start,'14:00');assert.equal(result.skipped,1);
  lessons[3].amount=250000;assert.equal(C.nextMonthPlan({month:'2026-09',lessons},'2026-10').groups.length,0);
 });
+
+test('notice groups the same teacher across subjects without losing variants, totals or unknown amounts',()=>{
+ const rows=[{subject:'사회',teacher:'강사T',type:'개별정규',hours:2,rate:null,amount:62500,status:'출석'},{subject:'사탐',teacher:'강사',type:'개별정규',hours:2,rate:null,amount:62500,status:'출석'},{subject:'통사',teacher:'강사',type:'개별정규',hours:2,rate:null,amount:null,status:'결석예고'}];
+ const before=JSON.stringify(rows),groups=C.groups(rows,true);assert.equal(groups.length,1);assert.equal(groups[0].total,125000);assert.equal(groups[0].pending,true);assert.equal(groups[0].variants.size,3);assert.deepEqual(groups[0].subjects,['사회','사탐','통사']);assert.equal(JSON.stringify(rows),before);
+ assert.equal(C.groups([{...rows[0],teacher:''},{...rows[1],teacher:''}],true).length,2);
+});

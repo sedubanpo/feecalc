@@ -43,8 +43,28 @@
  function paper(d){
   const host=el('priorNoticePaper'),lessons=d.lessons.filter(r=>r.included!==false),adjustments=d.adjustments.filter(r=>r.included!==false),sum=lessons.some(r=>r.amount===null)?null:lessons.reduce((s,r)=>s+r.amount,0);
   host.dataset.month=d.month;
-  const events=day=>lessons.filter(r=>r.day===day).map(r=>`<div class="prior-event ${getSubjectColorClass(r.subject,false,false)} ${r.status==='결석예고'?'prior-absence':''} ${r.type==='1:1'?'prior-private':''}"><strong>${esc(r.subject)}</strong>${ctx.options.hideNoticeTimes?'':`<span>${esc(r.start&&r.end?r.start+'–'+r.end:(r.hours===null?'시간 확인 필요':r.hours+'시간'))}</span>`}<small>${r.type==='1:1'?'1:1 · ':''}<span class="notice-teacher-badge">${esc(r.teacher)}</span> ${esc(ctx.options.cancelAsAttendance?r.status.replace('당일취소','출석'):r.status)}</small></div>`).join('');
-  host.innerHTML=`<img src="assets/brand/sedu-warm.svg" class="watermark-img" alt=""><header class="prior-document-header"><div><img src="assets/brand/sedu-warm.svg" alt="에스에듀 반포관 로고"><span>에스에듀 반포관</span></div><div class="receipt-student"><h2>${esc(ctx.student.name)}</h2>${ctx.schoolHtml(ctx.student)}<p>${Number(d.month.slice(0,4))}년 ${Number(d.month.slice(5))}월분</p></div></header><h2>수강료 정산 안내서</h2><p class="prior-context">실제 입력 기록 기준 · ${esc(d.fetchedAt.slice(0,10))} 조회${d.modified?' · 검토 수정본':''}</p><div class="prior-document-content"><section><table><thead><tr><th>과목·강사 / 수업 내역</th><th>금액</th></tr></thead><tbody>${lessons.map(r=>`<tr class="${r.status==='결석예고'?'prior-absence':''}"><td><strong>${esc(r.subject)}</strong> <span class="notice-teacher-badge">${esc(r.teacher)}</span><small>${r.day}일 · ${esc(r.type)} ${r.hours===null?'확인 필요':r.hours+'시간'} · ${esc(ctx.options.cancelAsAttendance?r.status.replace('당일취소','출석'):r.status)}</small></td><td class="${tone(r.amount)}">${money(r.amount)}</td></tr>`).join('')}</tbody></table><div class="prior-money-row"><span>실제 수업료</span><b class="${tone(sum)}">${money(sum)}</b></div>${adjustments.map(r=>`<div class="prior-money-row"><span>${esc(r.label)}</span><b class="${tone(r.amount)}">${money(r.amount)}</b></div>`).join('')}<div class="prior-money-row prior-total"><strong>이월·초과금</strong><b class="${tone(total(d))}">${money(total(d))}</b></div><p class="prior-context">이월금 − · 초과금 +<br>월마감 확정 여부와 별개인 입력 기록 기준 정산입니다.</p></section><section><h3>${Number(d.month.slice(5))}월 수업 일정</h3><div class="prior-weekdays">${['일','월','화','수','목','금','토'].map(x=>`<span>${x}</span>`).join('')}</div><div class="prior-calendar-grid">${'<div class="prior-day outside"></div>'.repeat(C.weekday(d.month,1))}${Array.from({length:C.daysInMonth(d.month)},(_,i)=>`<div class="prior-day"><b>${i+1}</b>${events(i+1)}</div>`).join('')}${'<div class="prior-day outside"></div>'.repeat((7-(C.weekday(d.month,1)+C.daysInMonth(d.month))%7)%7)}</div><p class="prior-context">회색·취소선: 결석예고 · 금색 테두리: 1:1 수업</p></section></div>`;
+  const template=el('captureArea').cloneNode(true);
+  template.querySelector('.receipt-document-title').textContent='이전 달 수강료 정산 안내서';
+  const part=id=>template.querySelector('#'+id);
+  part('dispDate').textContent=`${Number(d.month.slice(0,4))}년 ${Number(d.month.slice(5))}월분`;
+  part('receiptContext').hidden=false;
+  part('receiptContext').textContent=`현재 계산 월(${ctx.month})과 별도인 이전 달 내역입니다. 실제 수업료 + 시작 잔액 + 수납·환불을 합산했습니다.`;
+  part('receiptContent').className='receipt-content layout-default';
+  part('receiptBody').innerHTML=FeeCalendar.noticeRows(lessons);
+  template.querySelector('.receipt-fee-table').classList.add('grouped-receipt');
+  template.querySelector('.receipt-fee-table thead').innerHTML='<tr><th>과목·강사</th><th>수업 내역</th><th>금액</th></tr>';
+  part('priceSummaryArea').innerHTML=`<div class="border-t-2 border-gray-200 pt-2 space-y-1 mb-4"><div class="flex justify-between"><span>실제 수업료</span><b class="${tone(sum)}">${money(sum)}</b></div>${adjustments.map(r=>`<div class="flex justify-between"><span>${esc(r.label)}</span><b class="${tone(r.amount)}">${money(r.amount)}</b></div>`).join('')}</div><div class="flex justify-between items-center bg-gray-50 p-4 rounded-xl border border-gray-100 receipt-total prior-total"><strong>이월·초과금</strong><b class="${tone(total(d))}">${money(total(d))}</b></div><p class="prior-context">이월금 − · 초과금 +<br>실제 입력 기록 기준 · ${esc(d.fetchedAt.slice(0,10))} 조회${d.modified?' · 검토 수정본':''}<br>현재 달 청구액에 자동으로 더하지 않습니다.</p>`;
+  part('calTitleReceipt').textContent=`${Number(d.month.slice(5))}월 수업 일정`;
+  part('receiptMiniCalGrid').innerHTML=FeeCalendar.noticeCalendar(lessons,d.month);
+  part('receiptCalendarArea').hidden=false;
+  part('receiptCalendarArea').style.display='';
+  template.querySelector('.receipt-right').style.display='';
+  for(const id of ['monthComparison','voucherGuideBox'])part(id)?.remove();
+  if(part('calendarReceiptLegend'))part('calendarReceiptLegend').textContent='실제 입력 수업 · 회색·취소선: 결석예고 · 금색 테두리: 1:1';
+  // Reuse the current notice's structure/styles without duplicating document IDs.
+  for(const node of template.querySelectorAll('[id]')){node.dataset.receiptPart=node.id;node.removeAttribute('id');}
+  host.className=template.className+' prior-notice-paper';
+  host.innerHTML=template.innerHTML;
   const issue=el('priorSourceIssue');if(issue)issue.textContent=d.sourceIssue||'';
   document.querySelectorAll('[data-prior-export]').forEach(b=>b.disabled=total(d)===null);
  }
