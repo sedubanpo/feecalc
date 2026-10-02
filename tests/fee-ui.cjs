@@ -338,6 +338,27 @@ const root=path.resolve(__dirname,'..'),evidence=process.env.EVIDENCE_ROOT;
  if(evidence){fs.mkdirSync(evidence,{recursive:true});for(const width of [1440,390]){await page.setViewportSize({width,height:1000});assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));await page.locator('#captureArea').screenshot({path:path.join(evidence,'notice-labels-'+width+'.png')});}await page.setViewportSize({width:1440,height:1000});}
  await page.locator('#noticeCancelAsAttendance').uncheck();assert.match(await page.locator('#receiptBody').innerText(),/당일취소/);
  });
+ await check('notice absence, time visibility and real PNG clipboard export',async()=>{
+ await page.evaluate(()=>{
+ testProgressSnapshot={studentId:'one',month:'2026-09',fetchedAt:'2026-10-02T00:00:00Z',lessons:[{id:'absent',date:'2026-09-26',className:'사회-개별(검증강사)-3h',teacher:'검증강사',minutes:0,amount:0,start:'16:00',end:'19:00',kind:'absence'},{id:'private',date:'2026-09-12',className:'국어-1:1(다른강사)-3h',teacher:'다른강사',minutes:180,amount:375000,start:'13:00',end:'16:00',kind:'regular'}]};
+ applyCalculatorState({currentTab:'progress',studentId:'one',studentName:'검증학생',targetYear:2026,targetMonth:9,progress:{snapshot:testProgressSnapshot,mode:'manual',cutoff:'2026-09-30',endDate:'2026-09-30'}});FeeCalendar.navigate('notice');
+ });
+ await page.waitForFunction(()=>progressVerified&&!progressLoading);
+ assert.equal(await page.locator('#receiptBody .notice-absence').count(),1);
+ assert.equal(await page.locator('#receiptMiniCalGrid .notice-absence').count(),1);
+ const before=await page.evaluate(()=>JSON.stringify(progressState.snapshot));
+ await page.locator('#hideNoticeTimes').check();assert.equal(await page.locator('.notice-time:visible').count(),0);
+ const saved=await page.evaluate(()=>collectCalculatorState());await page.evaluate(s=>{applyCalculatorState(s);FeeCalendar.navigate('notice');},saved);await page.waitForFunction(()=>progressVerified&&!progressLoading);
+ assert.equal(await page.locator('#hideNoticeTimes').isChecked(),true);
+ assert.equal(await page.evaluate(()=>JSON.stringify(progressState.snapshot)),before);
+ await page.locator('#hideNoticeTimes').uncheck();assert.equal(await page.locator('.notice-time:visible').count(),2);
+ await page.evaluate(()=>{window.copiedNotice=null;Object.defineProperty(navigator.clipboard,'write',{configurable:true,value:async items=>{window.copiedNotice=await items[0].getType('image/png');}});});
+ await page.locator('#copyNoticeImage').click();await page.waitForFunction(()=>window.copiedNotice,{timeout:30000});
+ const png=await page.evaluate(async()=>Array.from(new Uint8Array(await copiedNotice.arrayBuffer())));assert.ok(png.length>10000);
+ if(evidence){fs.writeFileSync(path.join(evidence,'clipboard-export.png'),Buffer.from(png));await page.locator('#captureArea').screenshot({path:path.join(evidence,'export-preview.png')});}
+ assert.match(await page.locator('#imageOutputStatus').innerText(),/복사했습니다/);
+ assert.equal(await page.evaluate(()=>document.documentElement.classList.contains('workspace-loading')),false);
+ });
  await check('signed-out account controls fit narrow and intermediate headers',async()=>{
  await page.evaluate(()=>testAuthState({state:'anonymous',gateway:testGateway}));
  for(const width of [390,600,768,1050,1440]){await page.setViewportSize({width,height:1000});assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),String(width));assert.equal(await page.locator('#staffLoginForm').isVisible(),true);}

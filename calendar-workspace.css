@@ -441,3 +441,8 @@ body.calendar-app{padding:0!important;background:#f2f3f1!important;color:var(--w
 #captureArea .notice-event.notice-private{border:2px solid #b88b2f}
 #captureArea .notice-private-label{display:inline-block;color:#765416;font-weight:700;margin-right:4px}
 #captureArea .notice-meta{display:flex;flex-wrap:wrap;align-items:center;gap:3px}
+
+#captureArea.hide-notice-times .notice-time{display:none!important}
+#captureArea .notice-event.notice-absence,#captureArea .receipt-variant.notice-absence{background:#edf0f1!important;color:#687078!important;border-color:#c9ced1;filter:grayscale(1)}
+#captureArea .notice-absence strong,#captureArea .notice-absence .notice-time,#captureArea .notice-absence .notice-teacher-badge,#captureArea .notice-absence .variant-condition,#captureArea .notice-absence small{color:#687078!important;text-decoration:line-through}
+#captureArea .notice-absence .notice-teacher-badge{background:#e4e7e9;border-color:#c9ced1}

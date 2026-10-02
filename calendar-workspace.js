@@ -10,7 +10,7 @@
     const priorMonth=()=>{const d=new Date(Number(el('targetYear').value),Number(el('targetMonth').value)-2,1);return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;};
     const rowList=()=>[...document.querySelectorAll(currentTab==='auto'?'#autoList .auto-row':'#selectList .select-row')];
     let view='work',lastMode='auto',selectedRow=0,selectedSubject='전체',selectedDays=new Set(),detailDay=1,selectedExtraId=null,undo=[],applying=false,queued=false;
-    let options={layout:'compact',showComparison:false,cancelAsAttendance:false,previous:null,source:null,placements:[],timetableSource:null};
+    let options={layout:'compact',showComparison:false,cancelAsAttendance:false,hideNoticeTimes:false,previous:null,source:null,placements:[],timetableSource:null};
     const originalReceiptHead=document.querySelector('.receipt-fee-table thead').innerHTML;
     let sourceSubject='';
     let sourceSnapshot=null,sourceContext='',candidateResult=null,candidateGroups=[],fetchToken=0,sourceTimer=0,sourceAttempt='',sourcePending='',outputPending=false,legacySnapshot=null,draftMonth=null;
@@ -93,7 +93,7 @@
         el('dispTotal').parentElement.classList.add('receipt-total');
         const preview=el('captureArea').parentElement;preview.id='noticeColumn';
         const memoWidget=el('studentMemoWidget');if(memoWidget)controls.append(memoWidget);
-        const review=document.createElement('div');review.id='noticeControls';review.innerHTML=`<div class="notice-heading"><h2>안내서 검토</h2><button type="button" id="returnWork">계산 작업</button></div><div class="notice-options"><label>출력 배치<select id="noticeLayout"><option value="compact">금액 요약 + 전체 달력</option><option value="portrait">세로 배치</option></select></label><label id="noticeAttendanceOption" title="안내서 표기만 바꾸며 원본 출결과 금액은 유지합니다."><input type="checkbox" id="noticeCancelAsAttendance"> 당일취소를 출석으로 표시</label><label><input type="checkbox" id="showMonthComparison"> 전월 대비 시수 표시</label><button type="button" id="loadPreviousHours">전월 실제 시수 불러오기</button><span id="previousStatus" role="status"></span></div>`;
+        const review=document.createElement('div');review.id='noticeControls';review.innerHTML=`<div class="notice-heading"><h2>안내서 검토</h2><button type="button" id="returnWork">계산 작업</button></div><div class="notice-options"><label>출력 배치<select id="noticeLayout"><option value="compact">금액 요약 + 전체 달력</option><option value="portrait">세로 배치</option></select></label><label><input type="checkbox" id="hideNoticeTimes"> 캘린더 시간 숨김</label><label id="noticeAttendanceOption" title="안내서 표기만 바꾸며 원본 출결과 금액은 유지합니다."><input type="checkbox" id="noticeCancelAsAttendance"> 당일취소를 출석으로 표시</label><label><input type="checkbox" id="showMonthComparison"> 전월 대비 시수 표시</label><button type="button" id="loadPreviousHours">전월 실제 시수 불러오기</button><span id="previousStatus" role="status"></span></div>`;
         el('captureArea').before(review);
         const legend=document.createElement('p');legend.id='calendarReceiptLegend';legend.textContent='날짜별 수업은 달력에, 금액 산출 근거는 과목·강사별 내역에 표시합니다.';el('receiptMiniCalGrid').after(legend);
         const compare=document.createElement('section');compare.id='monthComparison';el('voucherGuideBox').after(compare);
@@ -110,6 +110,7 @@
         el('applyCalendar').onclick=()=>applyDates(false);el('removeCalendar').onclick=()=>applyDates(true);el('globalExcludeDays').onclick=()=>globalDates(true);el('restoreGlobalDays').onclick=()=>globalDates(false);
         el('loadSource').onclick=()=>loadSource(false);el('loadPreviousHours').onclick=loadPrevious;
         el('noticeLayout').onchange=e=>{options.layout=e.target.value;markTouched();refresh();};
+        el('hideNoticeTimes').onchange=e=>{options.hideNoticeTimes=e.target.checked;markTouched();refresh();};
         el('noticeCancelAsAttendance').onchange=e=>{options.cancelAsAttendance=e.target.checked;markTouched();refresh();};
         el('showMonthComparison').onchange=e=>{options.showComparison=e.target.checked;markTouched();refresh();};
         ['일','월','화','수','목','금','토'].forEach((day,i)=>{const b=document.createElement('button');b.type='button';b.textContent=day;b.setAttribute('aria-label',`${day}요일 날짜 선택`);b.onclick=()=>{selectedExtraId=null;for(let d=1;d<=C.daysInMonth(month());d++)if(C.weekday(month(),d)===i)selectedDays.add(d);renderWork();};el('weekdaySelect').append(b);});
@@ -255,12 +256,12 @@
         if(!['auto','select','history','progress','first'].includes(currentTab)){document.querySelector('.receipt-fee-table thead').innerHTML=originalReceiptHead;return;}
         document.querySelector('.receipt-fee-table thead').innerHTML='<tr><th>과목·강사</th><th>수업 내역</th><th id="thAmount">금액</th></tr>';
         const billingLessons=currentTab==='first'?C.expand(collectFirstRegistrationRows().map(r=>({...r,dates:Array.from({length:getFirstRegistrationBillingCount(r)},(_,i)=>i+1)})),'select',month()):lessons;
-        el('receiptBody').innerHTML=C.groups(billingLessons).map(g=>`<tr><td><strong>${subjectIcon(g.subject)}${esc(g.subject)}</strong><span class="receipt-teacher notice-teacher-badge">${esc(g.teacher||'강사 미기재')}</span></td><td><div class="receipt-variants">${[...g.variants.values()].map(v=>`<span class="receipt-variant"><span class="variant-condition">${esc(v.type==='개별정규'?'개별':v.type)} ${v.hours}h × ${v.count}${currentTab==='history'?'건':'회'}${v.status==='예정'||(v.status==='출석'&&!options.cancelAsAttendance)?'':' · '+esc(v.status)}</span><small>${v.rate!==null&&v.rate!==undefined?money(v.rate)+(v.rateMode==='perHour'?'/시간':'/회'):v.amount===null?'금액 확인 필요':money(v.amount)+'/회'}</small></span>`).join('')}</div></td><td class="${tone(g.total)}">${signed(g.pending?null:g.total)}</td></tr>`).join('');
+        el('receiptBody').innerHTML=C.groups(billingLessons).map(g=>`<tr><td><strong>${subjectIcon(g.subject)}${esc(g.subject)}</strong><span class="receipt-teacher notice-teacher-badge">${esc(g.teacher||'강사 미기재')}</span></td><td><div class="receipt-variants">${[...g.variants.values()].map(v=>`<span class="receipt-variant${v.status.includes('결석예고')?' notice-absence':''}"><span class="variant-condition">${esc(v.type==='개별정규'?'개별':v.type)} ${v.hours}h × ${v.count}${currentTab==='history'?'건':'회'}${v.status==='예정'||(v.status==='출석'&&!options.cancelAsAttendance)?'':' · '+esc(v.status)}</span><small>${v.rate!==null&&v.rate!==undefined?money(v.rate)+(v.rateMode==='perHour'?'/시간':'/회'):v.amount===null?'금액 확인 필요':money(v.amount)+'/회'}</small></span>`).join('')}</div></td><td class="${tone(g.total)}">${signed(g.pending?null:g.total)}</td></tr>`).join('');
         const cal=el('receiptMiniCalGrid');cal.replaceChildren();
         for(let i=0;i<C.weekday(month(),1);i++){const c=document.createElement('div');c.className='receipt-cal-cell outside';cal.append(c);}
         for(let d=1;d<=C.daysInMonth(month());d++){
             const c=document.createElement('div');c.className='receipt-cal-cell';c.innerHTML=`<div class="rc-date">${d}</div>`;
-            if(!isReceiptCalendarDetailsHidden())for(const r of lessons.filter(r=>r.day===d))c.insertAdjacentHTML('beforeend',`<div class="notice-event ${getSubjectColorClass(r.subject,false,false)}${r.predicted?' predicted':''}${r.type==='1:1'?' notice-private':''}"><strong>${subjectIcon(r.subject)}${esc(r.subject)}</strong><span class="notice-time">${esc(r.start&&r.end?formatCompactTimeRange(r.start,r.end):r.hours+'시간')}</span><small class="notice-meta">${r.type==='1:1'?'<span class="notice-private-label">1:1</span>':''}${r.teacher?'<span class="notice-teacher-name notice-teacher-badge">'+esc(r.teacher)+'</span>':''}${r.status==='예정'||(r.status==='출석'&&!options.cancelAsAttendance)?'':'<span class="notice-status">'+esc(r.status)+'</span>'}</small></div>`);cal.append(c);
+            if(!isReceiptCalendarDetailsHidden())for(const r of lessons.filter(r=>r.day===d))c.insertAdjacentHTML('beforeend',`<div class="notice-event ${getSubjectColorClass(r.subject,false,false)}${r.predicted?' predicted':''}${r.type==='1:1'?' notice-private':''}${r.status.includes('결석예고')?' notice-absence':''}"><strong>${subjectIcon(r.subject)}${esc(r.subject)}</strong><span class="notice-time">${esc(r.start&&r.end?formatCompactTimeRange(r.start,r.end):r.hours+'시간')}</span><small class="notice-meta">${r.type==='1:1'?'<span class="notice-private-label">1:1</span>':''}${r.teacher?'<span class="notice-teacher-name notice-teacher-badge">'+esc(r.teacher)+'</span>':''}${r.status==='예정'||(r.status==='출석'&&!options.cancelAsAttendance)?'':'<span class="notice-status">'+esc(r.status)+'</span>'}</small></div>`);cal.append(c);
         }
     }
     function refresh(){
@@ -278,7 +279,7 @@
         el('toggleSiblingNotice').hidden=!['auto','select','manual','guide','first'].includes(currentTab);
         for(const b of el('productHeader').querySelectorAll('[data-purpose]'))b.setAttribute('aria-pressed',String(b.dataset.purpose===(notice?(currentTab==='timetable'?'timetable':'notice'):currentTab==='progress'||currentTab==='payment'?'progress':currentTab==='history'?'history':currentTab==='timetable'?'timetable':'calculate')));
         el('tabNavRow').querySelectorAll('button').forEach(b=>{const m=b.id.slice(4);b.hidden=currentTab==='ai'||(currentTab==='progress'||currentTab==='payment'?!['progress','payment'].includes(m):currentTab==='timetable'?m!=='timetable':currentTab==='history'?m!=='history':!['auto','select','manual','first','guide'].includes(m));});
-        el('captureArea').classList.toggle('portrait-notice',options.layout==='portrait');el('noticeLayout').value=options.layout;el('showMonthComparison').checked=options.showComparison;el('noticeCancelAsAttendance').checked=!!options.cancelAsAttendance;el('noticeAttendanceOption').hidden=!['auto','select','history','progress','first'].includes(currentTab);
+        el('captureArea').classList.toggle('portrait-notice',options.layout==='portrait');el('noticeLayout').value=options.layout;el('showMonthComparison').checked=options.showComparison;el('noticeCancelAsAttendance').checked=!!options.cancelAsAttendance;el('hideNoticeTimes').checked=!!options.hideNoticeTimes;el('captureArea').classList.toggle('hide-notice-times',!!options.hideNoticeTimes);el('noticeAttendanceOption').hidden=!['auto','select','history','progress','first'].includes(currentTab);
         if(editable){
             const subtotal=lessons.reduce((s,r)=>s+(r.amount||0),0),discount=getPercentDiscountInfo(subtotal),pending=lessons.some(r=>r.amount===null);
             el('dispSubtotal').textContent=signed(subtotal);updateDiscountSummaryRow(discount);renderAdjustmentSummary();
@@ -506,8 +507,28 @@
             if(typeof html2canvas!=='function')throw Error('이미지 변환기를 불러오지 못했습니다. 네트워크를 확인한 뒤 재시도하세요.');
             await document.fonts.ready;
             await Promise.all([...target.querySelectorAll('img')].map(img=>img.complete?Promise.resolve():new Promise(resolve=>{img.addEventListener('load',resolve,{once:true});img.addEventListener('error',resolve,{once:true});setTimeout(resolve,8000);}))); 
+            const embeddedImages=[...target.querySelectorAll('img')].map(img=>{
+                if(!img.naturalWidth)throw Error('안내서 이미지를 불러오지 못했습니다. 잠시 후 다시 출력하세요.');
+                const bitmap=document.createElement('canvas');bitmap.width=img.naturalWidth;bitmap.height=img.naturalHeight;
+                bitmap.getContext('2d').drawImage(img,0,0);return bitmap.toDataURL('image/png');
+            });
             target.style.width='1120px';target.style.maxWidth='1120px';await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
-            const canvas=await html2canvas(target,{scale:2,useCORS:true,backgroundColor:'#fff',windowWidth:1440,onclone:doc=>{doc.body.classList.add('capture-mode');doc.getElementById('captureArea').style.width='1120px';}});
+            const canvas=await html2canvas(target,{scale:2,x:0,y:0,scrollX:0,scrollY:0,foreignObjectRendering:true,useCORS:true,backgroundColor:'#fff',windowWidth:1440,onclone:async doc=>{
+                doc.body.classList.add('capture-mode');
+                const area=doc.getElementById('captureArea');doc.body.append(area);area.style.width='1120px';area.style.position='absolute';area.style.left='0';area.style.top='0';
+                // html2canvas measures text baselines using an image; Tailwind's block
+                // image reset shifts that measurement. Restore inline images in the clone.
+                const fix=doc.createElement('style');fix.textContent='img{display:inline-block;vertical-align:baseline}';doc.head.append(fix);
+                await Promise.all([...area.querySelectorAll('img')].map(async(img,i)=>{img.removeAttribute('crossorigin');img.src=embeddedImages[i];await img.decode();}));
+                await doc.fonts.ready;
+                // Resolve the watermark after export layout, without transform or negative stacking.
+                const watermark=area.querySelector('.watermark-img');
+                if(watermark){
+                    const bounds=area.getBoundingClientRect(),grid=doc.getElementById('receiptMiniCalGrid').getBoundingClientRect();
+                    const width=Math.min(grid.width*.95,grid.height*.85),height=width*(watermark.naturalHeight/watermark.naturalWidth||1);
+                    for(const [key,value] of Object.entries({left:(grid.left-bounds.left+(grid.width-width)/2)+'px',top:(grid.top-bounds.top+(grid.height-height)/2)+'px',width:width+'px',height:height+'px',transform:'none','max-height':'none','z-index':'0'}))watermark.style.setProperty(key,value,'important');
+                }
+            }});
             if(context!==JSON.stringify(collectCalculatorState()))throw Error('이미지 생성 중 계산 내용이 바뀌었습니다. 다시 출력하세요.');
             const blob=await new Promise((resolve,reject)=>canvas.toBlob(v=>v?resolve(v):reject(Error('이미지 생성에 실패했습니다.')),'image/png'));
             if(outputUrl)URL.revokeObjectURL(outputUrl);outputUrl=URL.createObjectURL(blob);const url=outputUrl;
@@ -532,7 +553,7 @@
     applyCalculatorState=function(data,...args){
         const m=`${data.targetYear}-${String(data.targetMonth).padStart(2,'0')}`;
         for(const key of ['autoRows','selectRows'])for(const row of data[key]||[])C.validateSchedule(row.schedule,m);
-        applying=true;legacySnapshot=null;options={layout:'compact',showComparison:false,cancelAsAttendance:false,previous:null,source:null,placements:[],timetableSource:null,...(data.calendarWorkspace||{})};
+        applying=true;legacySnapshot=null;options={layout:'compact',showComparison:false,cancelAsAttendance:false,hideNoticeTimes:false,previous:null,source:null,placements:[],timetableSource:null,...(data.calendarWorkspace||{})};
         if(!Array.isArray(options.placements)||options.placements.some(r=>!r||!Number.isInteger(r.day)||r.day<1||r.day>31||!Number.isFinite(r.hours)||r.hours<0)) {applying=false;throw Error('시간표 저장 형식을 확인해 주세요.');}
         try{const result=applyOriginal(data,...args);
         
@@ -552,14 +573,14 @@
     const oldUpdate=updateAll;updateAll=function(...args){oldUpdate(...args);if(!applying)queue();};
     for(const name of ['updateHistoryView','renderPaymentReceipt','renderProgress','renderFirstRegistrationView','renderGuideEstimate','updateTimetableView']){const original=window[name];if(typeof original==='function')window[name]=function(...args){const result=original(...args);queue();return result;};}
     const oldReset=resetAndUpdate;resetAndUpdate=function(...args){selectedDays.clear();options.source=null;options.previous=null;options.showComparison=false;options.placements=[];options.timetableSource=null;document.querySelectorAll('[data-schedule]').forEach(row=>{delete row.dataset.schedule;delete row.dataset.sourceIds;delete row.dataset.candidateKeys;row.dataset.legacyAggregate='false';});return oldReset(...args);};
-    const oldClear=clearMonthlyState;clearMonthlyState=function(...args){draftMonth=null;selectedExtraId=null;legacySnapshot=null;options={layout:'compact',showComparison:false,cancelAsAttendance:false,previous:null,source:null,placements:[],timetableSource:null};sourceSnapshot=null;candidateResult=null;candidateGroups=[];sourceContext='';sourceAttempt='';sourcePending='';clearTimeout(sourceTimer);fetchToken++;selectedDays.clear();undo=[];if(el('sourceCandidates'))el('sourceCandidates').hidden=true;document.querySelectorAll('[data-schedule]').forEach(row=>{delete row.dataset.schedule;delete row.dataset.sourceIds;delete row.dataset.candidateKeys;row.dataset.legacyAggregate='false';});return oldClear(...args);};
+    const oldClear=clearMonthlyState;clearMonthlyState=function(...args){draftMonth=null;selectedExtraId=null;legacySnapshot=null;options={layout:'compact',showComparison:false,cancelAsAttendance:false,hideNoticeTimes:false,previous:null,source:null,placements:[],timetableSource:null};sourceSnapshot=null;candidateResult=null;candidateGroups=[];sourceContext='';sourceAttempt='';sourcePending='';clearTimeout(sourceTimer);fetchToken++;selectedDays.clear();undo=[];if(el('sourceCandidates'))el('sourceCandidates').hidden=true;document.querySelectorAll('[data-schedule]').forEach(row=>{delete row.dataset.schedule;delete row.dataset.sourceIds;delete row.dataset.candidateKeys;row.dataset.legacyAggregate='false';});return oldClear(...args);};
     const oldSave=saveServerRecord;saveServerRecord=function(...args){refresh();if(currentTab==='history'&&historyMismatch()){setServerRecordStatus('선택 학생의 수업 이력을 다시 불러온 뒤 저장하세요.','warning');return;}if(legacySnapshot){setServerRecordStatus('폐기된 AI예측 저장본은 열람만 가능합니다. 새 계산으로 시작하세요.','warning');return;}if(['auto','select','history'].includes(currentTab)&&activeLessons().some(r=>r.amount===null)){setServerRecordStatus('단가 미확인 수업을 확인한 뒤 저장하세요.','warning');return;}return oldSave(...args);};
     const oldSaveUi=updateServerSaveModeUi;updateServerSaveModeUi=function(){oldSaveUi();if(legacySnapshot||(currentTab==='history'&&historyMismatch())||(['auto','select','history'].includes(currentTab)&&activeLessons().some(r=>r.amount===null)))document.querySelectorAll('[onclick^="saveServerRecord("]').forEach(b=>b.disabled=true);};
     const oldHistoryText=updateHistoryInfoText;updateHistoryInfoText=function(...args){if(historyMismatch()){el('generatedTextArea').value='선택 학생과 수업 이력의 학생·월이 다릅니다. 선택 학생의 기록을 다시 불러온 뒤 안내 문자를 생성하세요.';return;}return oldHistoryText(...args);};
     const oldCopyText=copyGeneratedText;copyGeneratedText=function(...args){if(currentTab==='history'&&historyMismatch()){updateHistoryInfoText();setServerRecordStatus('선택 학생의 수업 이력을 다시 불러온 뒤 문자를 복사하세요.','warning');return;}return oldCopyText(...args);};
     window.downloadImage=()=>outputImage('save');window.processAiPrediction=()=>setServerRecordStatus('AI예측 기능은 폐기되었습니다.','warning');
     const oldInit=initWorkspaceLayout;initWorkspaceLayout=function(){oldInit();setup();};
-    const oldLoad=window.onload;window.onload=async function(...args){const value=await oldLoad.apply(this,args);setup();updateBatch();refresh();return value;};
+    const oldLoad=window.onload;window.onload=async function(...args){try{const value=await oldLoad.apply(this,args);setup();updateBatch();refresh();return value;}finally{if(el('productHeader'))document.documentElement.classList.remove('workspace-loading');else{document.documentElement.classList.remove('workspace-loading');document.body.replaceChildren(Object.assign(document.createElement('p'),{textContent:'화면을 준비하지 못했습니다. 새로고침해 주세요.'}));}}};
     const oldStudentMatch=syncStudentMatch;syncStudentMatch=function(...args){const result=oldStudentMatch(...args);scheduleSourceLookup();return result;};
     const oldRecords=renderServerRecordList;renderServerRecordList=function(){oldRecords();decorateRecords();};
     const knownSchools=typeof SCHOOL_ICONS==='undefined'?{}:SCHOOL_ICONS;
