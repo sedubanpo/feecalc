@@ -435,3 +435,9 @@ body.calendar-app{padding:0!important;background:#f2f3f1!important;color:var(--w
 #nextMonthRows{max-height:270px;overflow:auto;padding-right:6px}
 #nextMonthPatterns .temporary-preview{margin:0}
 @media(max-width:600px){.draft-dialog{padding:20px}.draft-dialog .temporary-heading h2{font-size:19px}.draft-dialog .temporary-footer button{min-width:0;padding:10px 12px}.next-pattern{gap:9px}.next-pattern-heading{gap:8px}}
+
+/* Notice identity labels follow S-LMS's compact teacher chips. */
+#captureArea .notice-teacher-badge{display:inline-flex;align-items:center;width:fit-content;max-width:100%;padding:2px 5px;border:1px solid #cbd8dd;border-radius:5px;background:#edf3f3;color:#345261;font-weight:500;line-height:1.4;white-space:normal;overflow-wrap:anywhere}
+#captureArea .notice-event.notice-private{border:2px solid #b88b2f}
+#captureArea .notice-private-label{display:inline-block;color:#765416;font-weight:700;margin-right:4px}
+#captureArea .notice-meta{display:flex;flex-wrap:wrap;align-items:center;gap:3px}

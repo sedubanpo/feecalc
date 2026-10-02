@@ -322,6 +322,22 @@ const root=path.resolve(__dirname,'..'),evidence=process.env.EVIDENCE_ROOT;
  await page.keyboard.press('Escape');await page.setViewportSize({width:1440,height:1000});
  });
 
+ await check('notice attendance labels preserve source and totals, private borders and teacher chips export',async()=>{
+ await page.evaluate(()=>{applyCalculatorState({currentTab:'history',studentId:'one',studentName:'검증학생',targetYear:2026,targetMonth:9,historyData:[{year:2026,month:9,day:14,subject:'국어-1:1(검증강사)-2h',teacher:'검증강사',attend:'당일취소',hours:2,amount:250000,originalAmount:250000,startTime:'18:00',endTime:'20:00'}]});FeeCalendar.navigate('notice');});
+ const before=await page.evaluate(()=>({source:JSON.stringify(historyData),total:document.getElementById('dispTotal').textContent}));
+ assert.match(await page.locator('#receiptBody').innerText(),/당일취소/);
+ assert.equal(await page.locator('#captureArea .notice-private').count(),1);
+ assert.equal(await page.locator('#captureArea .notice-teacher-badge').count(),2);
+ await page.locator('#noticeCancelAsAttendance').check();
+ assert.doesNotMatch(await page.locator('#receiptBody').innerText(),/당일취소/);assert.match(await page.locator('#receiptBody').innerText(),/출석/);
+ assert.doesNotMatch(await page.locator('#receiptMiniCalGrid').innerText(),/당일취소/);
+ assert.deepEqual(await page.evaluate(()=>({source:JSON.stringify(historyData),total:document.getElementById('dispTotal').textContent})),before);
+ const state=await page.evaluate(()=>collectCalculatorState());assert.equal(state.calendarWorkspace.cancelAsAttendance,true);
+ await page.evaluate(s=>{applyCalculatorState(s);FeeCalendar.navigate('notice');},state);
+ assert.equal(await page.locator('#noticeCancelAsAttendance').isChecked(),true);
+ if(evidence){fs.mkdirSync(evidence,{recursive:true});for(const width of [1440,390]){await page.setViewportSize({width,height:1000});assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));await page.locator('#captureArea').screenshot({path:path.join(evidence,'notice-labels-'+width+'.png')});}await page.setViewportSize({width:1440,height:1000});}
+ await page.locator('#noticeCancelAsAttendance').uncheck();assert.match(await page.locator('#receiptBody').innerText(),/당일취소/);
+ });
  await check('signed-out account controls fit narrow and intermediate headers',async()=>{
  await page.evaluate(()=>testAuthState({state:'anonymous',gateway:testGateway}));
  for(const width of [390,600,768,1050,1440]){await page.setViewportSize({width,height:1000});assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),String(width));assert.equal(await page.locator('#staffLoginForm').isVisible(),true);}
