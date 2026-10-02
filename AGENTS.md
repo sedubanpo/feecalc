@@ -35,5 +35,5 @@
 ## Financial source imports — 2026-09-30
 
 - Desk receipts and Intranet saved monthly opening balances are read-only sources. Show a review dialog with all items initially unchecked, source month/date, signed amounts, and adjustment total preview; append only explicitly selected rows.
-- Receipt imports deduct payments and add refunds. Missing or blocked amounts/identity never become zero-valued imports. Intranet imports use directly saved opening balances, not aggregate paid totals or cached computed closing balances.
+- Receipt imports deduct payments and add refunds. Missing or blocked amounts/identity never become zero-valued imports. Intranet imports prefer directly saved opening balances; if absent, recompute automatic carry using the Intranet monthly billing and Desk receipt model from the September 2026 settlement baseline. Do not use aggregate paid totals or cached computed closing balances. Prior unresolved charges or receipt identity errors block import.
 - Preserve source IDs, student/month, fingerprint, and original amount in saved adjustment rows to prevent repeated imports. Re-read selected sources before applying; reject changed source records, login changes, and student/month changes. Keep one-step undo. Never update Desk or Intranet source records.
