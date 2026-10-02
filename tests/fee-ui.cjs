@@ -359,6 +359,36 @@ const root=path.resolve(__dirname,'..'),evidence=process.env.EVIDENCE_ROOT;
  assert.match(await page.locator('#imageOutputStatus').innerText(),/복사했습니다/);
  assert.equal(await page.evaluate(()=>document.documentElement.classList.contains('workspace-loading')),false);
  });
+ await check('previous notice reconciles actual tuition, opening and receipts independently with editable persistent draft',async()=>{
+ await page.setViewportSize({width:1800,height:1100});
+ await context.route('https://school.example/logo.svg',r=>r.fulfill({contentType:'image/svg+xml',headers:{'access-control-allow-origin':'*'},body:'<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120"><circle cx="60" cy="60" r="56" fill="#204c73"/><text x="40" y="78" font-size="50" fill="white">S</text></svg>'}));
+ await page.evaluate(()=>{
+ applyCalculatorState({currentTab:'auto',studentId:'one',studentName:'검증학생',targetYear:2026,targetMonth:10,adjustmentItems:[{label:'9월 초과금',amount:906250,kind:'extra'}]});
+ testProgressSnapshot={studentId:'one',month:'2026-09',fetchedAt:'2026-10-03T00:00:00Z',lessons:[{id:'prior-a',date:'2026-09-12',className:'사회-1:1(검증강사)-3h',teacher:'검증강사',minutes:180,amount:3193750,start:'13:00',end:'16:00',kind:'regular'}]};
+ testFinancialData={feecalc_desk_payments:{studentId:'one',month:'2026-09',rows:[{id:'receipt',label:'9월 기수납액',amount:-2287500,kind:'other',fingerprint:'a'.repeat(64)}]},feecalc_intranet_opening:{studentId:'one',month:'2026-09',rows:[{id:'opening',label:'8월 잔액',amount:0,kind:'other',fingerprint:'b'.repeat(64)}]}};
+ studentRegistry.find(s=>s.id==='one').schoolLogoUrl='https://school.example/logo.svg';FeeCalendar.navigate('notice');window.priorWrites=testWrites.length;
+ });
+ assert.match(await page.locator('#captureArea .notice-school-meta').innerText(),/검증중 · 2학년/);
+ await page.locator('#loadPriorNotice').click();await page.waitForFunction(()=>document.querySelector('#priorNoticePaper .prior-total')?.textContent.includes('906,250'));
+ assert.equal(await page.evaluate(()=>getAdjustmentTotal()),906250);
+ await page.getByLabel('잔액·수납 1 금액 (원)',{exact:true}).fill('-2200000');await page.getByLabel('잔액·수납 1 금액 (원)',{exact:true}).press('Tab');
+ assert.match(await page.locator('#priorNoticePaper .prior-total').innerText(),/993,750/);
+ await page.evaluate(()=>{window.priorState=collectCalculatorState();applyCalculatorState(priorState);FeeCalendar.navigate('notice');});
+ assert.equal(await page.getByLabel('잔액·수납 1 금액 (원)',{exact:true}).inputValue(),'-2200000');
+ assert.equal(await page.evaluate(()=>getAdjustmentTotal()),906250);assert.equal(await page.evaluate(()=>testWrites.length),await page.evaluate(()=>priorWrites));
+ assert.equal(await page.locator('#noticeTools').evaluate(e=>getComputedStyle(e).position),'static');
+ await page.waitForFunction(()=>document.querySelector('#captureArea .notice-school-emblem')?.naturalWidth>0);
+ if(evidence){await page.locator('#captureArea .receipt-student').screenshot({path:path.join(evidence,'school-identity.png')});await page.locator('#priorNoticeSection').screenshot({path:path.join(evidence,'prior-desktop.png')});}
+ await page.evaluate(()=>{window.copiedNotice=null;});await page.locator('[data-prior-export="copy"]').click();await page.waitForFunction(()=>!!window.copiedNotice,{timeout:30000});
+ if(evidence){const png=await page.evaluate(async()=>Array.from(new Uint8Array(await copiedNotice.arrayBuffer())));fs.writeFileSync(path.join(evidence,'prior-export.png'),Buffer.from(png));}
+ await page.setViewportSize({width:390,height:844});assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));if(evidence)await page.locator('#priorNoticeSection').screenshot({path:path.join(evidence,'prior-mobile.png')});
+ await page.setViewportSize({width:1440,height:1000});
+ await page.evaluate(()=>{testFail=true;});await page.locator('#loadPriorNotice').click();await page.waitForFunction(()=>document.getElementById('priorNoticeStatus').textContent.includes('조회하지 못했습니다'));assert.match(await page.locator('#priorNoticePaper .prior-total').innerText(),/993,750/);await page.evaluate(()=>{testFail=false;});
+ await page.locator('#priorEditors details').first().evaluate(e=>e.open=true);
+ await page.getByLabel('실제 수업 1 수업일',{exact:true}).fill('2026-09-19');await page.getByLabel('실제 수업 1 수업일',{exact:true}).press('Tab');assert.match(await page.locator('#priorNoticePaper tbody').innerText(),/19일/);
+ await page.evaluate(()=>{testFinancialData.feecalc_intranet_opening.rows[0].amount=null;testFinancialData.feecalc_intranet_opening.rows[0].blocked='시작 잔액 확인 필요';});await page.locator('#loadPriorNotice').click();await page.waitForFunction(()=>document.querySelector('#priorSourceIssue')?.textContent.includes('확인 필요'));assert.equal(await page.locator('[data-prior-export="copy"]').isDisabled(),true);
+ await page.evaluate(()=>{applyCalculatorState({...priorState,studentId:'two',studentName:'동명학생'});FeeCalendar.navigate('notice');});assert.equal(await page.locator('#priorNoticePaper').isVisible(),false);
+ });
  await check('signed-out account controls fit narrow and intermediate headers',async()=>{
  await page.evaluate(()=>testAuthState({state:'anonymous',gateway:testGateway}));
  for(const width of [390,600,768,1050,1440]){await page.setViewportSize({width,height:1000});assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),String(width));assert.equal(await page.locator('#staffLoginForm').isVisible(),true);}

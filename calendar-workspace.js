@@ -42,7 +42,7 @@
         if(purpose==='timetable')switchTab('timetable');
         refresh();
     }
-    window.FeeCalendar={navigate,refresh,activeLessons,changeLesson,seedNextMonth,remember:saveUndo,commit:commitCalendar,focusDay:day=>{detailDay=day;renderDay(activeLessons());}};
+    window.FeeCalendar={exportNotice:(target,action)=>outputImage(action,target),navigate,refresh,activeLessons,changeLesson,seedNextMonth,remember:saveUndo,commit:commitCalendar,focusDay:day=>{detailDay=day;renderDay(activeLessons());}};
     function setup(){
         if(el('productHeader'))return;
         document.title='에스에듀 반포관 · 수강료 계산기';document.body.classList.add('calendar-app');
@@ -301,6 +301,7 @@
             const amount=Number(value.textContent.replace(/[^\d.-]/g,''));value.textContent=signed(amount);value.classList.remove('positive','negative','neutral');value.classList.add(tone(amount));
         }
         if(currentTab==='ai'){el('calendarWorkspace').hidden=true;view='notice';document.body.dataset.view='notice';el('noticeColumn').hidden=false;el('controlColumn').hidden=true;el('calendarBatch').hidden=true;}
+        renderSchoolIdentity();window.FeePriorNotice?.render({options,student:matchedStudent(),month:month(),priorMonth:priorMonth(),notice:view==='notice',fetchSnapshot,markTouched,schoolHtml});
         updateServerSaveModeUi();decorateRecords();scheduleSourceLookup();
     }
     function renderComparison(lessons){
@@ -494,13 +495,13 @@
         for(let day=1;day<=C.daysInMonth(month());day++)cal.insertAdjacentHTML('beforeend',`<div class="receipt-cal-cell"><div class="rc-date">${day}</div>${placements.filter(r=>r.day===day).map(r=>`<div class="notice-event ${getSubjectColorClass(r.subject,false,false)}"><strong>${subjectIcon(r.subject)}${esc(r.subject)} · ${esc(r.teacher)}</strong><span class="notice-time">${esc(r.start&&r.end?r.start+'–'+r.end:r.hours+'시간 · 시각 미배치')}</span></div>`).join('')}</div>`);
     }
     let outputUrl='';
-    async function outputImage(action){
+    async function outputImage(action,sourceTarget=null){
         if(outputPending)return;
-        if(currentTab==='history'&&historyMismatch()){el('imageOutputStatus').textContent='수업 이력의 학생·월이 다릅니다. 선택 학생의 기록을 다시 불러오세요.';return;}
-        if(currentTab==='progress'&&!progressReady()){setServerRecordStatus('최신 수업과 미확인 금액을 확인한 뒤 출력하세요.','warning');return;}
-        if(['auto','select','history'].includes(currentTab)&&activeLessons().some(r=>r.amount===null)){el('imageOutputStatus').textContent='단가 미확인 수업을 먼저 확인하세요. 0원은 직접 입력할 수 있습니다.';return;}
+        if(!sourceTarget&&currentTab==='history'&&historyMismatch()){el('imageOutputStatus').textContent='수업 이력의 학생·월이 다릅니다. 선택 학생의 기록을 다시 불러오세요.';return;}
+        if(!sourceTarget&&currentTab==='progress'&&!progressReady()){setServerRecordStatus('최신 수업과 미확인 금액을 확인한 뒤 출력하세요.','warning');return;}
+        if(!sourceTarget&&['auto','select','history'].includes(currentTab)&&activeLessons().some(r=>r.amount===null)){el('imageOutputStatus').textContent='단가 미확인 수업을 먼저 확인하세요. 0원은 직접 입력할 수 있습니다.';return;}
         outputPending=true;el('imageOutputStatus').textContent='이미지를 만들고 있습니다.';
-        const target=el('captureArea'),oldWidth=target.style.width,oldMax=target.style.maxWidth;
+        const target=sourceTarget||el('captureArea'),oldWidth=target.style.width,oldMax=target.style.maxWidth;
         const context=JSON.stringify(collectCalculatorState());
         document.querySelectorAll('.output-actions button').forEach(b=>b.disabled=true);
         try{
@@ -508,6 +509,7 @@
             await document.fonts.ready;
             await Promise.all([...target.querySelectorAll('img')].map(img=>img.complete?Promise.resolve():new Promise(resolve=>{img.addEventListener('load',resolve,{once:true});img.addEventListener('error',resolve,{once:true});setTimeout(resolve,8000);}))); 
             const embeddedImages=[...target.querySelectorAll('img')].map(img=>{
+                if(!img.naturalWidth&&img.classList.contains('notice-school-emblem'))return null;
                 if(!img.naturalWidth)throw Error('안내서 이미지를 불러오지 못했습니다. 잠시 후 다시 출력하세요.');
                 const bitmap=document.createElement('canvas');bitmap.width=img.naturalWidth;bitmap.height=img.naturalHeight;
                 bitmap.getContext('2d').drawImage(img,0,0);return bitmap.toDataURL('image/png');
@@ -515,16 +517,16 @@
             target.style.width='1120px';target.style.maxWidth='1120px';await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
             const canvas=await html2canvas(target,{scale:2,x:0,y:0,scrollX:0,scrollY:0,foreignObjectRendering:true,useCORS:true,backgroundColor:'#fff',windowWidth:1440,onclone:async doc=>{
                 doc.body.classList.add('capture-mode');
-                const area=doc.getElementById('captureArea');doc.body.append(area);area.style.width='1120px';area.style.position='absolute';area.style.left='0';area.style.top='0';
+                const area=doc.getElementById(target.id);if(sourceTarget){doc.getElementById('captureArea')?.remove();area.id='captureArea';}doc.body.append(area);area.style.width='1120px';area.style.position='absolute';area.style.left='0';area.style.top='0';
                 // html2canvas measures text baselines using an image; Tailwind's block
                 // image reset shifts that measurement. Restore inline images in the clone.
                 const fix=doc.createElement('style');fix.textContent='img{display:inline-block;vertical-align:baseline}';doc.head.append(fix);
-                await Promise.all([...area.querySelectorAll('img')].map(async(img,i)=>{img.removeAttribute('crossorigin');img.src=embeddedImages[i];await img.decode();}));
+                await Promise.all([...area.querySelectorAll('img')].map(async(img,i)=>{if(!embeddedImages[i]){img.remove();return;}img.removeAttribute('crossorigin');img.src=embeddedImages[i];await img.decode();}));
                 await doc.fonts.ready;
                 // Resolve the watermark after export layout, without transform or negative stacking.
                 const watermark=area.querySelector('.watermark-img');
                 if(watermark){
-                    const bounds=area.getBoundingClientRect(),grid=doc.getElementById('receiptMiniCalGrid').getBoundingClientRect();
+                    const bounds=area.getBoundingClientRect(),grid=(area.querySelector('.prior-calendar-grid')||doc.getElementById('receiptMiniCalGrid')).getBoundingClientRect();
                     const width=Math.min(grid.width*.95,grid.height*.85),height=width*(watermark.naturalHeight/watermark.naturalWidth||1);
                     for(const [key,value] of Object.entries({left:(grid.left-bounds.left+(grid.width-width)/2)+'px',top:(grid.top-bounds.top+(grid.height-height)/2)+'px',width:width+'px',height:height+'px',transform:'none','max-height':'none','z-index':'0'}))watermark.style.setProperty(key,value,'important');
                 }
@@ -534,7 +536,7 @@
             if(outputUrl)URL.revokeObjectURL(outputUrl);outputUrl=URL.createObjectURL(blob);const url=outputUrl;
             el('openNoticeImage').hidden=false;el('openNoticeImage').onclick=()=>window.open(url,'_blank');
             let copied=false;if(action==='copy'){try{if(!navigator.clipboard?.write||typeof ClipboardItem==='undefined')throw Error();await navigator.clipboard.write([new ClipboardItem({'image/png':blob})]);copied=true;}catch{el('imageOutputStatus').textContent='이미지 복사가 제한되어 파일 저장으로 전환합니다.';}}
-            if(!copied){const a=document.createElement('a');a.href=url;a.download=`${getCurrentStudentName().replace(/[^\w가-힣-]/g,'_')||'학생'}_${month()}_${currentTab==='timetable'?'시간표':'수강료안내서'}.png`;a.click();}
+            if(!copied){const a=document.createElement('a');a.href=url;a.download=`${getCurrentStudentName().replace(/[^\w가-힣-]/g,'_')||'학생'}_${sourceTarget?.dataset.month||month()}_${currentTab==='timetable'?'시간표':'수강료안내서'}.png`;a.click();}
             el('imageOutputStatus').textContent=copied?'이미지를 복사했습니다.':'파일 저장을 요청했습니다. 다운로드가 막히면 생성 이미지 열기를 사용하세요.';
         }catch(error){el('imageOutputStatus').textContent=error.message||'출력 실패 · 입력을 유지했습니다. 다시 시도하세요.';}
         finally{target.style.width=oldWidth;target.style.maxWidth=oldMax;outputPending=false;document.querySelectorAll('.output-actions button').forEach(b=>b.disabled=false);}
@@ -584,6 +586,17 @@
     const oldStudentMatch=syncStudentMatch;syncStudentMatch=function(...args){const result=oldStudentMatch(...args);scheduleSourceLookup();return result;};
     const oldRecords=renderServerRecordList;renderServerRecordList=function(){oldRecords();decorateRecords();};
     const knownSchools=typeof SCHOOL_ICONS==='undefined'?{}:SCHOOL_ICONS;
+    function schoolHtml(student){
+        if(!student)return '';
+        const url=student.schoolLogoUrl||student.schoolEmblemUrl||knownSchools[student.school];
+        const grade=String(student.grade||'').trim();
+        return `${url&&/^https:\/\//.test(url)?`<img class="notice-school-emblem" crossorigin="anonymous" src="${esc(url)}" alt="" aria-hidden="true" onerror="this.hidden=true">`:''}<p class="notice-school-meta">${esc([student.school,grade?(/학년/.test(grade)?grade:grade+'학년'):''].filter(Boolean).join(' · '))}</p>`;
+    }
+    function renderSchoolIdentity(){
+        const host=document.querySelector('#captureArea .receipt-student');if(!host)return;
+        let identity=host.querySelector('.notice-school-identity');if(!identity){identity=document.createElement('div');identity.className='notice-school-identity';host.append(identity);}
+        const html=schoolHtml(matchedStudent());if(identity.dataset.html!==html){identity.innerHTML=html;identity.dataset.html=html;}
+    }
     function decorateRecords(){
         if(!isServerConfigured()&&!document.querySelector('#serverRecordList .record-item')){el('serverRecordList').textContent='';return;}
         [...document.querySelectorAll('#serverRecordList .record-item')].forEach((card,i)=>{
