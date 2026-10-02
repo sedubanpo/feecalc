@@ -49,16 +49,38 @@
         }
         return [...map.values()].sort((a,b)=>a.subject.localeCompare(b.subject,'ko')||a.teacher.localeCompare(b.teacher,'ko'));
     }
-    function hoursBySubject(lessons){const totals={};for(const r of lessons)totals[r.subject]=(totals[r.subject]||0)+(r.hours||0);return totals;}
+    function hoursBySubject(lessons){
+        const totals={};
+        for(const r of lessons){
+            if(!finite(r.hours)||Number(r.hours)<0||totals[r.subject]===null)totals[r.subject]=null;
+            else totals[r.subject]=(totals[r.subject]||0)+Number(r.hours);
+        }
+        return totals;
+    }
     function compareHours(current,previous){
         return [...new Set([...Object.keys(current),...Object.keys(previous||{})])].map(subject=>{
-            const now=current[subject]||0,prior=previous?.[subject];
+            const now=subject in current?(finite(current[subject])?Number(current[subject]):null):0,prior=previous?.[subject];
             const known=finite(prior)&&Number(prior)>=0;
-            return {subject,current:now,previous:known?Number(prior):null,percent:known&&Number(prior)>0?(now-Number(prior))/Number(prior)*100:null,label:!known?'비교 자료 없음':Number(prior)===0?(now>0?'신규':'변동 없음'):null};
+            return {subject,current:now,previous:known?Number(prior):null,percent:now!==null&&known&&Number(prior)>0?(now-Number(prior))/Number(prior)*100:null,label:now===null?'현재 시수 확인 필요':!known?'비교 자료 없음':Number(prior)===0?(now>0?'신규':'변동 없음'):null};
         });
     }
     function normalizeSnapshot(snapshot){
-        return snapshot.lessons.map(r=>({...info(r.className,r.teacher),id:r.id,day:Number(r.date.slice(-2)),date:r.date,hours:(r.minutes||0)/60,amount:r.amount,rate:null,rawName:r.className,start:r.start,end:r.end,status:({regular:'출석',late:'지각',cancel:'당일취소',absence:'결석예고',absenceMakeup:'결석보강',cancelMakeup:'보충',lateMakeup:'보충',free:'프리'})[r.kind]||'확인 필요',kind:r.kind,note:r.note||r.memo||r.reference||'',source:r}));
+        return snapshot.lessons.map(r=>({...info(r.className,r.teacher),id:r.id,day:Number(r.date.slice(-2)),date:r.date,hours:r.minutes===null?null:(r.minutes||0)/60,amount:r.amount,rate:null,rawName:r.className,start:r.start,end:r.end,status:({regular:'출석',late:'지각',cancel:'당일취소',absence:'결석예고',absenceMakeup:'결석보강',cancelMakeup:'보충',lateMakeup:'보충',free:'프리'})[r.kind]||'확인 필요',kind:r.kind,note:r.note||r.memo||r.reference||'',source:r}));
+    }
+    function validatePriorNotice(d){
+        if(d===undefined||d===null)return;
+        const month=v=>typeof v==='string'&&/^20\d{2}-(0[1-9]|1[0-2])$/.test(v);
+        const value=(v,minimum=0,maximum=1e10)=>v===null||(typeof v==='number'&&Number.isFinite(v)&&v>=minimum&&v<=maximum);
+        if(!d||typeof d!=='object'||typeof d.studentId!=='string'||!d.studentId||!month(d.month)||!month(d.targetMonth)||d.month>=d.targetMonth||typeof d.fetchedAt!=='string'||!Number.isFinite(Date.parse(d.fetchedAt))||!Array.isArray(d.lessons)||d.lessons.length>1000||!Array.isArray(d.adjustments)||d.adjustments.length>5000||d.sourceIssue!==undefined&&typeof d.sourceIssue!=='string')throw Error('이전 달 안내서 저장 형식을 확인해 주세요.');
+        const ids=new Set();
+        for(const row of [...d.lessons,...d.adjustments]){
+            if(!row||typeof row.id!=='string'||!row.id||ids.has(row.id)||!value(row.amount,-1e10)||row.included!==undefined&&typeof row.included!=='boolean')throw Error('이전 달 안내서 항목·금액을 확인해 주세요.');
+            ids.add(row.id);
+        }
+        for(const row of d.lessons){
+            if(!Number.isInteger(row.day)||row.day<1||row.day>daysInMonth(d.month)||row.date!==d.month+'-'+String(row.day).padStart(2,'0')||!value(row.amount)||!value(row.hours,0,24)||['subject','teacher','type','status','start','end'].some(key=>typeof row[key]!=='string'))throw Error('이전 달 수업 날짜·시간·금액을 확인해 주세요.');
+        }
+        if(d.adjustments.some(row=>typeof row.label!=='string'))throw Error('이전 달 잔액·수납 내용을 확인해 주세요.');
     }
     // Patterns are candidates only. Staff must confirm each against change notices.
     function candidates(snapshot){
@@ -138,6 +160,6 @@
         for(const v of [...Object.values(s.overrides||{}),...(s.additional||[])])if((v.start||v.end)&&(!clock(v.start)||!clock(v.end)||v.end<=v.start))throw Error('회차별 시작·종료 시각을 확인해 주세요.');
         return JSON.parse(JSON.stringify(s));
     }
-    const api={nextMonthPlan,info,expand,groups,hoursBySubject,compareHours,candidates,groupCandidates,normalizeSnapshot,daysInMonth,weekday,validateSchedule};
+    const api={nextMonthPlan,info,expand,groups,hoursBySubject,compareHours,candidates,groupCandidates,normalizeSnapshot,validatePriorNotice,daysInMonth,weekday,validateSchedule};
     if(typeof module!=='undefined')module.exports=api;else root.FeeCalendarCore=api;
 })(typeof window==='undefined'?{}:window);

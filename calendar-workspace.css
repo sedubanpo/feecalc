@@ -155,8 +155,8 @@ body.calendar-app{padding:0!important;background:#f2f3f1!important;color:var(--w
 :is(#captureArea,#priorNoticePaper).portrait-notice .receipt-cal-cell{min-height:88px}
 #noticeControls{grid-area:controls;min-width:0}#noticeTools{grid-area:tools;min-width:0;max-width:none;margin:0;position:sticky;top:20px}
 .output-actions{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}.output-actions span{flex-basis:100%;font-size:12px;color:var(--work-muted)}
-.calendar-app[data-mode=timetable] :is(#captureArea,#priorNoticePaper) .receipt-content{grid-template-columns:minmax(0,1fr)}
-.calendar-app[data-mode=timetable] :is(#captureArea,#priorNoticePaper) .receipt-left{display:none}
+.calendar-app[data-mode=timetable] #captureArea:not(.prior-notice-paper) .receipt-content{grid-template-columns:minmax(0,1fr)}
+.calendar-app[data-mode=timetable] #captureArea:not(.prior-notice-paper) .receipt-left{display:none}
 #timetablePlacement{padding:10px 0;border-bottom:1px solid var(--work-border);margin-bottom:14px}
 #timetablePlacement h3{font-size:15px;font-weight:700}#timetablePlacement p{font-size:12px;line-height:1.7;color:var(--work-muted);margin:8px 0}
 .placement-row{padding:10px 0;border-bottom:1px solid var(--work-border);display:flex;flex-wrap:wrap;gap:8px}
@@ -167,7 +167,7 @@ body.calendar-app{padding:0!important;background:#f2f3f1!important;color:var(--w
 @media(max-width:1050px){#productHeader{gap:12px;padding:12px 18px}#productHeader button{padding:8px 9px;font-size:12px}#workspaceGrid{grid-template-columns:190px minmax(250px,300px) minmax(0,1fr)}#controlColumn{padding:14px}.calendar-event strong{font-size:11px}.calendar-event span,.calendar-event small{font-size:10px}#calendarWorkspace{grid-column:2/-1;grid-row:2}#controlColumn{grid-column:2/-1;display:block;border:0;max-height:470px;overflow:auto}#recordsDock{grid-row:1/3}.calendar-batch{grid-template-columns:minmax(0,1fr) 80px 100px}#noticeColumn{grid-row:1}}
 @media(max-width:760px){#productHeader{flex-wrap:wrap;padding:12px 14px;gap:10px}.product-brand img{width:34px;height:34px}.product-brand strong{font-size:19px}#productHeader nav{width:100%;overflow:auto;gap:0}#productHeader button{flex-shrink:0;min-height:38px;padding:8px 10px}#workspaceGrid{display:block!important}#recordsDock{position:static;max-height:none;padding:12px}#serverRecordArea h3{font-size:13px}#serverRecordList{display:flex;overflow-x:auto;gap:10px}#serverRecordList .record-item{flex:0 0 200px;margin:0}#staffAuthPanel{max-width:none}#controlColumn{padding:16px;max-height:560px;overflow:auto;border-bottom:1px solid var(--work-border)}#calendarWorkspace,#noticeColumn{padding:16px 10px}.work-heading h2{font-size:18px}.work-heading>div:last-child{display:flex;flex-direction:column;gap:5px}.source-tools{gap:10px}.calendar-day{padding:2px;min-height:100px}.calendar-event strong{font-size:10px}.calendar-event span,.calendar-event small{font-size:9px}#calendarWorkspace .calendar-event{padding:4px 2px}.calendar-day-head input{width:12px;height:12px}.calendar-day-head{gap:0}.calendar-toolbar{font-size:11px}#calendarWorkspace #weekdaySelect button{min-width:30px}:is(#captureArea,#priorNoticePaper){width:100%;padding:18px 12px!important}:is(#captureArea,#priorNoticePaper) .receipt-content{grid-template-columns:minmax(0,1fr)}:is(#captureArea,#priorNoticePaper) .receipt-header{gap:10px}:is(#captureArea,#priorNoticePaper) .receipt-brand p{font-size:14px}:is(#captureArea,#priorNoticePaper) .receipt-brand h1{font-size:12px}:is(#captureArea,#priorNoticePaper) .receipt-brand img{width:32px;height:32px}:is(#captureArea,#priorNoticePaper) .receipt-student h2{font-size:16px}:is(#captureArea,#priorNoticePaper) .receipt-cal-cell{min-height:62px}:is(#captureArea,#priorNoticePaper) :is(#receiptBody,[data-receipt-part="receiptBody"]) strong{font-size:13px}:is(#captureArea,#priorNoticePaper) :is(#receiptBody,[data-receipt-part="receiptBody"])>tr>td{font-size:12px}:is(#captureArea,#priorNoticePaper) :is(#thAmount,[data-receipt-part="thAmount"]){width:105px!important}.notice-options{gap:10px}.notice-heading h2{font-size:19px}.calendar-batch{grid-template-columns:minmax(0,1fr) 68px 90px;gap:8px}.calendar-batch input{width:100%}.calendar-app[data-mode=ai] #controlColumn{max-height:none}}
 @media(prefers-reduced-motion:reduce){.calendar-app button{transition:none}}
-.capture-mode :is(#captureArea,#priorNoticePaper) .receipt-content{grid-template-columns:minmax(300px,420px) minmax(0,1fr)!important}.capture-mode :is(#captureArea,#priorNoticePaper).portrait-notice .receipt-content,.capture-mode[data-mode=timetable] :is(#captureArea,#priorNoticePaper) .receipt-content{grid-template-columns:minmax(0,1fr)!important}
+.capture-mode :is(#captureArea,#priorNoticePaper) .receipt-content{grid-template-columns:minmax(300px,420px) minmax(0,1fr)!important}.capture-mode :is(#captureArea,#priorNoticePaper).portrait-notice .receipt-content,.capture-mode[data-mode=timetable] #captureArea:not(.prior-notice-paper) .receipt-content{grid-template-columns:minmax(0,1fr)!important}
 .capture-mode .notice-event{break-inside:avoid;line-height:1.6!important}.capture-mode .notice-event span{padding-bottom:1px}
 :is(#captureArea,#priorNoticePaper) .receipt-cal-grid{gap:0;background:transparent!important}
 :is(#captureArea,#priorNoticePaper) .receipt-fee-table th:first-child{width:74px;text-align:left}
@@ -225,7 +225,7 @@ body.calendar-app{padding:0!important;background:#f2f3f1!important;color:var(--w
 :is(#captureArea,#priorNoticePaper) :is(#priceSummaryArea,[data-receipt-part="priceSummaryArea"]) :is(#labelTotal,[data-receipt-part="labelTotal"]){font-size:14px;font-weight:700}
 :is(#captureArea,#priorNoticePaper) :is(#priceSummaryArea,[data-receipt-part="priceSummaryArea"]) :is(#dispTotal,[data-receipt-part="dispTotal"]){font-weight:700;font-variant-numeric:tabular-nums}
 :is(#captureArea,#priorNoticePaper) :is(#receiptCalendarArea,[data-receipt-part="receiptCalendarArea"])>div:first-child{justify-content:flex-start;text-align:left;font-size:13px;color:var(--work-ink);margin-bottom:10px}
-:is(#captureArea,#priorNoticePaper) :is(#receiptCalendarArea,[data-receipt-part="receiptCalendarArea"])>div:nth-child(2){background:#edf1f3;padding:8px 0;margin:0;border:1px solid var(--work-border);border-bottom:0;color:#526777}
+:is(#captureArea,#priorNoticePaper) .notice-calendar-weekdays{background:#edf1f3;padding:8px 0;margin:0;border:1px solid var(--work-border);border-bottom:0;color:#526777}
 #calendarReceiptLegend,:is(#monthComparison,[data-receipt-part="monthComparison"])>p{font-size:10px}:is(#monthComparison,[data-receipt-part="monthComparison"]) h3{font-size:12px}.comparison-line{font-size:11px}
 #noticeTools>h3{font-size:15px;font-weight:700;margin:0 0 12px;color:var(--work-ink)}
 #noticeTools .output-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding-bottom:22px;margin-bottom:22px;border-bottom:1px solid var(--work-border)}
@@ -451,4 +451,19 @@ body.calendar-app{padding:0!important;background:#f2f3f1!important;color:var(--w
 .notice-event strong{white-space:normal;word-break:keep-all}
 .notice-event .notice-meta{grid-column:1/-1}
 :is(#captureArea,#priorNoticePaper) .receipt-fee-table td:first-child strong{word-break:keep-all}
+@media(max-width:760px){
+ :is(#captureArea,#priorNoticePaper) .notice-calendar-scroll{overflow-x:auto;max-width:100%;scrollbar-color:#9aabb3 #edf1f3}
+ :is(#captureArea,#priorNoticePaper) .notice-calendar-scroll>:is(.notice-calendar-weekdays,.receipt-cal-grid){min-width:560px}
+ :is(#captureArea,#priorNoticePaper) .notice-calendar-scroll-hint{display:block;font-size:11px;line-height:1.6;color:var(--work-muted);margin:0 0 8px}
+ :is(#captureArea,#priorNoticePaper) .notice-event{grid-template-columns:minmax(0,1fr);gap:3px}
+ :is(#captureArea,#priorNoticePaper) .notice-event strong{overflow-wrap:anywhere}
+ :is(#captureArea,#priorNoticePaper) .notice-time{white-space:normal;overflow-wrap:anywhere}
+}
+.notice-calendar-scroll{min-width:0}
+.notice-calendar-scroll:focus-visible{outline:2px solid var(--action);outline-offset:3px}
+.notice-calendar-scroll-hint{display:none}
+.capture-mode :is(#captureArea,#priorNoticePaper) .notice-calendar-scroll{overflow:visible}
+.capture-mode :is(#captureArea,#priorNoticePaper) .notice-calendar-scroll>:is(.notice-calendar-weekdays,.receipt-cal-grid){min-width:0}
+.capture-mode :is(#captureArea,#priorNoticePaper) .notice-calendar-scroll-hint{display:none}
+.capture-mode :is(#captureArea,#priorNoticePaper) .notice-event{grid-template-columns:minmax(0,1fr) auto}
 [data-receipt-part="calendarReceiptLegend"]{font-size:10px;color:var(--work-muted)}

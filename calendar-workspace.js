@@ -23,7 +23,7 @@
         if(['auto','select'].includes(currentTab))return C.expand(readRows(),currentTab,month(),[...excludedDates]);
         if(currentTab==='history'&&historyMismatch())return [];
         if(currentTab==='history')return historyData.filter(r=>!r.excludeFromHistory&&r.month===Number(el('targetMonth').value)&&r.year===Number(el('targetYear').value)).map((r,i)=>({...C.info(r.subject,r.teacher),id:'history:'+i,day:r.day,hours:r.hours||0,amount:r.amount,rawName:r.subject,start:r.startTime||'',end:r.endTime||'',status:(getHistoryStatusMeta(r)?.label||r.attend||'출석').replace(/ · (과금|0원)$/,''),rate:null,rateMode:'perClass'}));
-        if(currentTab==='progress'){const result=progressResult();return [...result.actual,...result.predicted].map(r=>({...C.info(r.className,r.teacher),id:r.id,day:Number(r.date.slice(-2)),hours:(r.minutes||0)/60,amount:r.amount,rawName:r.className,start:r.start,end:r.end,status:(r.temporary?'임시':r.predicted?'예상':progressKind(r.kind))+(r.edited?' · 수정':''),edited:r.edited,rate:null,predicted:r.predicted,temporary:r.temporary}));}
+        if(currentTab==='progress'){const result=progressResult();return [...result.actual,...result.predicted].map(r=>({...C.info(r.className,r.teacher),id:r.id,day:Number(r.date.slice(-2)),hours:r.minutes===null?null:(r.minutes||0)/60,amount:r.amount,rawName:r.className,start:r.start,end:r.end,status:(r.temporary?'임시':r.predicted?'예상':progressKind(r.kind))+(r.edited?' · 수정':''),edited:r.edited,rate:null,predicted:r.predicted,temporary:r.temporary}));}
         if(currentTab==='timetable')return options.timetableSource?.month===month()&&options.timetableSource?.studentName===getCurrentStudentName()?options.placements:[];
         if(currentTab==='first')return collectFirstRegistrationRows().flatMap((r,i)=>getFirstRegistrationMonthDates(r).map(day=>({...C.info(r.name),id:'first:'+i+':'+day,day,hours:r.hours,amount:Math.round(r.rate*(r.rateMode==='perHour'?r.hours:1)),rawName:r.name,start:'',end:'',status:'예정'}))); 
         return [];
@@ -96,6 +96,11 @@
         const review=document.createElement('div');review.id='noticeControls';review.innerHTML=`<div class="notice-heading"><h2>안내서 검토</h2><button type="button" id="returnWork">계산 작업</button></div><div class="notice-options"><label>출력 배치<select id="noticeLayout"><option value="compact">금액 요약 + 전체 달력</option><option value="portrait">세로 배치</option></select></label><label><input type="checkbox" id="hideNoticeTimes"> 캘린더 시간 숨김</label><label id="noticeAttendanceOption" title="안내서 표기만 바꾸며 원본 출결과 금액은 유지합니다."><input type="checkbox" id="noticeCancelAsAttendance"> 당일취소를 출석으로 표시</label><label><input type="checkbox" id="showMonthComparison"> 전월 대비 시수 표시</label><button type="button" id="loadPreviousHours">전월 실제 시수 불러오기</button><span id="previousStatus" role="status"></span></div>`;
         el('captureArea').before(review);
         const legend=document.createElement('p');legend.id='calendarReceiptLegend';legend.textContent='날짜별 수업은 달력에, 금액 산출 근거는 과목·강사별 내역에 표시합니다.';el('receiptMiniCalGrid').after(legend);
+        const calendarGrid=el('receiptMiniCalGrid'),calendarWeekdays=calendarGrid.previousElementSibling;
+        calendarWeekdays.classList.add('notice-calendar-weekdays');
+        const calendarScroll=document.createElement('div');calendarScroll.className='notice-calendar-scroll';calendarScroll.tabIndex=0;calendarScroll.setAttribute('role','region');calendarScroll.setAttribute('aria-label','월간 수업 일정 · 좁은 화면에서는 좌우로 이동할 수 있습니다');
+        calendarGrid.before(calendarScroll);calendarScroll.append(calendarWeekdays,calendarGrid);
+        const scrollHint=document.createElement('p');scrollHint.className='notice-calendar-scroll-hint';scrollHint.textContent='달력을 좌우로 움직여 전체 일정을 확인하세요.';calendarScroll.before(scrollHint);
         const compare=document.createElement('section');compare.id='monthComparison';el('voucherGuideBox').after(compare);
         const output=preview.querySelector('.image-save-button').parentElement;
         output.id='noticeTools';output.setAttribute('role','complementary');output.setAttribute('aria-label','이미지 출력과 안내 문자');
@@ -295,22 +300,35 @@
         el('captureArea').classList.toggle('portrait-notice',options.layout==='portrait');el('noticeLayout').value=options.layout;el('showMonthComparison').checked=options.showComparison;el('noticeCancelAsAttendance').checked=!!options.cancelAsAttendance;el('hideNoticeTimes').checked=!!options.hideNoticeTimes;el('captureArea').classList.toggle('hide-notice-times',!!options.hideNoticeTimes);el('noticeAttendanceOption').hidden=!['auto','select','history','progress','first'].includes(currentTab);
         if(editable){
             const subtotal=lessons.reduce((s,r)=>s+(r.amount||0),0),discount=getPercentDiscountInfo(subtotal),pending=lessons.some(r=>r.amount===null);
-            el('dispSubtotal').textContent=signed(subtotal);updateDiscountSummaryRow(discount);renderAdjustmentSummary();
+            el('dispSubtotal').textContent=signed(pending?null:subtotal);updateDiscountSummaryRow(discount);renderAdjustmentSummary();
+            if(pending&&discount.amount)el('dispDiscount').textContent='확인 필요';
             el('dispTotal').textContent=pending?'단가 확인 필요':money(renderSiblingSummary(getCurrentStudentName(),discount.discountedBase+getAdjustmentTotal()));
             el('labelTotal').textContent='예상 납부액';updateInfoText(subtotal,getAdjustmentTotal());
             rowList().forEach((r,i)=>{const count=r.querySelector('.sub-count');if(count)count.value=lessons.filter(l=>l.row===i).length;});
         }
         if(el('studentMemoWidget')?.parentElement!==el('controlColumn'))el('controlColumn').append(el('studentMemoWidget'));
         if(currentTab==='history'&&historyMismatch()){el('dispTotal').textContent='학생·월 자료 재확인';el('generatedTextArea').value='선택 학생과 수업 이력의 학생·월이 다릅니다. 선택 학생의 기록을 다시 불러온 뒤 안내 문자를 생성하세요.';}
-        document.querySelectorAll('[onclick="copyGeneratedText()"]').forEach(b=>b.disabled=currentTab==='history'&&!!historyMismatch());
-        if(currentTab==='history'&&lessons.some(r=>r.amount===null))el('dispTotal').textContent='금액 확인 필요';
+        const messageIssue=noticeMessageIssue();
+        if(messageIssue)el('generatedTextArea').value=messageIssue;
+        document.querySelectorAll('[onclick="copyGeneratedText()"]').forEach(b=>b.disabled=!!messageIssue);
+        const pendingCharges=lessons.some(r=>r.amount===null);
+        if(currentTab==='history'&&pendingCharges){el('dispTotal').textContent='금액 확인 필요';if(el('dispSubtotal'))el('dispSubtotal').textContent='확인 필요';}
         decorateConditions();renderGroupedReceipt(lessons);renderWork();renderComparison(lessons);renderPlacements();
-        for(const id of ['dispSubtotal','dispDiscount','dispAdj']){const n=el(id);if(!n)continue;const num=Number(n.textContent.replace(/[^\d.-]/g,''))*(n.textContent.includes('−')?-1:1);n.textContent=signed(num);n.classList.remove('positive','negative','neutral');n.classList.add(tone(num));}
+        for(const id of ['dispSubtotal','dispDiscount','dispAdj']){
+            const n=el(id);if(!n)continue;
+            const match=/[+−-]?\d[\d,]*(?:\.\d+)?/.exec(n.textContent);
+            if(!match){n.classList.remove('positive','negative');n.classList.add('neutral');continue;}
+            // A percentage annotation is metadata, never part of the monetary value.
+            const num=Number(match[0].replace(/,/g,'').replace('−','-')),percent=/\([^)]*%\)/.exec(n.textContent)?.[0];
+            n.textContent=signed(num)+(percent?' '+percent:'');n.classList.remove('positive','negative','neutral');n.classList.add(tone(num));
+        }
         el('dispTotal')?.classList.add('expected-total');
         el('dispTotal')?.parentElement.classList.add('receipt-total');
         for(const row of el('priceSummaryArea').querySelectorAll('.flex,.payment-summary-row')){
             const label=row.firstElementChild,value=row.lastElementChild;
             if(!label||!value||label===value||!['수업 누계','수강료 소계'].includes(label.textContent.trim()))continue;
+            if(pendingCharges&&['auto','select','history','progress'].includes(currentTab)){value.textContent='확인 필요';value.classList.remove('positive','negative');value.classList.add('neutral');continue;}
+            if(!/\d/.test(value.textContent))continue;
             const amount=Number(value.textContent.replace(/[^\d.-]/g,''));value.textContent=signed(amount);value.classList.remove('positive','negative','neutral');value.classList.add(tone(amount));
         }
         if(currentTab==='ai'){el('calendarWorkspace').hidden=true;view='notice';document.body.dataset.view='notice';el('noticeColumn').hidden=false;el('controlColumn').hidden=true;el('calendarBatch').hidden=true;}
@@ -325,7 +343,7 @@
         if(!bound){host.insertAdjacentHTML('beforeend','<p>전월 자료를 불러오면 과목별 시수 변화를 표시합니다.</p>');return;}
         const baseline=options.previous.hours;
         host.insertAdjacentHTML('beforeend',`<p>${esc(options.previous.month)} 실제 기록 → ${esc(month())} ${currentTab==='history'?'실제 기록':'계산 수업'} · 전월 누락·변경 사항은 확인해 주세요.</p>`);
-        for(const row of C.compareHours(C.hoursBySubject(lessons),baseline))host.insertAdjacentHTML('beforeend',`<div class="comparison-line"><span>${subjectIcon(row.subject)}${esc(row.subject)} ${row.previous??'미확인'} → ${Number(row.current.toFixed(2))}시간</span><b class="${tone(row.percent)}">${row.label||((row.percent>0?'+':row.percent<0?'−':'')+Math.abs(row.percent).toFixed(1)+'%')}</b></div>`);
+        for(const row of C.compareHours(C.hoursBySubject(lessons),baseline))host.insertAdjacentHTML('beforeend',`<div class="comparison-line"><span>${subjectIcon(row.subject)}${esc(row.subject)} ${row.previous??'미확인'} → ${row.current===null?'미확인':Number(row.current.toFixed(2))}시간</span><b class="${tone(row.percent)}">${row.label||((row.percent>0?'+':row.percent<0?'−':'')+Math.abs(row.percent).toFixed(1)+'%')}</b></div>`);
     }
     async function fetchSnapshot(whichMonth){
         const student=matchedStudent();if(!student||!isServerConfigured())throw Error('직원 로그인 후 등록 학생을 선택해 주세요.');
@@ -515,8 +533,9 @@
         if(!sourceTarget&&['auto','select','history'].includes(currentTab)&&activeLessons().some(r=>r.amount===null)){el('imageOutputStatus').textContent='단가 미확인 수업을 먼저 확인하세요. 0원은 직접 입력할 수 있습니다.';return;}
         outputPending=true;el('imageOutputStatus').textContent='이미지를 만들고 있습니다.';
         const target=sourceTarget||el('captureArea'),oldWidth=target.style.width,oldMax=target.style.maxWidth;
-        const context=JSON.stringify(collectCalculatorState());
-        document.querySelectorAll('.output-actions button').forEach(b=>b.disabled=true);
+        const context=JSON.stringify(collectCalculatorState()),outputEpoch=staffAuthEpoch;
+        const outputButtons=[...document.querySelectorAll('.output-actions button,[data-prior-export]')].map(button=>({button,disabled:button.disabled}));
+        outputButtons.forEach(({button})=>button.disabled=true);
         try{
             if(typeof html2canvas!=='function')throw Error('이미지 변환기를 불러오지 못했습니다. 네트워크를 확인한 뒤 재시도하세요.');
             await document.fonts.ready;
@@ -544,15 +563,17 @@
                     for(const [key,value] of Object.entries({left:(grid.left-bounds.left+(grid.width-width)/2)+'px',top:(grid.top-bounds.top+(grid.height-height)/2)+'px',width:width+'px',height:height+'px',transform:'none','max-height':'none','z-index':'0'}))watermark.style.setProperty(key,value,'important');
                 }
             }});
-            if(context!==JSON.stringify(collectCalculatorState()))throw Error('이미지 생성 중 계산 내용이 바뀌었습니다. 다시 출력하세요.');
+            const checkContext=()=>{if(outputEpoch!==staffAuthEpoch||context!==JSON.stringify(collectCalculatorState()))throw Error('이미지 생성 중 계산 내용 또는 로그인 상태가 바뀌었습니다. 다시 출력하세요.');};
+            checkContext();
             const blob=await new Promise((resolve,reject)=>canvas.toBlob(v=>v?resolve(v):reject(Error('이미지 생성에 실패했습니다.')),'image/png'));
+            checkContext();
             if(outputUrl)URL.revokeObjectURL(outputUrl);outputUrl=URL.createObjectURL(blob);const url=outputUrl;
             el('openNoticeImage').hidden=false;el('openNoticeImage').onclick=()=>window.open(url,'_blank');
             let copied=false;if(action==='copy'){try{if(!navigator.clipboard?.write||typeof ClipboardItem==='undefined')throw Error();await navigator.clipboard.write([new ClipboardItem({'image/png':blob})]);copied=true;}catch{el('imageOutputStatus').textContent='이미지 복사가 제한되어 파일 저장으로 전환합니다.';}}
             if(!copied){const a=document.createElement('a');a.href=url;a.download=`${getCurrentStudentName().replace(/[^\w가-힣-]/g,'_')||'학생'}_${sourceTarget?.dataset.month||month()}_${currentTab==='timetable'?'시간표':'수강료안내서'}.png`;a.click();}
             el('imageOutputStatus').textContent=copied?'이미지를 복사했습니다.':'파일 저장을 요청했습니다. 다운로드가 막히면 생성 이미지 열기를 사용하세요.';
         }catch(error){el('imageOutputStatus').textContent=error.message||'출력 실패 · 입력을 유지했습니다. 다시 시도하세요.';}
-        finally{target.style.width=oldWidth;target.style.maxWidth=oldMax;outputPending=false;document.querySelectorAll('.output-actions button').forEach(b=>b.disabled=false);}
+        finally{target.style.width=oldWidth;target.style.maxWidth=oldMax;outputPending=false;outputButtons.forEach(({button,disabled})=>button.disabled=disabled);refresh();}
     }
     // Persist only draft extensions. School assets and student registry stay out of localStorage.
     const collectOriginal=collectCalculatorState;
@@ -568,15 +589,18 @@
     applyCalculatorState=function(data,...args){
         const m=`${data.targetYear}-${String(data.targetMonth).padStart(2,'0')}`;
         for(const key of ['autoRows','selectRows'])for(const row of data[key]||[])C.validateSchedule(row.schedule,m);
-        applying=true;legacySnapshot=null;options={layout:'compact',showComparison:false,cancelAsAttendance:false,hideNoticeTimes:false,previous:null,source:null,placements:[],timetableSource:null,...(data.calendarWorkspace||{})};
-        if(!Array.isArray(options.placements)||options.placements.some(r=>!r||!Number.isInteger(r.day)||r.day<1||r.day>31||!Number.isFinite(r.hours)||r.hours<0)) {applying=false;throw Error('시간표 저장 형식을 확인해 주세요.');}
+        const nextOptions={layout:'compact',showComparison:false,cancelAsAttendance:false,hideNoticeTimes:false,previous:null,source:null,placements:[],timetableSource:null,...(data.calendarWorkspace||{})};
+        C.validatePriorNotice(nextOptions.priorNotice);
+        if(!Array.isArray(nextOptions.placements)||nextOptions.placements.some(r=>!r||!Number.isInteger(r.day)||r.day<1||r.day>31||!Number.isFinite(r.hours)||r.hours<0))throw Error('시간표 저장 형식을 확인해 주세요.');
+        const oldOptions=options,oldLegacy=legacySnapshot;let restored=false;
+        applying=true;legacySnapshot=null;options=JSON.parse(JSON.stringify(nextOptions));
         try{const result=applyOriginal(data,...args);
         
         if(data.currentTab==='history'&&data.historyData?.length&&!options.historySource)options.historySource={studentId:data.studentId||'',studentName:data.studentName||'',month:m,origin:'saved'};
         if(data.currentTab==='timetable'&&!data.calendarWorkspace)migrateTimetable();
         if(data.currentTab==='ai'){legacySnapshot=JSON.parse(JSON.stringify(data));view='notice';}else{view='work';lastMode=data.currentTab||'auto';}
         selectedExtraId=null;selectedDays.clear();selectedRow=0;undo=[];sourceSnapshot=null;candidateResult=null;candidateGroups=[];sourceContext='';sourceAttempt='';sourcePending='';fetchToken++;clearTimeout(sourceTimer);if(el('sourceCandidates'))el('sourceCandidates').hidden=true;
-        return result;}finally{applying=false;draftMonth=month();updateBatch();refresh();window.markCalculatorSaved();}
+        restored=true;return result;}finally{if(!restored){options=oldOptions;legacySnapshot=oldLegacy;}applying=false;draftMonth=month();updateBatch();refresh();if(restored)window.markCalculatorSaved();}
     };
     const oldSwitch=switchTab;
     switchTab=function(tab){
@@ -591,8 +615,15 @@
     const oldClear=clearMonthlyState;clearMonthlyState=function(...args){draftMonth=null;selectedExtraId=null;legacySnapshot=null;options={layout:'compact',showComparison:false,cancelAsAttendance:false,hideNoticeTimes:false,previous:null,source:null,placements:[],timetableSource:null};sourceSnapshot=null;candidateResult=null;candidateGroups=[];sourceContext='';sourceAttempt='';sourcePending='';clearTimeout(sourceTimer);fetchToken++;selectedDays.clear();undo=[];if(el('sourceCandidates'))el('sourceCandidates').hidden=true;document.querySelectorAll('[data-schedule]').forEach(row=>{delete row.dataset.schedule;delete row.dataset.sourceIds;delete row.dataset.candidateKeys;row.dataset.legacyAggregate='false';});return oldClear(...args);};
     const oldSave=saveServerRecord;saveServerRecord=function(...args){refresh();if(currentTab==='history'&&historyMismatch()){setServerRecordStatus('선택 학생의 수업 이력을 다시 불러온 뒤 저장하세요.','warning');return;}if(legacySnapshot){setServerRecordStatus('폐기된 AI예측 저장본은 열람만 가능합니다. 새 계산으로 시작하세요.','warning');return;}if(['auto','select','history'].includes(currentTab)&&activeLessons().some(r=>r.amount===null)){setServerRecordStatus('단가 미확인 수업을 확인한 뒤 저장하세요.','warning');return;}return oldSave(...args);};
     const oldSaveUi=updateServerSaveModeUi;updateServerSaveModeUi=function(){oldSaveUi();if(legacySnapshot||(currentTab==='history'&&historyMismatch())||(['auto','select','history'].includes(currentTab)&&activeLessons().some(r=>r.amount===null)))document.querySelectorAll('[onclick^="saveServerRecord("]').forEach(b=>b.disabled=true);};
-    const oldHistoryText=updateHistoryInfoText;updateHistoryInfoText=function(...args){if(historyMismatch()){el('generatedTextArea').value='선택 학생과 수업 이력의 학생·월이 다릅니다. 선택 학생의 기록을 다시 불러온 뒤 안내 문자를 생성하세요.';return;}return oldHistoryText(...args);};
-    const oldCopyText=copyGeneratedText;copyGeneratedText=function(...args){if(currentTab==='history'&&historyMismatch()){updateHistoryInfoText();setServerRecordStatus('선택 학생의 수업 이력을 다시 불러온 뒤 문자를 복사하세요.','warning');return;}return oldCopyText(...args);};
+    function noticeMessageIssue(){
+        if(currentTab==='history'&&historyMismatch())return '선택 학생과 수업 이력의 학생·월이 다릅니다. 선택 학생의 기록을 다시 불러온 뒤 안내 문자를 생성하세요.';
+        if(['auto','select','history'].includes(currentTab)&&activeLessons().some(r=>r.amount===null))return '금액이 미확인인 수업이 있습니다. 단가·수업 금액을 확인한 뒤 안내 문자를 생성하세요. 0원 수업은 직접 0원을 입력하세요.';
+        if(currentTab==='progress'&&!progressReady())return '최신 수업과 미확인 금액·시간을 확인한 뒤 안내 문자를 생성하세요.';
+        return '';
+    }
+    const oldInfoText=updateInfoText;updateInfoText=function(...args){const issue=noticeMessageIssue();if(issue){el('generatedTextArea').value=issue;return;}return oldInfoText(...args);};
+    const oldHistoryText=updateHistoryInfoText;updateHistoryInfoText=function(...args){const issue=noticeMessageIssue();if(issue){el('generatedTextArea').value=issue;return;}return oldHistoryText(...args);};
+    const oldCopyText=copyGeneratedText;copyGeneratedText=function(...args){const issue=noticeMessageIssue();if(issue){el('generatedTextArea').value=issue;setServerRecordStatus(issue,'warning');return;}return oldCopyText(...args);};
     window.downloadImage=()=>outputImage('save');window.processAiPrediction=()=>setServerRecordStatus('AI예측 기능은 폐기되었습니다.','warning');
     const oldInit=initWorkspaceLayout;initWorkspaceLayout=function(){oldInit();setup();};
     const oldLoad=window.onload;window.onload=async function(...args){try{const value=await oldLoad.apply(this,args);setup();updateBatch();refresh();return value;}finally{if(el('productHeader'))document.documentElement.classList.remove('workspace-loading');else{document.documentElement.classList.remove('workspace-loading');document.body.replaceChildren(Object.assign(document.createElement('p'),{textContent:'화면을 준비하지 못했습니다. 새로고침해 주세요.'}));}}};

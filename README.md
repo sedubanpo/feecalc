@@ -47,6 +47,8 @@ Supabase의 `fee_calc_records`와 `fee_calc_private_settings`는 RLS를 유지�
 
 `node tests/fee-ui.cjs`는 Playwright와 설치된 Chrome을 사용합니다. 모든 학생·메모·저장 API를 가상 응답으로 대체하며 운영 데이터를 쓰지 않습니다.
 
+`node tests/audit-ui.cjs`는 미확인 금액의 문자 복사 차단, 할인율 표시, 이전 달 편집·실행 취소·저장 복원·날짜/시간 검증, 모바일 달력 이동, PNG 생성 중 변경 차단을 추가로 확인합니다. 이 테스트도 모든 비공개 API를 합성 응답으로 대체합니다. 점검 내용은 [2026-10-03 실사용 점검](AUDIT-2026-10-03.md)에 기록했습니다.
+
 - `node --test tests/auth*.mjs`: 모의 인증·세션·오류·동시 요청 검증
 - `node --test ../sedu-intranet/tests/feecalc.test.mjs`: 서버 인증·권한·RPC 허용 목록 검증
 - `node tests/database-access.mjs`: PGlite 로컬 PostgreSQL에서 가상 기록으로 권한·반복 적용·기록 보존 검증. 기본 모듈 경로는 `/tmp/feecalc-sql-test/node_modules/@electric-sql/pglite/dist/index.js`, 다른 설치 위치는 `PGLITE_MODULE`로 지정합니다. 이 검증은 pg_trgm 인덱스만 생략하며 운영 DB에 연결하지 않습니다.

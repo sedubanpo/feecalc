@@ -41,3 +41,20 @@ test('notice groups the same teacher across subjects without losing variants, to
  const before=JSON.stringify(rows),groups=C.groups(rows,true);assert.equal(groups.length,1);assert.equal(groups[0].total,125000);assert.equal(groups[0].pending,true);assert.equal(groups[0].variants.size,3);assert.deepEqual(groups[0].subjects,['사회','사탐','통사']);assert.equal(JSON.stringify(rows),before);
  assert.equal(C.groups([{...rows[0],teacher:''},{...rows[1],teacher:''}],true).length,2);
 });
+
+test('unknown source durations stay unknown in notices and subject comparisons',()=>{
+ const snapshot={lessons:[{id:'missing',date:'2026-09-01',className:'수학-개별(A)',teacher:'A',minutes:null,amount:50000,start:'',end:'',kind:'regular'},{id:'known',date:'2026-09-02',className:'수학-개별(A)',teacher:'A',minutes:120,amount:50000,start:'10:00',end:'12:00',kind:'regular'},{id:'absent',date:'2026-09-03',className:'영어-개별(B)',teacher:'B',minutes:0,amount:0,start:'10:00',end:'12:00',kind:'absence'}]};
+ const rows=C.normalizeSnapshot(snapshot);assert.equal(rows[0].hours,null);assert.equal(rows[2].hours,0);
+ assert.deepEqual(C.hoursBySubject(rows),{수학:null,영어:0});
+ assert.deepEqual(C.hoursBySubject(rows.slice().reverse()),{영어:0,수학:null});
+ const priorMissing=C.compareHours({수학:10},{수학:null})[0];assert.equal(priorMissing.percent,null);assert.equal(priorMissing.label,'비교 자료 없음');
+ const currentMissing=C.compareHours({수학:null},{수학:10})[0];assert.equal(currentMissing.current,null);assert.equal(currentMissing.percent,null);assert.equal(currentMissing.label,'현재 시수 확인 필요');
+});
+
+test('previous notice draft validation preserves explicit zero and unknown values; rejects corrupt records',()=>{
+ const lesson=C.normalizeSnapshot({lessons:[{id:'one',date:'2026-09-01',className:'수학-개별(A)',teacher:'A',minutes:null,amount:null,start:'',end:'',kind:'regular'}]})[0];
+ const draft={studentId:'one',month:'2026-09',targetMonth:'2026-10',fetchedAt:'2026-10-03T00:00:00Z',lessons:[lesson],adjustments:[{id:'desk:p',label:'기수납',amount:-50000},{id:'intranet:zero',label:'시작 잔액',amount:0}]};
+ const before=JSON.stringify(draft);C.validatePriorNotice(draft);assert.equal(JSON.stringify(draft),before);
+ for(const invalid of [{lessons:[{...lesson,day:31}]},{lessons:[{...lesson,hours:-1}]},{lessons:[{...lesson,amount:'50000'}]},{lessons:[{...lesson,status:null}]},{lessons:[lesson,lesson]},{adjustments:[{id:'p',label:'납부',amount:Infinity}]},{fetchedAt:null},{month:'2026-10'}])assert.throws(()=>C.validatePriorNotice({...draft,...invalid}));
+ C.validatePriorNotice(null);C.validatePriorNotice(undefined);
+});

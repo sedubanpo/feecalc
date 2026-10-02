@@ -13,7 +13,11 @@
   el('priorNoticeMonth').onchange=()=>{generation++;pending=false;message='월을 선택했습니다. 불러오기를 눌러 주세요.';status();};
   document.addEventListener('feecalc-auth-change',()=>{generation++;version='';render(ctx);});
  }
- function status(){el('priorNoticeStatus').textContent=message;el('loadPriorNotice').disabled=pending||!ctx.student||!isServerConfigured();}
+ function status(){
+  el('priorNoticeStatus').textContent=message;el('loadPriorNotice').disabled=pending||!ctx.student||!isServerConfigured();el('loadPriorNotice').setAttribute('aria-busy',String(pending));
+  if(el('resetPriorEdits'))el('resetPriorEdits').disabled=pending;
+  const draft=validDraft();document.querySelectorAll('[data-prior-export]').forEach(b=>b.disabled=pending||!draft||!!exportIssue(draft));
+ }
  async function load(){
   if(pending||!ctx.student||!isServerConfigured())return;
   const month=el('priorNoticeMonth').value,studentId=ctx.student.id,identity=contextKey(),token=++generation;
@@ -40,6 +44,7 @@
   finally{if(token===generation){pending=false;status();}}
  }
  function total(d){const rows=[...d.lessons,...d.adjustments].filter(r=>r.included!==false);return d.sourceIssue||rows.some(r=>typeof r.amount!=='number'||!Number.isFinite(r.amount))?null:Math.round(rows.reduce((sum,r)=>sum+r.amount,0)*100)/100;}
+ function exportIssue(d){return d.sourceIssue|| (total(d)===null?'포함한 항목의 금액을 확인해 주세요.':d.lessons.some(r=>r.included!==false&&r.hours===null)?'정산 시수가 미확인인 수업이 있습니다. 원본 확인 또는 시수 입력 후 출력하세요.':'');}
  function paper(d){
   const host=el('priorNoticePaper'),lessons=d.lessons.filter(r=>r.included!==false),adjustments=d.adjustments.filter(r=>r.included!==false),sum=lessons.some(r=>r.amount===null)?null:lessons.reduce((s,r)=>s+r.amount,0);
   host.dataset.month=d.month;
@@ -53,39 +58,56 @@
   part('receiptBody').innerHTML=FeeCalendar.noticeRows(lessons);
   template.querySelector('.receipt-fee-table').classList.add('grouped-receipt');
   template.querySelector('.receipt-fee-table thead').innerHTML='<tr><th>과목·강사</th><th>수업 내역</th><th>금액</th></tr>';
-  part('priceSummaryArea').innerHTML=`<div class="border-t-2 border-gray-200 pt-2 space-y-1 mb-4"><div class="flex justify-between"><span>실제 수업료</span><b class="${tone(sum)}">${money(sum)}</b></div>${adjustments.map(r=>`<div class="flex justify-between"><span>${esc(r.label)}</span><b class="${tone(r.amount)}">${money(r.amount)}</b></div>`).join('')}</div><div class="flex justify-between items-center bg-gray-50 p-4 rounded-xl border border-gray-100 receipt-total prior-total"><strong>이월·초과금</strong><b class="${tone(total(d))}">${money(total(d))}</b></div><p class="prior-context">이월금 − · 초과금 +<br>실제 입력 기록 기준 · ${esc(d.fetchedAt.slice(0,10))} 조회${d.modified?' · 검토 수정본':''}<br>현재 달 청구액에 자동으로 더하지 않습니다.</p>`;
+  const fetchedDate=new Date(d.fetchedAt).toLocaleDateString('sv-SE',{timeZone:'Asia/Seoul'});
+  part('priceSummaryArea').innerHTML=`<div class="border-t-2 border-gray-200 pt-2 space-y-1 mb-4"><div class="flex justify-between"><span>실제 수업료</span><b class="${tone(sum)}">${money(sum)}</b></div>${adjustments.map(r=>`<div class="flex justify-between"><span>${esc(r.label)}</span><b class="${tone(r.amount)}">${money(r.amount)}</b></div>`).join('')}</div><div class="flex justify-between items-center bg-gray-50 p-4 rounded-xl border border-gray-100 receipt-total prior-total"><strong>이월·초과금</strong><b class="${tone(total(d))}">${money(total(d))}</b></div><p class="prior-context">이월금 − · 초과금 +<br>실제 입력 기록 기준 · ${esc(fetchedDate)} 조회${d.modified?' · 검토 수정본':''}<br>현재 달 청구액에 자동으로 더하지 않습니다.</p>`;
   part('calTitleReceipt').textContent=`${Number(d.month.slice(5))}월 수업 일정`;
   part('receiptMiniCalGrid').innerHTML=FeeCalendar.noticeCalendar(lessons,d.month);
   part('receiptCalendarArea').hidden=false;
   part('receiptCalendarArea').style.display='';
   template.querySelector('.receipt-right').style.display='';
-  for(const id of ['monthComparison','voucherGuideBox'])part(id)?.remove();
+  for(const id of ['monthComparison','voucherGuideBox','progressCalendarLegend'])part(id)?.remove();
   if(part('calendarReceiptLegend'))part('calendarReceiptLegend').textContent='실제 입력 수업 · 회색·취소선: 결석예고 · 금색 테두리: 1:1';
   // Reuse the current notice's structure/styles without duplicating document IDs.
   for(const node of template.querySelectorAll('[id]')){node.dataset.receiptPart=node.id;node.removeAttribute('id');}
   host.className=template.className+' prior-notice-paper';
   host.innerHTML=template.innerHTML;
-  const issue=el('priorSourceIssue');if(issue)issue.textContent=d.sourceIssue||'';
-  document.querySelectorAll('[data-prior-export]').forEach(b=>b.disabled=total(d)===null);
+  const issue=el('priorSourceIssue');if(issue)issue.textContent=exportIssue(d);
+  document.querySelectorAll('[data-prior-export]').forEach(b=>b.disabled=pending||!!exportIssue(d));
  }
  function settings(d){
-  const host=el('priorNoticeSettings');host.innerHTML='<h3>이전 달 안내서 설정</h3><p>체크한 항목만 합산합니다. 수정은 이 안내서 초안에만 저장되며, 인트라넷·데스크 원본과 현재 달 계산에는 반영되지 않습니다.</p><p id="priorSourceIssue" role="alert"></p><p id="priorExportStatus" role="status"></p><div class="prior-export"><button type="button" data-prior-export="save">이전 달 이미지 저장</button><button type="button" data-prior-export="copy">이전 달 이미지 복사</button></div><button type="button" id="resetPriorEdits">원본 다시 불러오기</button><div id="priorEditors"></div>';
+  const host=el('priorNoticeSettings');host.innerHTML='<h3>이전 달 안내서 설정</h3><p>체크한 항목만 합산합니다. 수정은 이 안내서 초안에만 저장되며, 인트라넷·데스크 원본과 현재 달 계산에는 반영되지 않습니다.</p><p>정산 시수와 일정 시간은 별도입니다. 시수·시간 수정으로 금액을 자동 계산하지 않습니다.</p><p id="priorSourceIssue" role="alert"></p><p id="priorEditError" role="alert"></p><p id="priorExportStatus" role="status"></p><div class="prior-export"><button type="button" data-prior-export="save">이전 달 이미지 저장</button><button type="button" data-prior-export="copy">이전 달 이미지 복사</button></div><button type="button" id="resetPriorEdits">원본 다시 불러오기</button><div id="priorEditors"></div>';
   const editors=el('priorEditors');
   for(const [name,rows] of [['실제 수업',d.lessons],['잔액·수납',d.adjustments]]){
    const group=document.createElement('details');group.open=name==='잔액·수납';const summary=document.createElement('summary');summary.textContent=`${name} ${rows.length}건`;group.append(summary);
    rows.forEach((row,i)=>{
     const box=document.createElement('div');box.className='prior-edit-row';
     const label=document.createElement('label'),check=document.createElement('input');check.type='checkbox';check.checked=row.included!==false;label.append(check,document.createTextNode(name==='실제 수업'?`${row.day}일 ${row.subject} · ${row.teacher}`:row.label));box.append(label);
-    const change=()=>{d.modified=true;ctx.markTouched();paper(d);};check.onchange=()=>{row.included=check.checked;change();};
-    const field=(title,value,write,type='text')=>{const l=document.createElement('label'),input=document.createElement('input');l.textContent=title;input.type=type;input.value=value??'';input.setAttribute('aria-label',`${name} ${i+1} ${title}`);if(type==='number'){input.step='0.01';input.min=title==='금액 (원)'&&name==='잔액·수납'?'-10000000000':'0';input.max='10000000000';}if(type==='date'){input.min=d.month+'-01';input.max=d.month+'-'+C.daysInMonth(d.month);}input.onchange=()=>{if((type==='date'||type==='time')&&(!input.value||!input.checkValidity())){input.reportValidity();input.value=type==='date'?row.date:(title==='시작 시간'?row.start:row.end);return;}if(type==='number'){if(input.value===''||!input.checkValidity()){input.setCustomValidity('올바른 숫자를 입력하세요.');input.reportValidity();write(null);change();return;}input.setCustomValidity('');}write(type==='number'?Number(input.value):input.value);change();};input.oninput=()=>input.setCustomValidity('');l.append(input);box.append(l);};
+    const change=()=>{d.modified=true;version=JSON.stringify(d);label.lastChild.textContent=name==='실제 수업'?`${row.day}일 ${row.subject} · ${row.teacher}`:row.label;ctx.markTouched();paper(d);};check.onchange=()=>{FeeCalendar.remember();row.included=check.checked;change();};
+    const field=(title,value,write,type='text')=>{
+     const l=document.createElement('label'),input=document.createElement('input');l.textContent=title;input.type=type;input.value=value??'';input.setAttribute('aria-label',`${name} ${i+1} ${title}`);
+     if(type==='number'){input.step='0.01';input.min=title==='금액 (원)'&&name==='잔액·수납'?'-10000000000':'0';input.max=title==='정산 시수'?'24':'10000000000';}
+     if(type==='date'){input.min=d.month+'-01';input.max=d.month+'-'+String(C.daysInMonth(d.month)).padStart(2,'0');}
+     input.onchange=()=>{
+      const previous=type==='date'?row.date:title==='시작 시간'?row.start:row.end;
+      if((type==='date'||type==='time')&&(!input.value||!input.checkValidity())){el('priorEditError').textContent='조회 월 안의 날짜와 올바른 시간을 입력하세요.';input.value=previous;return;}
+      if(type==='time'){
+       const start=title==='시작 시간'?input.value:row.start,end=title==='종료 시간'?input.value:row.end;
+       if(start&&end&&end.slice(0,5)<=start.slice(0,5)){el('priorEditError').textContent='종료 시간은 시작 시간보다 늦어야 합니다. 기존 시간을 유지했습니다.';input.value=previous;return;}
+      }
+      el('priorEditError').textContent='';FeeCalendar.remember();
+      if(type==='number'&&(input.value===''||!input.checkValidity())){el('priorEditError').textContent=title+'을 확인해 주세요. 빈 값이나 범위를 벗어난 값은 미확인으로 남깁니다.';write(null);change();return;}
+      write(type==='number'?Number(input.value):input.value);change();
+     };
+     l.append(input);box.append(l);
+    };
     field('금액 (원)',row.amount,v=>row.amount=v,'number');
-    if(name==='실제 수업'){field('과목',row.subject,v=>row.subject=v);field('강사',row.teacher,v=>row.teacher=v);field('수업 시간',row.hours,v=>row.hours=v,'number');field('수업일',row.date,v=>{if(new RegExp('^'+d.month+'-\\d{2}$').test(v)&&Number(v.slice(-2))<=C.daysInMonth(d.month)){row.date=v;row.day=Number(v.slice(-2));}},'date');field('시작 시간',row.start,v=>row.start=v,'time');field('종료 시간',row.end,v=>row.end=v,'time');}
+    if(name==='실제 수업'){field('과목',row.subject,v=>row.subject=v);field('강사',row.teacher,v=>row.teacher=v);field('정산 시수',row.hours,v=>row.hours=v,'number');field('수업일',row.date,v=>{if(new RegExp('^'+d.month+'-\\d{2}$').test(v)&&Number(v.slice(-2))<=C.daysInMonth(d.month)){row.date=v;row.day=Number(v.slice(-2));}},'date');field('시작 시간',row.start,v=>row.start=v,'time');field('종료 시간',row.end,v=>row.end=v,'time');}
     else field('내용',row.label,v=>row.label=v);
     group.append(box);
    });editors.append(group);
   }
   el('resetPriorEdits').onclick=()=>{el('priorNoticeMonth').value=d.month;load();};
-  host.querySelectorAll('[data-prior-export]').forEach(b=>b.onclick=async()=>{if(total(d)!==null){el('priorExportStatus').textContent='이미지를 만들고 있습니다.';await FeeCalendar.exportNotice(el('priorNoticePaper'),b.dataset.priorExport);if(el('priorExportStatus'))el('priorExportStatus').textContent=el('imageOutputStatus').textContent;}});
+  host.querySelectorAll('[data-prior-export]').forEach(b=>b.onclick=async()=>{if(!exportIssue(d)&&!pending){el('priorExportStatus').textContent='이미지를 만들고 있습니다.';await FeeCalendar.exportNotice(el('priorNoticePaper'),b.dataset.priorExport);if(el('priorExportStatus'))el('priorExportStatus').textContent=el('imageOutputStatus').textContent;}});
  }
  function render(next){
   if(!next)return;ctx=next;setup();const now=contextKey();

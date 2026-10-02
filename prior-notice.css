@@ -12,3 +12,6 @@
 #noticeColumn:has(#priorNoticeSection) #noticeTools{position:static}
 #priorNoticePaper{grid-area:auto}
 #priorNoticePaper .prior-total{background:#edf1f3;padding:14px 12px;margin-top:12px;border:0;border-radius:6px}
+#priorEditError{color:#a13b34!important}
+.prior-edit-row input[type=number]{font-variant-numeric:tabular-nums}
+#priorNoticeSection :is(input,button,summary):focus-visible{outline:2px solid #254761;outline-offset:3px}
