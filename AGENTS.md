@@ -39,3 +39,5 @@
 - Preserve source IDs, student/month, fingerprint, and original amount in saved adjustment rows to prevent repeated imports. Re-read selected sources before applying; reject changed source records, login changes, and student/month changes. Keep one-step undo. Never update Desk or Intranet source records.
 
 - Complete Desk settlement corrections (`desk_portal_adjustment`, `수강료 정정`, `PORTAL-ADJ`) are signed net-collection deltas. Import them as separately labeled, unchecked review items; include them once in Intranet net paid/carry. Other non-payment metadata stays excluded.
+
+- Next-month recurrence counts distinct dates per weekday across clock shifts when subject, teacher, lesson type, duration and fee match. Keep separate same-day sessions and different subjects/rates apart; use the latest observed time for the reviewed draft.

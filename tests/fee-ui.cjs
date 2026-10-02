@@ -226,6 +226,24 @@ const root=path.resolve(__dirname,'..'),evidence=process.env.EVIDENCE_ROOT;
  });
  await check('IME composition does not match or fetch partial names',async()=>{await page.evaluate(()=>{beginStudentNameComposition();handleStudentNameInput();});assert.equal(await page.evaluate(()=>matchedStudent()),null);await page.evaluate(()=>{studentNameComposing=false;handleStudentNameInput();});assert.equal(await page.evaluate(()=>matchedStudent().id),'one');});
 
+ await check('shifted Saturday lesson transfers all five dates after review',async()=>{
+ await page.setViewportSize({width:1440,height:1000});
+ await page.evaluate(()=>{
+ testProgressSnapshot={studentId:'one',month:'2026-09',fetchedAt:'2026-09-30T00:00:00Z',lessons:['05','12','19','26'].map(d=>({id:'sat'+d,date:'2026-09-'+d,className:(d==='05'?'지리':'사회')+'-1:1(검증강사)-3h',teacher:'검증강사',minutes:180,amount:375000,start:d==='26'?'14:00':'13:00',end:d==='26'?'17:00':'16:00',kind:'regular'}))};
+ applyCalculatorState({currentTab:'progress',studentId:'one',studentName:'검증학생',targetYear:2026,targetMonth:9,progress:{snapshot:testProgressSnapshot,mode:'auto',cutoff:'2026-09-30',endDate:'2026-09-30'}});FeeCalendar.navigate('progress');
+ });
+ await page.waitForFunction(()=>progressVerified&&!progressLoading);
+ const writes=await page.evaluate(()=>testWrites.length);
+ await page.locator('[onclick="openNextMonthWizard()"]').click();
+ assert.equal(await page.locator('#nextMonthRows [data-group]').count(),1);
+ assert.match(await page.locator('#nextMonthRows').innerText(),/사회.*검증강사/s);
+ assert.match(await page.locator('#nextMonthTotal').innerText(),/5회.*1,875,000원/);
+ if(evidence){fs.mkdirSync(evidence,{recursive:true});await page.screenshot({path:path.join(evidence,'saturday-next-month.png')});}
+ await page.locator('#nextMonthConfirm').click();
+ assert.equal(await page.locator('#workCalendar .calendar-event').count(),5);
+ assert.match(await page.locator('#workCalendar [data-day="3"] .calendar-event').innerText(),/14:00–17:00/);
+ assert.equal(await page.locator('#dispTotal').innerText(),'1,875,000원');assert.equal(await page.evaluate(()=>testWrites.length),writes);
+ });
  await check('progress edits and next-month drafts preserve source, confirmation, totals and undo',async()=>{
  await page.setViewportSize({width:1440,height:1000});
  await page.evaluate(()=>{

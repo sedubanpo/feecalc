@@ -27,3 +27,11 @@ test('next-month rollover keeps independent sessions and valid February dates',(
  const p=C.nextMonthPlan({month:'2026-12',lessons},'2027-01');assert.equal(p.groups.length,2);assert.equal(p.groups.reduce((n,g)=>n+g.total,0),400000);
  assert.ok(C.nextMonthPlan({month:'2026-12',lessons},'2027-02').groups.every(g=>g.dates.every(d=>d<=28)));
 });
+
+test('Saturday recurrence survives a clock shift without merging geography or other tuition terms',()=>{
+ const row=(d,subject,start='13:00',amount=375000)=>({id:String(d),date:`2026-09-${d}`,className:`${subject}-1:1(검증)-3h`,teacher:'검증',minutes:180,amount,start,end:start==='14:00'?'17:00':'16:00',kind:'regular'});
+ const lessons=[row('05','지리'),row('12','사회'),row('19','사회'),row('26','사회','14:00')];
+ const result=C.nextMonthPlan({month:'2026-09',lessons},'2026-10');
+ assert.equal(result.groups.length,1);const g=result.groups[0];assert.equal(g.subject,'사회');assert.deepEqual(g.days,[6]);assert.equal(g.count,5);assert.equal(g.total,1875000);assert.equal(g.schedule.overrides[3].start,'14:00');assert.equal(result.skipped,1);
+ lessons[3].amount=250000;assert.equal(C.nextMonthPlan({month:'2026-09',lessons},'2026-10').groups.length,0);
+});
