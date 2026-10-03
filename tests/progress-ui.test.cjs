@@ -1,5 +1,15 @@
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
 const source=fs.readFileSync(require.resolve('../progress-ui.js'),'utf8');
+test('saved past-month refresh replaces deleted lessons and stops automatic forecasts without erasing local drafts',async()=>{
+ const core=require('../progress-core.js'),lesson=(id,date,amount)=>({id,date,amount,minutes:180,className:'수학-개별-검증',teacher:'검증',start:'18:00',end:'21:00',kind:'regular'});
+ const snapshot={studentId:'qa',month:'2026-09',lessons:[lesson('math','2026-09-23',87500)]};
+ const context=vm.createContext({ProgressCore:core,progressRequest:0,progressLoading:false,progressVerified:true,progressStatus:'',staffAuthEpoch:1,progressState:{snapshot:{...snapshot,lessons:[...snapshot.lessons,lesson('deleted','2026-09-15',87500)]},mode:'auto',cutoff:'2026-09-29',endDate:'2026-09-30',excluded:['keep'],manual:[],temporary:[lesson('local:keep','2026-09-25',0)],edits:[],removedActual:[]},matchedStudent:()=>({id:'qa'}),progressMonth:()=>'2026-09',isServerConfigured:()=>true,progressBound:()=>true,progressToday:()=>'2026-10-03',renderProgress:()=>{},getSupabaseClient:()=>({rpc:async()=>({data:snapshot})})});
+ vm.runInContext(source.slice(source.indexOf('function progressResult'),source.indexOf('const progressButton')),context);
+ vm.runInContext(source.slice(source.indexOf('async function loadProgressLessons'),source.indexOf('function setProgressMode')),context);
+ await context.loadProgressLessons({preserveForecast:true});assert.equal(context.progressState.snapshot.lessons.length,1);assert.equal(context.progressState.excluded[0],'keep');assert.equal(context.progressState.temporary.length,1);
+ const r=context.progressResult();assert.equal(r.actualAmount,87500);assert.equal(r.predicted.length,1);assert.equal(r.predicted[0].temporary,true);assert.equal(r.automaticForecastEnded,true);assert.equal(context.progressReady(),true);
+ context.getSupabaseClient=()=>({rpc:async()=>({error:{message:'offline'}})});await context.loadProgressLessons({preserveForecast:true});assert.equal(context.progressReady(),false);assert.equal(context.progressState.snapshot.lessons.length,1);
+});
 test('restored old snapshot refresh advances Sep10 to Sep15 and preserves end and exclusions',async()=>{
  const context=vm.createContext({progressRequest:0,progressLoading:false,progressVerified:false,progressStatus:'',staffAuthEpoch:1,progressState:{snapshot:{},mode:'auto',cutoff:'2026-09-10',endDate:'2026-09-20',excluded:['x'],manual:[]},matchedStudent:()=>({id:'qa'}),progressMonth:()=>'2026-09',isServerConfigured:()=>true,progressBound:()=>true,progressToday:()=>'2026-09-16',renderProgress:()=>{},ProgressCore:{validMonth:()=>true,validateSnapshot:x=>x,defaultCutoff:()=> '2026-09-15',monthEnd:()=> '2026-09-30'},getSupabaseClient:()=>({rpc:async()=>({data:{studentId:'qa',month:'2026-09',lessons:[{date:'2026-09-15'}]}})})});
  vm.runInContext(source.slice(source.indexOf('async function loadProgressLessons'),source.indexOf('function setProgressMode')),context);

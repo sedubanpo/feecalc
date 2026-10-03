@@ -1,6 +1,24 @@
 const test=require('node:test'),assert=require('node:assert/strict'),core=require('../progress-core.js');
 const row=(id,date,hours=2,extra={})=>({id,date,className:`수학-개별(검증강사)-${hours}h`,teacher:'검증강사',kind:'regular',start:'16:00',end:'18:00',minutes:hours*60,amount:hours*30000,...extra});
 const state=lessons=>({snapshot:{studentId:'qa',month:'2026-09',lessons},cutoff:'2026-09-16',mode:'auto',excluded:[],manual:[]});
+test('completed month never resurrects a missing final weekday as an automatic charge',()=>{
+ const s=state([row('math','2026-09-23',3,{amount:87500}),row('other','2026-09-29',2,{amount:3018750,className:'국어-1:1-검증',teacher:'검증'})]);
+ s.cutoff='2026-09-29';s.endDate='2026-09-30';const before=JSON.stringify(s);
+ for(const today of ['2026-09-29','2026-09-30']){const r=core.calculate(s,today);assert.equal(r.predictedAmount,87500);assert.equal(r.actualAmount+r.predictedAmount-2287500,906250);}
+ for(const today of ['2026-10-01','2026-10-03','2027-01-01']){const r=core.calculate(s,today);assert.equal(r.automaticForecastEnded,true);assert.equal(r.predicted.length,0);assert.equal(r.actualAmount,3106250);assert.equal(r.actualAmount+r.predictedAmount-2287500,818750);}
+ assert.equal(JSON.stringify(s),before);
+});
+test('completed month preserves explicit dates, temporary lessons, edits and unresolved actuals',()=>{
+ const s=state([row('math','2026-09-23',3,{amount:87500}),row('pending','2026-09-29',2,{amount:null})]);s.cutoff='2026-09-29';
+ s.temporary=[row('local:explicit','2026-09-25',2,{amount:0})];s.edits=[{id:'math',minutes:180,amount:80000,start:'15:00',end:'18:00'}];
+ let r=core.calculate(s,'2026-10-03');assert.equal(r.predicted.length,1);assert.equal(r.predicted[0].temporary,true);assert.equal(r.actualAmount,80000);assert.equal(r.pending,1);
+ s.mode='manual';s.manual=[{templateId:'math',date:'2026-09-30'}];r=core.calculate(s,'2026-10-03');assert.equal(r.predicted.length,2);assert.equal(r.predictedAmount,87500);assert.equal(r.actualAmount,80000);
+ s.removedActual=['math'];assert.equal(core.calculate(s,'2026-10-03').actual.length,1);assert.equal(s.snapshot.lessons[0].amount,87500);
+});
+test('current and future months continue forecasting with an explicit academy date',()=>{
+ const s=state([row('math','2026-09-23')]);s.cutoff='2026-09-29';
+ for(const today of ['2026-08-31','2026-09-01','2026-09-30']){const r=core.calculate(s,today);assert.equal(r.automaticForecastEnded,false);assert.equal(r.predicted.length,1);}
+});
 test('forecast end is inclusive and never removes actual lessons after it',()=>{
  const s=state([row('a','2026-09-09'),row('actual','2026-09-29')]);s.endDate='2026-09-23';
  const r=core.calculate(s);assert.deepEqual(r.predicted.map(x=>x.date),['2026-09-23']);assert.equal(r.actual.length,2);assert.equal(r.actualAmount,120000);

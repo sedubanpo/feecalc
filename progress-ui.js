@@ -8,7 +8,7 @@ const progressMoney = value => value === null ? '확인 필요' : value.toLocale
 const progressMonth = () => `${progressEl('targetYear').value}-${String(progressEl('targetMonth').value).padStart(2,'0')}`;
 const progressToday = () => new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
 function progressBound() { return !!progressState.snapshot && progressState.snapshot.studentId === matchedStudent()?.id && progressState.snapshot.month === progressMonth(); }
-function progressResult() { return ProgressCore.calculate(progressBound() ? progressState : null); }
+function progressResult() { return ProgressCore.calculate(progressBound() ? progressState : null, progressToday()); }
 function progressReady() { return progressBound() && progressVerified && !progressLoading && progressState.snapshot.lessons.length > 0 && progressResult().pending === 0; }
 
 const progressButton = document.createElement('button');
@@ -57,7 +57,7 @@ async function loadProgressLessons(options={}) {
     if (!options.preserveForecast && progressBound() && (progressState.manual.length || progressState.excluded.length || progressState.temporary?.length || progressState.edits?.length || progressState.removedActual?.length) && !confirm('수업을 다시 불러오면 현재 계산에서 수정·제외한 내역과 임시 수업이 초기화됩니다. 계속할까요?')) return;
     const previous=progressBound()?progressState:null;
     const request=++progressRequest, epoch=staffAuthEpoch;
-    progressLoading=true; progressStatus='인트라넷 수업을 불러오고 있습니다.'; renderProgress();
+    progressLoading=true; progressVerified=false; progressStatus='인트라넷 수업을 불러오고 있습니다.'; renderProgress();
     try {
         const {data,error}=await getSupabaseClient().rpc('feecalc_progress',{p_student_id:student.id,p_month:month});
         if (request!==progressRequest || epoch!==staffAuthEpoch || matchedStudent()?.id!==student.id || progressMonth()!==month) return;
@@ -116,7 +116,7 @@ function renderProgressDates() {
 }
 function progressLessonList(host,rows,editable) {
     host.replaceChildren();
-    if(!rows.length){const p=document.createElement('p');p.className='ui-help';p.textContent=editable?'예상 수업이 없습니다. 계산 방식과 기준일을 확인하거나 날짜를 추가하세요.':'입력 수업이 없습니다.';host.append(p);return;}
+    if(!rows.length){const p=document.createElement('p');p.className='ui-help';p.textContent=editable?(progressResult().automaticForecastEnded&&progressState.mode==='auto'?'지난달은 자동 예상 수업을 추가하지 않습니다. 입력된 실제 수업으로 정산합니다.':'예상 수업이 없습니다. 계산 방식과 기준일을 확인하거나 날짜를 추가하세요.'):'입력 수업이 없습니다.';host.append(p);return;}
     const fragment=document.createDocumentFragment();
     rows.forEach(row=>{
         const line=document.createElement('div');line.className='progress-lesson';
@@ -146,7 +146,7 @@ function renderProgress() {
     if(bound){
         const cutoff=progressEl('progressCutoff');cutoff.value=progressState.cutoff;cutoff.min=progressMonth()+'-01';cutoff.max=progressMonth()+'-'+ProgressCore.daysInMonth(progressMonth());
         const end=progressEl('progressEnd');end.value=progressState.endDate || ProgressCore.monthEnd(progressMonth());end.min=progressState.cutoff;end.max=ProgressCore.monthEnd(progressMonth());
-        progressEl('progressCoverage').textContent=`조회본 마지막 수업일 ${result.actual.map(r=>r.date).sort().at(-1)||'없음'} · ${result.actual.length}건${progressVerified?' · 최신 조회 완료':' · 최신 확인 필요'}`;
+        progressEl('progressCoverage').textContent=`조회본 마지막 수업일 ${result.actual.map(r=>r.date).sort().at(-1)||'없음'} · ${result.actual.length}건${progressVerified?' · 최신 조회 완료':' · 최신 확인 필요'}${result.automaticForecastEnded?' · 지난달 자동 예상 제외 (직접 추가·임시 수업은 유지)':''}`;
         document.querySelectorAll('input[name="progressMode"]').forEach(el=>{el.checked=el.value===progressState.mode;});
         progressEl('progressManual').hidden=progressState.mode!=='manual';progressEl('progressRestore').hidden=progressState.mode!=='auto';
         progressEl('progressRestore').disabled=!progressState.excluded.length;
@@ -184,9 +184,10 @@ function groupProgressReceipt(rows) {
 }
 function renderProgressReceipt(result,bound) {
     restoreDefaultPriceSummaryArea();
-    progressEl('receiptSubTitle').textContent='수강료 예상 안내서';
-    progressEl('receiptContext').textContent=bound?`${progressState.cutoff} 기준 · ${progressState.endDate || ProgressCore.monthEnd(progressMonth())}까지 예상`:'';
-    progressEl('receiptContext').hidden=!bound;progressEl('labelTotal').textContent='예상 납부액';
+    const settlement=result.automaticForecastEnded && !result.predicted.length;
+    progressEl('receiptSubTitle').textContent=settlement?'수강료 정산 안내서':'수강료 예상 안내서';
+    progressEl('receiptContext').textContent=bound?(result.automaticForecastEnded?'지난달 입력 수업 기준 · 자동 예상 수업 제외'+(result.predicted.length?' · 직접 추가·임시 수업 포함':''):`${progressState.cutoff} 기준 · ${progressState.endDate || ProgressCore.monthEnd(progressMonth())}까지 예상`):'';
+    progressEl('receiptContext').hidden=!bound;progressEl('labelTotal').textContent=settlement?'잔여 수강료':'예상 납부액';
     progressEl('dispTotal').parentElement.classList.add('progress-total');
     progressEl('dispName').textContent=getCurrentStudentName()||'학생명';progressEl('dispDate').textContent=`${progressEl('targetYear').value}년 ${progressEl('targetMonth').value}월분`;
     const tbody=progressEl('receiptBody');tbody.replaceChildren();
@@ -222,16 +223,18 @@ function renderProgressReceipt(result,bound) {
 }
 function buildProgressMessage(result,total,discount) {
     const adjustments=collectAdjustmentItems();
+    const settlement=result.automaticForecastEnded && !result.predicted.length;
     return ['안녕하세요. 에스에듀 반포관입니다.','',
-        `${getCurrentStudentName()} 학생 ${progressEl('targetMonth').value}월 수강료 예상 내역입니다.`,
+        `${getCurrentStudentName()} 학생 ${progressEl('targetMonth').value}월 수강료 ${settlement?'정산':'예상'} 내역입니다.`,
         `입력된 수업 ${result.actual.length}회: ${progressMoney(result.actualAmount)}`,
         `추가 예상 수업 ${result.predicted.length}회: ${progressMoney(result.predictedAmount)}${result.predicted.some(r=>r.temporary)?' (임시 '+result.predicted.filter(r=>r.temporary).length+'회 포함)':''}`,
         `할인: ${progressMoney(discount.amount)}`,
         ...buildAdjustmentMessageLines(adjustments),
         ...(adjustments.length>1?[`이월·초과금 조정 합계: ${progressMoney(getAdjustmentTotal(adjustments))}`]:[]),
-        `월 예상 납부액: ${progressMoney(total)}`,'',
-        `예상 종료일: ${progressState.endDate || '월말'} (실제 입력 수업은 모두 포함)`,
-        `${progressState.cutoff} 기준 ${progressState.mode==='manual'?'입력 수업에 선택한 날짜의 수업을 추가했으며':'최근 요일별 입력 수업을 바탕으로 작성했으며'}, 예상 수업은 실제 일정에 따라 달라질 수 있습니다.`,
+        `${settlement?'잔여 수강료':'월 예상 납부액'}: ${progressMoney(total)}`,'',
+        ...(result.automaticForecastEnded?['지난달 입력 수업으로 계산하며 자동 예상 수업은 추가하지 않습니다.',...(result.predicted.length?['직접 추가·임시 수업은 계산기 초안의 별도 예상분으로 포함했습니다.']:[])]:[
+            `예상 종료일: ${progressState.endDate || '월말'} (실제 입력 수업은 모두 포함)`,
+            `${progressState.cutoff} 기준 ${progressState.mode==='manual'?'입력 수업에 선택한 날짜의 수업을 추가했으며':'최근 요일별 입력 수업을 바탕으로 작성했으며'}, 예상 수업은 실제 일정에 따라 달라질 수 있습니다.`]),
         '감사합니다.'].join('\n');
 }
 const progressOriginalSwitch=switchTab;

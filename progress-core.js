@@ -77,9 +77,12 @@
             ids.add(r.id);return {id:r.id,minutes:r.minutes,amount:r.amount,start:r.start,end:r.end};
         });
     }
-    function calculate(state) {
+    function calculate(state, today) {
         const snapshot = state?.snapshot;
         if (!snapshot) return {actual:[],predicted:[],templates:[],actualAmount:0,predictedAmount:0,pending:0};
+        // A saved cutoff is a planning preference, not evidence that lessons
+        // still remain in a completed month. The caller supplies the Korean date.
+        const automaticForecastEnded = validDate(today) && snapshot.month < today.slice(0,7);
         const cutoff = validDate(state.cutoff) && state.cutoff.slice(0,7) === snapshot.month ? state.cutoff : snapshot.month + '-01';
         const endDate = validDate(state.endDate) && state.endDate.slice(0,7) === snapshot.month ? state.endDate : monthEnd(snapshot.month);
         const choices = state.mode === 'manual' ? manualTemplates(snapshot,cutoff) : templates(snapshot,cutoff), excluded = new Set(state.excluded || []);
@@ -101,7 +104,7 @@
         }
         if (state.mode === 'manual') {
             for (const item of state.manual || []) add(choices.find(r=>r.id===item.templateId),item.date);
-        } else {
+        } else if (!automaticForecastEnded) {
             for (let d=1; d<=daysInMonth(snapshot.month); d++) {
                 const date = snapshot.month + '-' + String(d).padStart(2,'0');
                 for (const row of choices) if (dayOfWeek(date) === dayOfWeek(row.date)) add(row,date);
@@ -113,7 +116,7 @@
             predicted.push({...row,kind:'regular',predicted:true,temporary:true});
         }
         predicted.sort((a,b)=>a.date.localeCompare(b.date)||a.start.localeCompare(b.start)||a.className.localeCompare(b.className));
-        return {actual,predicted,templates:choices,actualAmount:actual.reduce((s,r)=>s+(r.amount || 0),0),predictedAmount:predicted.reduce((s,r)=>s+(r.amount || 0),0),pending:[...actual,...predicted].filter(r=>r.amount===null || r.minutes===null).length};
+        return {actual,predicted,templates:choices,automaticForecastEnded,actualAmount:actual.reduce((s,r)=>s+(r.amount || 0),0),predictedAmount:predicted.reduce((s,r)=>s+(r.amount || 0),0),pending:[...actual,...predicted].filter(r=>r.amount===null || r.minutes===null).length};
     }
     const api = {validMonth,validDate,daysInMonth,monthEnd,dayOfWeek,courseKey,validateSnapshot,validateTemporary,validateEdits,overlaps,templates,defaultCutoff,calculate};
     if (typeof module !== 'undefined' && module.exports) module.exports = api;

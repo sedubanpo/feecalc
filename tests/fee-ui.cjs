@@ -7,6 +7,8 @@ const root=path.resolve(__dirname,'..'),evidence=process.env.EVIDENCE_ROOT;
  const browser=await chromium.launch({headless:true,executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'});
  const context=await browser.newContext({viewport:{width:1440,height:1000},locale:'ko-KR'});
  const page=await context.newPage(),errors=[],results=[];
+ // Planning fixtures have an explicit academy date, independent of the host clock.
+ await context.addInitScript(()=>{const NativeDate=Date;window.testNow='2026-09-29T03:00:00Z';window.Date=class extends NativeDate{constructor(...args){super(...(args.length?args:[window.testNow]));}static now(){return new NativeDate(window.testNow).getTime();}};});
  page.on('pageerror',e=>errors.push(e.message)); page.on('dialog',d=>d.accept());
  // All private service access is synthetic; never use user accounts or write production data.
  await page.context().route('**/*.cloudfunctions.net/**',r=>r.abort());await page.context().route('**/*.supabase.co/**',r=>r.abort());
@@ -389,6 +391,40 @@ const root=path.resolve(__dirname,'..'),evidence=process.env.EVIDENCE_ROOT;
  await page.getByLabel('실제 수업 1 수업일',{exact:true}).fill('2026-09-19');await page.getByLabel('실제 수업 1 수업일',{exact:true}).press('Tab');assert.equal(await page.locator('#priorNoticePaper .notice-event').count(),81);
  await page.evaluate(()=>{testFinancialData.feecalc_intranet_opening.rows[0].amount=null;testFinancialData.feecalc_intranet_opening.rows[0].blocked='시작 잔액 확인 필요';});await page.locator('#loadPriorNotice').click();await page.waitForFunction(()=>document.querySelector('#priorSourceIssue')?.textContent.includes('확인 필요'));assert.equal(await page.locator('[data-prior-export="copy"]').isDisabled(),true);
  await page.evaluate(()=>{applyCalculatorState({...priorState,studentId:'two',studentName:'동명학생'});FeeCalendar.navigate('notice');});assert.equal(await page.locator('#priorNoticePaper').isVisible(),false);
+ });
+ await check('past-month saved notice drops automatic final-day charge and reflects latest deleted lesson',async()=>{
+ await page.setViewportSize({width:1920,height:1100});
+ await page.evaluate(()=>{
+ const otherDates=[1,8,14,17,19,21,22,26,28,29];
+ window.settlementSource={studentId:'one',month:'2026-09',fetchedAt:'2026-10-03T00:00:00Z',lessons:[
+ ...Array.from({length:15},(_,i)=>({id:'settlement-other-'+i,date:'2026-09-'+String(otherDates[i%otherDates.length]).padStart(2,'0'),className:'국어-1:1-검증국어',teacher:'검증국어',minutes:120,amount:i===14?306250:175000,start:i>=10?'16:00':'13:00',end:i>=10?'18:00':'15:00',kind:'regular'})),
+ ...[2,9,16,23].map(day=>({id:'settlement-math-'+day,date:'2026-09-'+String(day).padStart(2,'0'),className:'수학-개별-검증수학',teacher:'검증수학',minutes:180,amount:87500,start:'18:00',end:'21:00',kind:'regular'}))]};
+ testProgressSnapshot=structuredClone(settlementSource);
+ applyCalculatorState({currentTab:'progress',studentId:'one',studentName:'검증학생',targetYear:2026,targetMonth:9,progress:{snapshot:testProgressSnapshot,mode:'auto',cutoff:'2026-09-29',endDate:'2026-09-30',manual:[],excluded:[]},adjustmentItems:[{label:'9월 기수납액',amount:-1000000,kind:'other'},{label:'9월 기수납액',amount:-700000,kind:'other'},{label:'9월 기수납액',amount:-587500,kind:'other'}]});FeeCalendar.navigate('notice');
+ });
+ await page.waitForFunction(()=>progressVerified&&!progressLoading);
+ assert.equal(await page.locator('#dispTotal').innerText(),'906,250원');assert.equal(await page.evaluate(()=>progressResult().predictedAmount),87500);
+ await page.evaluate(()=>{window.testNow='2026-09-30T14:59:59Z';renderProgress();FeeCalendar.refresh();});assert.equal(await page.evaluate(()=>progressToday()),'2026-09-30');assert.equal(await page.locator('#dispTotal').innerText(),'906,250원');
+ await page.evaluate(()=>{window.testNow='2026-09-30T15:00:00Z';renderProgress();FeeCalendar.refresh();});assert.equal(await page.evaluate(()=>progressToday()),'2026-10-01');assert.equal(await page.locator('#dispTotal').innerText(),'818,750원');
+ // A previously saved snapshot still includes a source lesson later deleted.
+ await page.evaluate(()=>{window.testNow='2026-10-03T02:30:00Z';const saved=collectCalculatorState();saved.progress.snapshot.lessons.push({id:'settlement-deleted',date:'2026-09-15',className:'국어-1:1-검증국어',teacher:'검증국어',minutes:60,amount:87500,start:'13:00',end:'14:00',kind:'regular'});window.settlementSaved=saved;window.settlementWrites=testWrites.length;applyCalculatorState(saved);FeeCalendar.navigate('notice');});
+ await page.waitForFunction(()=>progressVerified&&!progressLoading);
+ assert.equal(await page.evaluate(()=>progressResult().actual.length),19);assert.equal(await page.evaluate(()=>progressResult().actualAmount),3106250);
+ assert.equal(await page.evaluate(()=>progressResult().predicted.length),0);assert.equal(await page.locator('#dispTotal').innerText(),'818,750원');assert.equal(await page.locator('#labelTotal').innerText(),'잔여 수강료');assert.equal(await page.locator('#receiptSubTitle').innerText(),'수강료 정산 안내서');
+ assert.match(await page.locator('#receiptContext').innerText(),/자동 예상 수업 제외/);assert.match(await page.locator('#generatedTextArea').inputValue(),/잔여 수강료: 818,750원/);assert.doesNotMatch(await page.locator('#generatedTextArea').inputValue(),/월 예상 납부액|예상 종료일/);
+ assert.equal(await page.locator('#captureArea .notice-event.predicted').count(),0);assert.equal(await page.locator('#captureArea .notice-event').count(),19);
+ await page.evaluate(()=>{FeeCalendar.navigate('progress');setProgressCutoff('2026-09-23');restoreProgressForecast();});assert.equal(await page.evaluate(()=>progressResult().predicted.length),0);await page.evaluate(()=>FeeCalendar.navigate('notice'));
+ const restored=await page.evaluate(()=>collectCalculatorState());await page.evaluate(s=>{applyCalculatorState(s);FeeCalendar.navigate('notice');},restored);await page.waitForFunction(()=>progressVerified&&!progressLoading);assert.equal(await page.locator('#dispTotal').innerText(),'818,750원');
+ if(evidence)await page.locator('#captureArea').screenshot({path:path.join(evidence,'settlement-desktop.png')});
+ await page.evaluate(()=>{window.copiedNotice=null;});await page.locator('#copyNoticeImage').click();await page.waitForFunction(()=>!!copiedNotice,{timeout:30000});
+ const png=await page.evaluate(async()=>Array.from(new Uint8Array(await copiedNotice.arrayBuffer())));assert.ok(png.length>10000);if(evidence)fs.writeFileSync(path.join(evidence,'settlement-export.png'),Buffer.from(png));
+ await page.setViewportSize({width:390,height:844});assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));if(evidence)await page.locator('#captureArea').screenshot({path:path.join(evidence,'settlement-mobile.png')});await page.setViewportSize({width:1440,height:1000});
+ assert.equal(await page.evaluate(()=>JSON.stringify(testProgressSnapshot)),await page.evaluate(()=>JSON.stringify(settlementSource)));assert.equal(await page.evaluate(()=>testWrites.length),await page.evaluate(()=>settlementWrites));
+ });
+ await check('past-month explicit manual dates and temporary drafts remain separately marked',async()=>{
+ await page.evaluate(()=>{const saved=collectCalculatorState();saved.progress.mode='manual';saved.progress.cutoff='2026-09-29';saved.progress.manual=[{templateId:'settlement-math-23',date:'2026-09-30'}];saved.progress.temporary=[{id:'local:settlement',date:'2026-09-25',className:'영어-개별-임시강사',teacher:'임시강사',minutes:60,amount:0,start:'15:00',end:'16:00',kind:'regular'}];applyCalculatorState(saved);FeeCalendar.navigate('notice');});await page.waitForFunction(()=>progressVerified&&!progressLoading);
+ assert.equal(await page.evaluate(()=>progressResult().predicted.length),2);assert.equal(await page.evaluate(()=>progressResult().predictedAmount),87500);assert.equal(await page.locator('#dispTotal').innerText(),'906,250원');assert.match(await page.locator('#receiptContext').innerText(),/직접 추가·임시/);assert.match(await page.locator('#generatedTextArea').inputValue(),/별도 예상분/);
+ await page.evaluate(()=>{window.testNow='2026-09-29T03:00:00Z';});
  });
  await check('signed-out account controls fit narrow and intermediate headers',async()=>{
  await page.evaluate(()=>testAuthState({state:'anonymous',gateway:testGateway}));
