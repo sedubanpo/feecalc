@@ -19,7 +19,7 @@
 +import {billingModelVersion} from './feecalcBilling.generated.js';
 +
 +import {projectCalculatorBalanceMonth,openingDisplayEstimate} from './feecalcBalancePolicy.js';
- 
+
  export async function automaticOpening(db,student,students,month,periods){
   const start=Object.keys(periods).filter(m=>m>='2026-09'&&m<=month&&periods[m]?.opening?.amount!=null).sort().at(-1)||'2026-09';
   if(month<'2026-09')return null;
