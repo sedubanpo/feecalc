@@ -35,7 +35,7 @@ test('compact receipt groups subject/teacher across actual and forecast, preserv
 });
 test('progress message retains offsetting named adjustments and manual provenance',()=>{
  const adjustments=[{label:'8월 이월금',amount:-50000},{label:'8월 초과금',amount:50000}];
- const context=vm.createContext({collectAdjustmentItems:()=>adjustments,getCurrentStudentName:()=>'검증학생',progressEl:()=>({value:9}),progressMoney:n=>n.toLocaleString('ko-KR')+'원',buildAdjustmentMessageLines:items=>items.map(x=>`${x.label}: ${x.amount.toLocaleString('ko-KR')}원`),getAdjustmentTotal:items=>items.reduce((s,x)=>s+x.amount,0),progressState:{cutoff:'2026-09-15',mode:'manual'}});
+ const context=vm.createContext({collectAdjustmentItems:()=>adjustments,getCurrentStudentName:()=>'검증학생',progressEl:()=>({value:9}),buildPaymentGuideText:()=>'결제링크 안내',progressMoney:n=>n.toLocaleString('ko-KR')+'원',buildAdjustmentMessageLines:items=>items.map(x=>`${x.label}: ${x.amount.toLocaleString('ko-KR')}원`),getAdjustmentTotal:items=>items.reduce((s,x)=>s+x.amount,0),progressState:{cutoff:'2026-09-15',mode:'manual'}});
  vm.runInContext(source.slice(source.indexOf('function buildProgressMessage'),source.indexOf('const progressOriginalSwitch')),context);
  const text=context.buildProgressMessage({actual:[{}],predicted:[{}],actualAmount:100000,predictedAmount:50000},150000,{amount:0});
  assert.match(text,/8월 이월금: -50,000원/);assert.match(text,/8월 초과금: 50,000원/);assert.match(text,/조정 합계: 0원/);assert.match(text,/선택한 날짜/);
@@ -51,11 +51,21 @@ test('month invalidation settles before the first fetch request token',async()=>
  const context=vm.createContext({progressRequest:0,progressLoading:false,progressStatus:'',staffAuthEpoch:1,progressState:{mode:'auto'},matchedStudent:()=>({id:'qa'}),progressMonth:()=>'2026-10',isServerConfigured:()=>true,progressBound:()=>false,progressToday:()=>'2026-09-16',ProgressCore:{validMonth:()=>true,validateSnapshot:x=>x,defaultCutoff:()=> '2026-10-01',monthEnd:()=> '2026-10-31'},getSupabaseClient:()=>({rpc:async()=>({data:{studentId:'qa',month:'2026-10',lessons:[]}})})});
  let first=true;context.renderProgress=()=>{if(first){first=false;context.progressRequest++;context.progressLoading=false;}};
  vm.runInContext(source.slice(source.indexOf('async function loadProgressLessons'),source.indexOf('function setProgressMode')),context);
- await context.loadProgressLessons();assert.equal(context.progressState.snapshot.month,'2026-10');assert.equal(context.progressLoading,false);assert.match(context.progressStatus,/저장된 수업이 없습니다/);
+ await context.loadProgressLessons();assert.equal(context.progressState.snapshot.month,'2026-10');assert.equal(context.progressLoading,false);assert.match(context.progressStatus,/입력 수업이 없습니다/);
 });
 test('same-user auth retry preserves forecast; sign-out clears it',async()=>{
  const context=vm.createContext({handleStaffAuthState:async()=>{},previousStaffUid:'one',progressRequest:0,progressLoading:false,progressState:{snapshot:{studentId:'qa'},manual:[{date:'2026-09-21'}]}});
  vm.runInContext(source.slice(source.indexOf('const progressOriginalAuth'),source.indexOf('const progressOriginalSaveUi')),context);
  await context.handleStaffAuthState({state:'pending',user:{uid:'one'}});assert.equal(context.progressState.manual.length,1);
  await context.handleStaffAuthState({state:'signed-out',user:null});assert.equal(context.progressState.snapshot,null);
+});
+
+test('two-month basis fetch is atomic, student-bound and preserves prior manual dates',async()=>{
+ const core=require('../progress-core.js'),basis={studentId:'qa',month:'2026-09',lessons:[{id:'old',date:'2026-09-24',className:'국어',teacher:'검증',start:'16:00',end:'18:00',minutes:120,amount:60000,kind:'regular'}]},snapshot={studentId:'qa',month:'2026-10',lessons:[]};
+ const old={snapshot,basis:[basis],mode:'manual',cutoff:'2026-10-01',manual:[{templateId:'basis:2026-09:old',date:'2026-10-08'}],excluded:[],temporary:[],edits:[],removedActual:[]},calls=[];
+ const context=vm.createContext({ProgressCore:core,progressRequest:0,progressLoading:false,progressVerified:true,progressStatus:'',staffAuthEpoch:1,progressState:old,matchedStudent:()=>({id:'qa'}),progressMonth:()=>'2026-10',isServerConfigured:()=>true,progressBound:()=>true,progressToday:()=>'2026-10-04',renderProgress:()=>{},getSupabaseClient:()=>({rpc:async(_,p)=>{calls.push(p);return {data:p.p_month==='2026-10'?snapshot:basis};}})});
+ vm.runInContext(source.slice(source.indexOf('async function loadProgressLessons'),source.indexOf('function setProgressMode')),context);
+ await context.loadProgressLessons({preserveForecast:true,withBasis:true});assert.equal(calls.length,2);assert.equal(context.progressVerified,true);assert.equal(core.calculate(context.progressState).predictedAmount,60000);
+ const before=JSON.stringify(context.progressState);context.getSupabaseClient=()=>({rpc:async(_,p)=>({data:p.p_month==='2026-10'?snapshot:{...basis,studentId:'other'}})});
+ await context.loadProgressLessons({preserveForecast:true,withBasis:true});assert.equal(context.progressVerified,false);assert.equal(JSON.stringify(context.progressState),before);assert.match(context.progressStatus,/학생·월/);
 });

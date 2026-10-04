@@ -3840,6 +3840,9 @@
                 adjustment: parseInt(document.getElementById('adjustment').value, 10) || 0,
                 adjustmentItems: collectAdjustmentItems(true),
                 discountRate: getDiscountRate(),
+                messageTemplateType: document.getElementById('messageTemplateType').value,
+                messagePaymentType: document.getElementById('messagePaymentType').value,
+                customTransferAccount: document.getElementById('customTransferAccount').value,
                 hideReceiptCalendarDetails: isReceiptCalendarDetailsHidden(),
                 sameDayCancelAsAttendance: {
                     history: isSameDayCancelAsAttendanceEnabled('history'),
@@ -3902,6 +3905,9 @@
                     return copy;
                 });
             }
+            document.getElementById('messageTemplateType').value = ['general','first'].includes(data.messageTemplateType)?data.messageTemplateType:'general';
+            document.getElementById('messagePaymentType').value = ['link','visit','transferSchool','transferCustom'].includes(data.messagePaymentType)?data.messagePaymentType:'link';
+            document.getElementById('customTransferAccount').value = typeof data.customTransferAccount==='string'?data.customTransferAccount.slice(0,1000):'';
             restoreDefaultPriceSummaryArea();
             document.getElementById('studentName').value = data.studentName || '';
             document.getElementById('targetYear').value = data.targetYear || new Date().getFullYear();
@@ -4327,22 +4333,22 @@
         const __origSwitchTab = switchTab;
         switchTab = function(tab){ __origSwitchTab(tab); showTabHelp(tab); updateCoreDataArea(tab); };
     </script>
-    <link rel="stylesheet" href="fee-ui.css?v=20260916-range">
-    <script src="financial-sources-core.js?v=20260930-funds"></script>
+    <link rel="stylesheet" href="fee-ui.css?v=20261004-planning">
+    <script src="financial-sources-core.js?v=20261004-planning"></script>
     <script src="fee-ui.js?v=20260930-funds"></script>
-    <script src="progress-core.js?v=20261003-past-month-settlement"></script>
-    <script src="progress-ui.js?v=20261003-past-month-settlement"></script>
+    <script src="progress-core.js?v=20261004-planning"></script>
+    <script src="progress-ui.js?v=20261004-planning"></script>
     <link rel="stylesheet" href="workspace-ui.css?v=20260918">
     <script src="workspace-ui.js?v=20260930-layout-compact"></script>
     <script src="subject-icons.js?v=20260930-compact"></script>
     <script src="school-icons.js?v=20260930"></script>
-    <script src="calendar-core.js?v=20261003-usage-audit"></script>
-    <link rel="stylesheet" href="calendar-workspace.css?v=20261003-usage-audit">
-    <script src="calendar-workspace.js?v=20261003-usage-audit"></script>
-    <script src="temporary-lessons.js?v=20260930-next-month"></script>
+    <script src="calendar-core.js?v=20261004-planning"></script>
+    <link rel="stylesheet" href="calendar-workspace.css?v=20261004-planning">
+    <script src="calendar-workspace.js?v=20261004-planning"></script>
+    <script src="temporary-lessons.js?v=20261004-planning"></script>
     <script src="calendar-dialogs.js?v=20260930-next-month"></script>
     <link rel="stylesheet" href="financial-sources.css?v=20260930-funds">
-    <script src="financial-sources.js?v=20261002-audit"></script>
+    <script src="financial-sources.js?v=20261004-planning"></script>
     <script src="prior-notice.js?v=20261003-usage-audit"></script>
     <link rel="stylesheet" href="prior-notice.css?v=20261003-usage-audit">
 </body>

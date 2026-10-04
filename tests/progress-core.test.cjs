@@ -124,3 +124,29 @@ test('local forecast edit applies once and cannot change identity/date',()=>{
  const s=state([row('one','2026-09-09')]);s.edits=[{id:'one@2026-09-23',minutes:60,amount:30000,start:'16:00',end:'17:00',date:'2026-10-01',className:'other'}];
  const r=core.calculate(s);assert.equal(r.predictedAmount,90000);assert.equal(r.predicted[0].date,'2026-09-23');assert.equal(r.predicted[0].className,s.snapshot.lessons[0].className);assert.equal(r.actualAmount,60000);
 });
+
+test('absence notices waive unknown or locally edited amounts without altering source',()=>{
+ const s=state([row('absence','2026-09-01',2,{kind:'absence',minutes:null,amount:null}),row('regular','2026-09-02')]);s.cutoff='2026-09-30';
+ s.edits=[{id:'absence',minutes:0,amount:87500,start:'16:00',end:'18:00'}];const before=JSON.stringify(s);
+ const r=core.calculate(s,'2026-10-04');assert.equal(r.pending,0);assert.equal(r.actualAmount,60000);assert.equal(r.actual[0].amount,0);assert.equal(JSON.stringify(s),before);
+ s.snapshot.lessons[1].amount=null;assert.equal(core.calculate(s,'2026-10-04').pending,1);
+});
+test('two-month basis restores January courses but never bills historical rows automatically',()=>{
+ const snapshot={studentId:'qa',month:'2027-01',lessons:[]};
+ const basis=[{studentId:'qa',month:'2026-12',lessons:[row('old','2026-12-10')]}];
+ const s={snapshot,basis,mode:'auto',cutoff:'2027-01-01'};
+ assert.equal(core.calculate(s,'2027-01-01').actualAmount,0);assert.equal(core.calculate(s,'2027-01-01').predicted.length,0);
+ s.mode='manual';const choice=core.calculate(s).templates[0];assert.equal(choice.sourceMonth,'2026-12');
+ s.manual=[{templateId:choice.id,date:'2027-01-02'}];assert.equal(core.calculate(s).predictedAmount,60000);assert.equal(core.calculate(s).actual.length,0);
+ assert.throws(()=>core.validateBasis([{...basis[0],studentId:'other'}],snapshot));assert.throws(()=>core.validateBasis([{...basis[0],month:'2026-11',lessons:[]}],snapshot));
+});
+test('unknown recurring absence fee remains pending when explicitly planning a normal class',()=>{
+ const s=state([row('waived','2026-09-01',2,{kind:'absence',minutes:null,amount:null,forecastAmount:null,forecastMinutes:120})]);s.mode='manual';s.cutoff='2026-09-01';
+ s.manual=[{templateId:'waived',date:'2026-09-02'}];const r=core.calculate(s);assert.equal(r.actualAmount,0);assert.equal(r.pending,1);assert.equal(r.predicted[0].amount,null);
+});
+
+test('new current-month equivalent course preserves dates and edits selected from prior basis',()=>{
+ const s={snapshot:{studentId:'qa',month:'2026-10',lessons:[]},basis:[{studentId:'qa',month:'2026-09',lessons:[row('prior','2026-09-24')]}],mode:'manual',cutoff:'2026-10-01'};
+ const template=core.calculate(s).templates[0],id=template.id;s.manual=[{templateId:id,date:'2026-10-08'}];s.edits=[{id:id+'@2026-10-08',minutes:120,amount:50000,start:'16:00',end:'18:00'}];
+ s.snapshot.lessons=[row('current','2026-10-01')];const r=core.calculate(s);assert.equal(r.templates.length,1);assert.ok(r.templates[0].aliases.includes(id));assert.equal(r.predictedAmount,50000);assert.equal(r.predicted[0].id,id+'@2026-10-08');assert.equal(r.predicted[0].templateId,id);
+});

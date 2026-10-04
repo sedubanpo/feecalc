@@ -1,0 +1,29 @@
+{
+  "runtime": "nodejs22",
+  "project": "fir-lms-prod",
+  "function": "intranet:feeCalculatorApi",
+  "scope": "deployed baseline + calculator-only policy patch",
+  "modules": {
+    "lessonTime.js": "8c17c8361456e933c5cde64857ecb05a0b9ad246291293e1ea525845307431fb",
+    "deskLinks.js": "f8200d6c816f4d10c36270b62ea8b08530a20aa456e68a0cc5171104bd4b842f",
+    "savedBillingLessons.js": "343a61083ed655f290827adcf401296dd63418aa113a4d1be8306e24d029b9d7",
+    "index.js": "8fefbcb18ba97f89efe9e9b4b0b8d6a43a300eda3da1b4e3361058bcb56247a3",
+    "carriedFees.js": "0f430a64e8b112b08cf110b83e501023b51a820603f36850816760f29e03f3d9",
+    "feecalc.js": "6cf70a85addc043306db865749e109bc2c2a7381d20183ed4c4eff6034ec1e1f",
+    "feecalcBilling.generated.js": "6f07ce5033c0b18c9bc4f807ee25740b8182f833b9749e33e67ac1f445c80162",
+    "studentDiscounts.js": "8482ef2aa489dd5a4e530156f9fdb023198ecc8504e153de193446ae34b0cce8",
+    "feecalcOpeningBalance.js": "a44908f50a39d3f963ea24280449c563d52ac47f547e965c48fce0261c8187c8",
+    "feecalcDesk.js": "125633bb8b8cf25578b76a9a40c552a42987a9588f566ebc28fae8f1baa7a16f",
+    "publishedView.js": "e13c9d2fcf539ac6ca027cbb2ba4584f447472e9d22c14ed56068f1eeb178d40",
+    "feecalcFinancialSources.js": "8a573f9f950f169a450b2ee75fb02461a69ef61999896f7698fca196d00ea71c",
+    "feecalcBalancePolicy.js": "99b390f791f2d2da2ca336c2edc710e1c26bcf4fdd992e6d72bf7b2154b87d1b",
+    "feeHistory.js": "d3801f88df2dd612bc2cff879f97b69bd21879dfd0e4c3aa1cdec2ec30938cfb",
+    "portalChanges.js": "675acb2c93ca906c894629123e1aac6a40275dd076396287d977cf03517e52db",
+    "feecalcFirebase.js": "640b42f4cedde8577d748a4e8bf59b1d22e21af1bb67193d46e92e3e60fc3629",
+    "feecalcProgress.js": "5ce4d2474fb1559743e8050e9aa410ef845e4554db7f31c0d003cc2b160ac41a",
+    "balanceHistory.js": "caf31e67c488e328ec546ebfbee25d53cf750daeac856b59ec5e2f4e3b05c637",
+    "singleIndividual.js": "5212a8410425379d4a27d5458cb33648a229e3f4aa40bd995743b560c90aca9f",
+    "contracts.js": "1dbe66cb46f73a9eca1cfafae54f65ac103cf95e305516f47d52af39b28b1086",
+    "feecalcOpeningBilling.generated.js": "f492816632d5fc3b6c36507a1136119491e3fea24e163e2d29cc8e63f0d2a55b"
+  }
+}

@@ -81,3 +81,10 @@
  .adjustment-fields { grid-template-columns:minmax(0,1fr) 56px; }
  .adjustment-label { grid-column:1/-1; }
 }
+
+.progress-calendar-title{grid-column:1/-1;text-align:center;padding:8px 0;font-size:13px}
+.progress-weekday{text-align:center;color:var(--color-muted);font-size:11px;padding:4px 0}
+.progress-weekday:nth-child(2),.progress-dates button[data-weekday="0"]{color:#bd4545}
+.progress-weekday:nth-child(8),.progress-dates button[data-weekday="6"]{color:#245c85}
+.progress-dates .ui-button{min-height:36px;padding:4px 0;white-space:nowrap;font-variant-numeric:tabular-nums}
+.progress-calendar-blank{min-height:36px;background:rgba(36,76,97,.025);border-radius:5px}

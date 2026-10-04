@@ -84,17 +84,18 @@
         context=identity();focusDay=day;FeeCalendar.focusDay(day);focusReturn=el('workCalendar').querySelector(`[data-day="${day}"] .calendar-add-lesson`)||document.activeElement;
         const date=progressMonth()+'-'+String(day).padStart(2,'0');
         const distinct=new Map();
-        for(const row of progressBound()?progressState.snapshot.lessons:[]){
+        for(const row of progressBound()?ProgressCore.basisTemplates(progressState):[]){
             if(!['regular','late','absenceMakeup'].includes(row.kind)||!row.minutes)continue;
             distinct.set(JSON.stringify([ProgressCore.courseKey(row),row.minutes,row.amount,row.start,row.end]),row);
         }
         courses=[...distinct.values()].sort((a,b)=>a.className.localeCompare(b.className,'ko'));
-        el('temporaryCourse').innerHTML=courses.map((r,i)=>`<option value="${i}">${esc(FeeCalendarCore.info(r.className,r.teacher).subject)} · ${esc(r.teacher)} · ${r.minutes/60}시간 · ${esc(r.start)} · ${r.amount===null?'금액 확인 필요':r.amount.toLocaleString('ko-KR')+'원'}</option>`).join('')+'<option value="custom">새 수업 직접 입력</option>';
+        el('temporaryCourse').innerHTML=courses.map((r,i)=>`<option value="${i}">${esc(FeeCalendarCore.info(r.className,r.teacher).subject)} · ${esc(r.teacher)} · ${r.minutes/60}시간 · ${esc(r.start)} · ${esc(r.date.slice(5))} 기준 · ${r.amount===null?'금액 확인 필요':r.amount.toLocaleString('ko-KR')+'원'}</option>`).join('')+'<option value="custom">새 수업 직접 입력</option>';
         el('temporaryContext').textContent=`${getCurrentStudentName()||'학생 선택'} · ${Number(date.slice(5,7))}월 ${day}일 (${weekdays[ProgressCore.dayOfWeek(date)]})`;
         dialog.querySelector('[name="temporaryScope"][value="date"]').checked=true;
         for(const id of ['temporaryFrom','temporaryUntil']){el(id).min=progressMonth()+'-01';el(id).max=ProgressCore.monthEnd(progressMonth());}
         el('temporaryFrom').value=date;el('temporaryUntil').value=ProgressCore.monthEnd(progressMonth());
         el('temporaryWeekdays').querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(Number(b.dataset.weekday)===ProgressCore.dayOfWeek(date))));
+        const selected=el('progressTemplate').value,index=courses.findIndex(r=>r.id===selected);if(index>=0)el('temporaryCourse').value=String(index);
         selectCourse();dialog.showModal();el('temporaryCourse').focus();
     }
     window.TemporaryLessons={open};

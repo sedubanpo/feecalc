@@ -65,7 +65,7 @@
         });
     }
     function normalizeSnapshot(snapshot){
-        return snapshot.lessons.map(r=>({...info(r.className,r.teacher),id:r.id,day:Number(r.date.slice(-2)),date:r.date,hours:r.minutes===null?null:(r.minutes||0)/60,amount:r.amount,rate:null,rawName:r.className,start:r.start,end:r.end,status:({regular:'출석',late:'지각',cancel:'당일취소',absence:'결석예고',absenceMakeup:'결석보강',cancelMakeup:'보충',lateMakeup:'보충',free:'프리'})[r.kind]||'확인 필요',kind:r.kind,note:r.note||r.memo||r.reference||'',source:r}));
+        return snapshot.lessons.map(r=>({...info(r.className,r.teacher),id:r.id,day:Number(r.date.slice(-2)),date:r.date,hours:r.kind==='absence'?0:r.minutes===null?null:(r.minutes||0)/60,amount:r.kind==='absence'?0:r.amount,rate:null,rawName:r.className,start:r.start,end:r.end,status:({regular:'출석',late:'지각',cancel:'당일취소',absence:'결석예고',absenceMakeup:'결석보강',cancelMakeup:'보충',lateMakeup:'보충',free:'프리'})[r.kind]||'확인 필요',kind:r.kind,note:r.note||r.memo||r.reference||'',source:r}));
     }
     function validatePriorNotice(d){
         if(d===undefined||d===null)return;

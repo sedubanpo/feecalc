@@ -53,6 +53,22 @@
         }
         return [...distinct.values()];
     }
+    function previousMonth(month) {
+        const d=new Date(month+'-01T00:00:00Z');d.setUTCMonth(d.getUTCMonth()-1);return d.toISOString().slice(0,7);
+    }
+    function validateBasis(values,snapshot) {
+        if(values===undefined)return [];
+        if(!Array.isArray(values)||values.length>1)throw Error('기준 수업 조회 기간을 확인해 주세요.');
+        return values.map(value=>{const v=validateSnapshot(value);if(v.studentId!==snapshot.studentId||v.month!==previousMonth(snapshot.month))throw Error('기준 수업의 학생·월이 일치하지 않습니다.');return v;});
+    }
+    function basisTemplates(state,cutoff=state?.cutoff) {
+        if(!state?.snapshot)return [];
+        const snapshots=[...validateBasis(state.basis,state.snapshot),state.snapshot];
+        const rows=snapshots.flatMap(s=>manualTemplates(s,s===state.snapshot?cutoff:monthEnd(s.month)).map(r=>({...r,id:s===state.snapshot?r.id:'basis:'+s.month+':'+r.id,sourceMonth:s.month})));
+        const latest=new Map();
+        for(const row of rows){const key=JSON.stringify([courseKey(row),row.minutes,row.amount,row.start,row.end]),old=latest.get(key);latest.set(key,{...row,aliases:old?[...(old.aliases||[]),old.id]:[]});}
+        return [...latest.values()].sort((a,b)=>a.className.localeCompare(b.className,'ko')||b.date.localeCompare(a.date));
+    }
     // Local additions belong to the calculation draft, never the source snapshot.
     function validateTemporary(rows, month) {
         if (rows === undefined) return [];
@@ -85,10 +101,10 @@
         const automaticForecastEnded = validDate(today) && snapshot.month < today.slice(0,7);
         const cutoff = validDate(state.cutoff) && state.cutoff.slice(0,7) === snapshot.month ? state.cutoff : snapshot.month + '-01';
         const endDate = validDate(state.endDate) && state.endDate.slice(0,7) === snapshot.month ? state.endDate : monthEnd(snapshot.month);
-        const choices = state.mode === 'manual' ? manualTemplates(snapshot,cutoff) : templates(snapshot,cutoff), excluded = new Set(state.excluded || []);
+        const choices = state.mode === 'manual' ? basisTemplates(state,cutoff) : templates(snapshot,cutoff), excluded = new Set(state.excluded || []);
         const edits=new Map(validateEdits(state.edits).map(r=>[r.id,r])),removed=new Set(state.removedActual||[]);
         const adjusted=r=>edits.has(r.id)?{...r,...edits.get(r.id),edited:true}:r;
-        const actual = snapshot.lessons.filter(r=>!removed.has(r.id)).map(r=>adjusted({...r,predicted:false}));
+        const actual = snapshot.lessons.filter(r=>!removed.has(r.id)).map(r=>{const row=adjusted({...r,predicted:false});return row.kind==='absence'?{...row,minutes:0,amount:0}:row;});
         const occupied = new Set(snapshot.lessons.map(r=>courseKey(r)+'|'+r.date));
         const predicted = [], seen = new Set(), slots = new Set();
         function add(template,date) {
@@ -103,7 +119,7 @@
             predicted.push({...template,id,date,kind:'regular',predicted:true,templateId:template.id});
         }
         if (state.mode === 'manual') {
-            for (const item of state.manual || []) add(choices.find(r=>r.id===item.templateId),item.date);
+            for (const item of state.manual || []) {const template=choices.find(r=>r.id===item.templateId||r.aliases?.includes(item.templateId));add(template?{...template,id:item.templateId}:null,item.date);}
         } else if (!automaticForecastEnded) {
             for (let d=1; d<=daysInMonth(snapshot.month); d++) {
                 const date = snapshot.month + '-' + String(d).padStart(2,'0');
@@ -118,7 +134,7 @@
         predicted.sort((a,b)=>a.date.localeCompare(b.date)||a.start.localeCompare(b.start)||a.className.localeCompare(b.className));
         return {actual,predicted,templates:choices,automaticForecastEnded,actualAmount:actual.reduce((s,r)=>s+(r.amount || 0),0),predictedAmount:predicted.reduce((s,r)=>s+(r.amount || 0),0),pending:[...actual,...predicted].filter(r=>r.amount===null || r.minutes===null).length};
     }
-    const api = {validMonth,validDate,daysInMonth,monthEnd,dayOfWeek,courseKey,validateSnapshot,validateTemporary,validateEdits,overlaps,templates,defaultCutoff,calculate};
+    const api = {validMonth,validDate,daysInMonth,monthEnd,dayOfWeek,courseKey,validateSnapshot,validateTemporary,validateEdits,overlaps,templates,basisTemplates,validateBasis,previousMonth,defaultCutoff,calculate};
     if (typeof module !== 'undefined' && module.exports) module.exports = api;
     else root.ProgressCore = api;
 })(typeof window === 'undefined' ? {} : window);

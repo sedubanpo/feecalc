@@ -58,3 +58,8 @@ test('previous notice draft validation preserves explicit zero and unknown value
  for(const invalid of [{lessons:[{...lesson,day:31}]},{lessons:[{...lesson,hours:-1}]},{lessons:[{...lesson,amount:'50000'}]},{lessons:[{...lesson,status:null}]},{lessons:[lesson,lesson]},{adjustments:[{id:'p',label:'납부',amount:Infinity}]},{fetchedAt:null},{month:'2026-10'}])assert.throws(()=>C.validatePriorNotice({...draft,...invalid}));
  C.validatePriorNotice(null);C.validatePriorNotice(undefined);
 });
+
+test('absence notice missing time and amount is explicitly excluded from notice billing',()=>{
+ const snapshot={lessons:[{id:'abs',date:'2026-10-02',className:'영어',teacher:'검증',minutes:null,amount:null,kind:'absence'}]};const before=JSON.stringify(snapshot);
+ const row=C.normalizeSnapshot(snapshot)[0];assert.equal(row.hours,0);assert.equal(row.amount,0);assert.equal(row.status,'결석예고');assert.equal(JSON.stringify(snapshot),before);
+});

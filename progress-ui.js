@@ -9,7 +9,7 @@ const progressMonth = () => `${progressEl('targetYear').value}-${String(progress
 const progressToday = () => new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
 function progressBound() { return !!progressState.snapshot && progressState.snapshot.studentId === matchedStudent()?.id && progressState.snapshot.month === progressMonth(); }
 function progressResult() { return ProgressCore.calculate(progressBound() ? progressState : null, progressToday()); }
-function progressReady() { return progressBound() && progressVerified && !progressLoading && progressState.snapshot.lessons.length > 0 && progressResult().pending === 0; }
+function progressReady() { return progressBound() && progressVerified && !progressLoading && (progressResult().actual.length + progressResult().predicted.length) > 0 && progressResult().pending === 0; }
 
 const progressButton = document.createElement('button');
 progressButton.id = 'btn-progress'; progressButton.type = 'button'; progressButton.textContent = '진행형';
@@ -24,6 +24,8 @@ progressPanel.innerHTML = `
  <button type="button" id="progressFetch" class="ui-button primary" onclick="loadProgressLessons()">인트라넷 수업 불러오기</button>
  <p id="progressStatus" role="status" class="ui-help"></p>
  <div id="progressControls" hidden>
+  <button type="button" id="progressBasisFetch" class="ui-button" onclick="loadProgressLessons({preserveForecast:true,withBasis:true})">이번 달·지난달 기준 수업 불러오기</button>
+  <p id="progressBasisStatus" class="ui-help"></p>
   <fieldset class="progress-method"><legend>남은 수업 계산 방식</legend>
    <label><input type="radio" name="progressMode" value="auto" checked onchange="setProgressMode(this.value)"> 남은 요일 자동 계산</label>
    <label><input type="radio" name="progressMode" value="manual" onchange="setProgressMode(this.value)"> 날짜 직접 추가</label>
@@ -59,17 +61,23 @@ async function loadProgressLessons(options={}) {
     const request=++progressRequest, epoch=staffAuthEpoch;
     progressLoading=true; progressVerified=false; progressStatus='인트라넷 수업을 불러오고 있습니다.'; renderProgress();
     try {
-        const {data,error}=await getSupabaseClient().rpc('feecalc_progress',{p_student_id:student.id,p_month:month});
+        const withBasis=options.withBasis || !!previous?.basis?.length;
+        const requests=[getSupabaseClient().rpc('feecalc_progress',{p_student_id:student.id,p_month:month})];
+        if(withBasis)requests.push(getSupabaseClient().rpc('feecalc_progress',{p_student_id:student.id,p_month:ProgressCore.previousMonth(month)}));
+        const responses=await Promise.all(requests);
+        const {data,error}=responses[0];
         if (request!==progressRequest || epoch!==staffAuthEpoch || matchedStudent()?.id!==student.id || progressMonth()!==month) return;
         if (error) throw Error(error.message || '수업 조회에 실패했습니다.');
         const snapshot=ProgressCore.validateSnapshot(data);
         if (snapshot.studentId!==student.id || snapshot.month!==month) throw Error('학생·월 정보가 맞지 않습니다. 다시 조회해 주세요.');
+        if(withBasis && responses[1].error)throw Error(responses[1].error.message || '지난달 기준 수업 조회에 실패했습니다.');
+        const basis=withBasis?ProgressCore.validateBasis([responses[1].data],snapshot):[];
         const latest=ProgressCore.defaultCutoff(snapshot,progressToday());
         const cutoff=options.preserveForecast && previous?.cutoff>latest ? previous.cutoff : latest;
         const savedEnd=previous?.endDate || ProgressCore.monthEnd(snapshot.month);
-        progressState={snapshot,mode:progressState.mode,cutoff,endDate:savedEnd<cutoff?cutoff:savedEnd,excluded:options.preserveForecast?(previous?.excluded || []):[],manual:options.preserveForecast?(previous?.manual || []):[],temporary:options.preserveForecast?(previous?.temporary || []):[],edits:options.preserveForecast?(previous?.edits || []):[],removedActual:options.preserveForecast?(previous?.removedActual || []):[]};
+        progressState={snapshot,basis,mode:progressState.mode,cutoff,endDate:savedEnd<cutoff?cutoff:savedEnd,excluded:options.preserveForecast?(previous?.excluded || []):[],manual:options.preserveForecast?(previous?.manual || []):[],temporary:options.preserveForecast?(previous?.temporary || []):[],edits:options.preserveForecast?(previous?.edits || []):[],removedActual:options.preserveForecast?(previous?.removedActual || []):[]};
         progressVerified=true;
-        progressStatus=snapshot.lessons.length ? `최신 수업 ${snapshot.lessons.length}건을 확인했습니다. 마지막 수업일 ${snapshot.lessons.map(r=>r.date).sort().at(-1)}.` : '선택한 월에 저장된 수업이 없습니다. 인트라넷 입력 후 다시 불러와 주세요.';
+        progressStatus=snapshot.lessons.length ? `최신 수업 ${snapshot.lessons.length}건을 확인했습니다. 마지막 수업일 ${snapshot.lessons.map(r=>r.date).sort().at(-1)}.` : '선택한 월에 입력 수업이 없습니다. 이번 달·지난달 기준 수업을 불러오거나 임시 수업을 추가하세요.';
     } catch(error) {
         if (request===progressRequest && epoch===staffAuthEpoch) progressStatus=`${error.message} 다시 불러오기로 재시도하세요.${progressBound()?' 기존에 불러온 데이터는 유지됩니다.':''}`;
     } finally { if(request===progressRequest){progressLoading=false;renderProgress();} }
@@ -85,7 +93,8 @@ function setProgressEnd(value) {
 }
 function toggleProgressDate(date) {
     const templateId=progressEl('progressTemplate').value;
-    const index=progressState.manual.findIndex(r=>r.templateId===templateId && r.date===date);
+    const choice=progressResult().templates.find(r=>r.id===templateId);
+    const index=progressState.manual.findIndex(r=>(r.templateId===templateId||choice?.aliases?.includes(r.templateId)) && r.date===date);
     if(index>=0) progressState.manual.splice(index,1); else {
         const result=progressResult(),template=result.templates.find(r=>r.id===templateId);
         if(template && result.predicted.some(r=>r.date===date && r.start<template.end && template.start<r.end && ProgressCore.courseKey(r)===ProgressCore.courseKey(template))){progressStatus='시간이 겹치는 같은 과목의 예상 수업이 이미 있습니다. 기존 예상분을 제외한 뒤 추가하세요.';renderProgress();return;}
@@ -103,16 +112,22 @@ function restoreProgressForecast() { progressState.excluded=[]; renderProgress()
 function renderProgressDates() {
     const host=progressEl('progressDates'); host.replaceChildren();
     if(!progressBound()) return;
+    host.setAttribute('aria-label',progressMonth()+' 예상 수업 추가 날짜');
+    const heading=document.createElement('strong');heading.className='progress-calendar-title';heading.textContent=progressMonth().replace('-','년 ')+'월';host.append(heading);
+    for(const day of ['일','월','화','수','목','금','토']){const label=document.createElement('span');label.className='progress-weekday';label.textContent=day;host.append(label);}
+    const blank=()=>{const cell=document.createElement('span');cell.className='progress-calendar-blank';cell.setAttribute('aria-hidden','true');host.append(cell);};
+    for(let i=0;i<ProgressCore.dayOfWeek(progressMonth()+'-01');i++)blank();
     const template=progressResult().templates.find(r=>r.id===progressEl('progressTemplate').value);
     for(let day=1;day<=ProgressCore.daysInMonth(progressMonth());day++) {
         const date=progressMonth()+'-'+String(day).padStart(2,'0'), button=document.createElement('button');
         const occupied=template && progressState.snapshot.lessons.some(r=>r.date===date && ProgressCore.courseKey(r)===ProgressCore.courseKey(template));
-        const selected=!!template && progressState.manual.some(r=>r.date===date&&r.templateId===template.id);
-        button.type='button';button.className='ui-button';button.textContent=`${day}일`;
+        const selected=!!template && progressState.manual.some(r=>r.date===date&&(r.templateId===template.id||template.aliases?.includes(r.templateId)));
+        button.type='button';button.className='ui-button';button.textContent=String(day);button.dataset.weekday=ProgressCore.dayOfWeek(date);
         button.setAttribute('aria-label',`${date} 예상 수업${occupied?' · 입력 수업 있음':''}`);button.setAttribute('aria-pressed',String(selected));
         button.disabled=!template || date<=progressState.cutoff || date>progressState.endDate || !!occupied;
         button.onclick=()=>toggleProgressDate(date);host.append(button);
     }
+    for(let i=0;i<(7-(ProgressCore.dayOfWeek(progressMonth()+'-01')+ProgressCore.daysInMonth(progressMonth()))%7)%7;i++)blank();
 }
 function progressLessonList(host,rows,editable) {
     host.replaceChildren();
@@ -148,11 +163,13 @@ function renderProgress() {
         const end=progressEl('progressEnd');end.value=progressState.endDate || ProgressCore.monthEnd(progressMonth());end.min=progressState.cutoff;end.max=ProgressCore.monthEnd(progressMonth());
         progressEl('progressCoverage').textContent=`조회본 마지막 수업일 ${result.actual.map(r=>r.date).sort().at(-1)||'없음'} · ${result.actual.length}건${progressVerified?' · 최신 조회 완료':' · 최신 확인 필요'}${result.automaticForecastEnded?' · 지난달 자동 예상 제외 (직접 추가·임시 수업은 유지)':''}`;
         document.querySelectorAll('input[name="progressMode"]').forEach(el=>{el.checked=el.value===progressState.mode;});
+        progressEl('progressBasisFetch').disabled=progressLoading;
+        progressEl('progressBasisStatus').textContent=progressState.basis?.length?`${progressState.basis[0].month} · ${progressMonth()} 수업을 추가 기준으로 사용합니다. 지난달 수업은 자동 청구하지 않으며, 시간·금액을 확인하고 날짜를 선택하세요.`:'기준 수업은 조회한 이번 달 기록입니다. 월 초에는 지난달 수업도 불러올 수 있습니다.';
         progressEl('progressManual').hidden=progressState.mode!=='manual';progressEl('progressRestore').hidden=progressState.mode!=='auto';
         progressEl('progressRestore').disabled=!progressState.excluded.length;
         const select=progressEl('progressTemplate'),previous=select.value;select.replaceChildren();
         result.templates.forEach(r=>{const option=document.createElement('option');option.value=r.id;option.textContent=`${r.className} · ${r.teacher} · ${r.minutes===null?'시간 확인 필요':r.minutes/60+'시간'} · ${r.date.slice(5)} ${r.start}`;select.append(option);});
-        if(result.templates.some(r=>r.id===previous))select.value=previous;
+        const retained=result.templates.find(r=>r.id===previous||r.aliases?.includes(previous));if(retained)select.value=retained.id;
         if(!result.templates.length){const option=document.createElement('option');option.textContent='반복할 출석 수업이 없습니다.';select.append(option);}
         renderProgressDates();
         progressEl('progressSummary').textContent=`입력 ${result.actual.length}회 · ${(result.actual.reduce((s,r)=>s+(r.minutes||0),0)/60).toLocaleString()}시간 · ${progressMoney(result.actualAmount)} / 예상 ${result.predicted.length}회 · ${progressMoney(result.predictedAmount)}${result.predicted.some(r=>r.temporary)?' (임시 '+result.predicted.filter(r=>r.temporary).length+'회 포함)':''}${result.pending?` · ${result.pending}건 금액·시간 확인 필요 (미확인 금액은 합계 미포함)` : ''}`;
@@ -235,7 +252,7 @@ function buildProgressMessage(result,total,discount) {
         ...(result.automaticForecastEnded?['지난달 입력 수업으로 계산하며 자동 예상 수업은 추가하지 않습니다.',...(result.predicted.length?['직접 추가·임시 수업은 계산기 초안의 별도 예상분으로 포함했습니다.']:[])]:[
             `예상 종료일: ${progressState.endDate || '월말'} (실제 입력 수업은 모두 포함)`,
             `${progressState.cutoff} 기준 ${progressState.mode==='manual'?'입력 수업에 선택한 날짜의 수업을 추가했으며':'최근 요일별 입력 수업을 바탕으로 작성했으며'}, 예상 수업은 실제 일정에 따라 달라질 수 있습니다.`]),
-        '감사합니다.'].join('\n');
+        ...(progressEl('messageTemplateType').value==='first'?[buildFirstRegistrationGuideText(),'']:[]),buildPaymentGuideText(),'감사합니다.'].join('\n');
 }
 const progressOriginalSwitch=switchTab;
 switchTab=function(tab){
@@ -246,7 +263,7 @@ switchTab=function(tab){
     progressEl('receiptBody').classList.toggle('progress-receipt',tab==='progress');
     document.querySelectorAll('.progress-total').forEach(el=>el.classList.toggle('progress-total',tab==='progress'));
     if(tab==='progress'){
-        progressEl('smartPasteSection').classList.add('hidden');progressEl('voucherGuideBox').classList.add('hidden');progressEl('messageControlArea').classList.add('hidden');
+        progressEl('smartPasteSection').classList.add('hidden');progressEl('voucherGuideBox').classList.add('hidden');toggleMessageControlVisibility();
         progressEl('tabHelpBubble').textContent='진행형: 인트라넷 입력 수업 + 남은 요일 자동 계산 또는 날짜 직접 추가';renderProgress();
     }
     updateServerSaveModeUi();
@@ -262,7 +279,7 @@ applyCalculatorState=function(data,...args){
         if(!ProgressCore.validDate(data.progress.cutoff)||data.progress.cutoff.slice(0,7)!==snapshot.month)throw Error('진행형 기준일을 확인해 주세요.');
         const endDate=data.progress.endDate || ProgressCore.monthEnd(snapshot.month);
         if(!ProgressCore.validDate(endDate)||endDate.slice(0,7)!==snapshot.month||endDate<data.progress.cutoff)throw Error('진행형 예상 종료일을 확인해 주세요.');
-        restored={snapshot,mode:data.progress.mode==='manual'?'manual':'auto',cutoff:data.progress.cutoff,endDate,excluded:Array.isArray(data.progress.excluded)?data.progress.excluded.filter(v=>typeof v==='string').slice(0,5000):[],manual:Array.isArray(data.progress.manual)?data.progress.manual.filter(v=>v&&typeof v.templateId==='string'&&ProgressCore.validDate(v.date)).slice(0,5000):[],temporary:ProgressCore.validateTemporary(data.progress.temporary,snapshot.month),edits:ProgressCore.validateEdits(data.progress.edits),removedActual:Array.isArray(data.progress.removedActual)?data.progress.removedActual.filter(id=>snapshot.lessons.some(r=>r.id===id)):[]};
+        restored={snapshot,basis:ProgressCore.validateBasis(data.progress.basis,snapshot),mode:data.progress.mode==='manual'?'manual':'auto',cutoff:data.progress.cutoff,endDate,excluded:Array.isArray(data.progress.excluded)?data.progress.excluded.filter(v=>typeof v==='string').slice(0,5000):[],manual:Array.isArray(data.progress.manual)?data.progress.manual.filter(v=>v&&typeof v.templateId==='string'&&ProgressCore.validDate(v.date)).slice(0,5000):[],temporary:ProgressCore.validateTemporary(data.progress.temporary,snapshot.month),edits:ProgressCore.validateEdits(data.progress.edits),removedActual:Array.isArray(data.progress.removedActual)?data.progress.removedActual.filter(id=>snapshot.lessons.some(r=>r.id===id)):[]};
     }
     progressRequest++;progressLoading=false;progressState=restored;progressVerified=false;progressRefreshPending=!!restored.snapshot;progressStatus='저장본의 최신 인트라넷 수업을 확인합니다.';
     const result=progressOriginalApply(data,...args);renderProgress();return result;

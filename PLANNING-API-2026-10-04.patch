@@ -1,0 +1,121 @@
+--- a/functions/feecalcProgress.js
++++ b/functions/feecalcProgress.js
+@@ -64,7 +64,7 @@
+     kind:String(l.kind), start:String(l.start || ''), end:String(l.end || ''),
+     minutes:l.kind==='absence'?0:Number.isInteger(l.billMinutes) && l.billMinutes >= 0 ? l.billMinutes : null,
+     sourceMinutes:Number.isInteger(l.sourceMinutes) ? l.sourceMinutes : null,
+-    amount:estimatedCharge(l), reviewed:!!l.reviewed,
++    amount:l.kind==='absence'?0:estimatedCharge(l), reviewed:!!l.reviewed,
+     ...(l.kind==='absence'?{forecastMinutes:normal.get(l.id)?.billMinutes ?? null,forecastAmount:normalForecastCharge(normal.get(l.id))}:{}),
+   })).sort((a,b) => a.date.localeCompare(b.date) || a.start.localeCompare(b.start) || a.id.localeCompare(b.id));
+   return {studentId,month,fetchedAt:new Date().toISOString(),lessons};
+--- a/functions/feecalcOpeningBalance.js
++++ b/functions/feecalcOpeningBalance.js
+@@ -2,16 +2,19 @@
+ import {readMonthlyDesk} from './feecalcDesk.js';
+ import {readBalanceHistory} from './balanceHistory.js';
+ import {resolveBalanceOpening} from './feecalcOpeningBilling.generated.js';
+-import {projectBalanceMonth,billingModelVersion} from './feecalcBilling.generated.js';
++import {billingModelVersion} from './feecalcBilling.generated.js';
++
++import {projectCalculatorBalanceMonth,openingDisplayEstimate} from './feecalcBalancePolicy.js';
+ 
+ export async function automaticOpening(db,student,students,month,periods){
+  const start=Object.keys(periods).filter(m=>m>='2026-09'&&m<=month&&periods[m]?.opening?.amount!=null).sort().at(-1)||'2026-09';
+  if(month<'2026-09')return null;
+  const history=await readBalanceHistory({db,student:{...student,originMonth:start,opening:0},start,end:month,
+-  deskRecords:m=>readMonthlyDesk(db,m,students),persistSnapshots:false,projectMonth:projectBalanceMonth,modelVersion:billingModelVersion});
++  deskRecords:m=>readMonthlyDesk(db,m,students),persistSnapshots:false,projectMonth:projectCalculatorBalanceMonth,modelVersion:billingModelVersion});
+  const relevant=Object.fromEntries(Object.entries(periods).filter(([m])=>m>=start&&m<=month));
+  for(const p of Object.values(relevant))for(const field of ['opening','paid'])if(p?.[field]?.amount!=null&&(!Number.isSafeInteger(p[field].amount)||Math.abs(p[field].amount)>1e10))throw Object.assign(Error('저장된 잔액·수납 금액을 확인하세요.'),{status:409});
+  const amount=resolveBalanceOpening(month,relevant,history.months.map(s=>s.month),history.months);
+- const unresolved=history.months.reduce((n,s)=>n+s.unresolved,0);
+- return {amount,unresolved,fingerprint:hash({studentId:student.id,month,start,periods:relevant,months:history.months})};
++ const estimate=openingDisplayEstimate(month,relevant,history.months,start);
++ const unresolved=estimate.unresolved;
++ return {amount,unresolved,estimateAmount:estimate.amount,pendingMonths:estimate.pendingMonths,fingerprint:hash({studentId:student.id,month,start,periods:relevant,months:history.months})};
+ }
+--- a/functions/feecalcFinancialSources.js
++++ b/functions/feecalcFinancialSources.js
+@@ -41,7 +41,7 @@
+   const result=await automaticOpening(db,student,students,month,record?.periods||{});
+   const amount=result.amount,known=validAmount(amount),previous=new Date(Date.UTC(Number(month.slice(0,4)),Number(month.slice(5))-2,1)).getUTCMonth()+1;
+   unresolved=result.unresolved;
+-  const row={id:`opening:${month}`,amount:known?amount:null,kind:known&&amount<0?'carry':known&&amount>0?'extra':'other',label:`${previous}월 ${known&&amount<0?'이월금':known&&amount>0?'초과금':'잔액'}`,date:'',method:'이전 달에서 자동 이월',note:`${month} 전월 잔액 · 인트라넷 월별 청구액 − 순수납액으로 계산`,blocked:known?'':`이전 달 수업 ${unresolved}건의 단가·청구 기준을 확인하세요.`};
++  const row={id:`opening:${month}`,amount:known?amount:null,kind:known&&amount<0?'carry':known&&amount>0?'extra':'other',label:`${previous}월 ${known&&amount<0?'이월금':known&&amount>0?'초과금':'잔액'}`,estimateAmount:known?null:validAmount(result.estimateAmount)?result.estimateAmount:null,pendingMonths:result.pendingMonths,date:'',method:'이전 달에서 자동 이월',note:`${month} 전월 잔액 · 인트라넷 월별 청구액 − 순수납액으로 계산`,blocked:known?'':`이전 달 수업 ${unresolved}건의 단가·청구 기준을 확인하세요.`};
+   rows.push({...row,fingerprint:hash({row,sourceFingerprint:result.fingerprint})});
+  }
+  return {studentId,month,fetchedAt:new Date().toISOString(),rows,unresolved};
+--- /dev/null
++++ b/functions/feecalcBalancePolicy.js
+@@ -0,0 +1,20 @@
++// Calculator import policy: absence notices have no charge. All other unknowns stay blocked.
++import {projectBalanceMonth} from './feecalcBilling.generated.js';
++export function projectCalculatorBalanceMonth(student,month,rows,...args){
++ return projectBalanceMonth(student,month,rows.filter(row=>row.kind!=='absence'),...args);
++}
++// Same display subtotal as balanceOpeningEstimate.ts; it is never an import amount.
++export function openingDisplayEstimate(month,periods,summaries,start='2026-09'){
++ let amount=0,pendingMonths=[];
++ const next=m=>{const d=new Date(m+'-01T00:00:00Z');d.setUTCMonth(d.getUTCMonth()+1);return d.toISOString().slice(0,7);};
++ for(let m=start;m<=month;m=next(m)){
++  const saved=periods[m]?.opening?.amount;
++  if(saved!=null){amount=Number.isFinite(saved)?saved:null;pendingMonths=[];}
++  if(m===month)break;
++  const row=summaries.find(s=>s.month===m),paid=periods[m]?.paid?.amount??row?.paid;
++  if(!row||!Number.isFinite(row.charges)||!Number.isFinite(paid)){amount=null;continue;}
++  if(row.unresolved>0)pendingMonths.push({month:m,count:row.unresolved});
++  if(amount!==null)amount=Math.round((amount+row.charges-paid)*100)/100;
++ }
++ return {amount,pendingMonths,unresolved:pendingMonths.reduce((n,p)=>n+p.count,0)};
++}
+--- /dev/null
++++ b/tests/feecalc-calculator-policy.test.mjs
+@@ -0,0 +1,32 @@
++import test from 'node:test';import assert from 'node:assert/strict';
++import {hash} from '../functions/contracts.js';
++import {readFeeCalcPayments,readFeeCalcOpening} from '../functions/feecalcFinancialSources.js';
++import {createFeeCalculatorHandler,validateFeeCalcRequest} from '../functions/feecalc.js';
++const payment=(id,patch={})=>({id,studentName:'검증학생',studentId:'one',sourceMonth:'26-09s',sourceDueMonth:'26-10s',paidAt:'2026-09-30',amount:-200000,itemName:'납부금액',business:'반포',paymentType:'계좌',...patch});
++function fixture({students=[{id:'one',name:'검증학생'}],payments=[],mappings=[],periods={},scope={enabled:true,campusId:'banpo',readPayments:true},financialStudent='one',sizeOverride,documents={},followups=[],contacts=[]}={}){
++ const reads=[];const lists={students,tuitionPayments:payments,intranetDeskStudentMappings:mappings,intranetStudentFees:[],intranetStudentPeriods:[],intranetLegacyPeriods:[],intranetLessonDrafts:[],intranetIssues:[],tuitionFollowups:followups,tuitionContactLogs:contacts};
++ const doc=s=>({id:s.id,exists:true,data:()=>s});
++ const db={collection(name){assert.ok(Object.hasOwn(lists,name));const filters=[];const q={where(k,op,v){assert.ok(['==','in'].includes(op));filters.push([k,v,op]);return q;},limit(n){assert.ok(n<=5001);return q;},async get(){reads.push(name);const rows=([...lists[name],...(['intranetStudentPeriods','intranetLegacyPeriods','intranetLessonDrafts'].includes(name)?Object.entries(documents).filter(([path])=>path.startsWith(name+'/')).map(([,value])=>value):[])]).filter(s=>filters.every(([k,v,op])=>op==='in'?v.includes(k.split('.').reduce((a,b)=>a?.[b],s)):k.split('.').reduce((a,b)=>a?.[b],s)===v));return{size:sizeOverride?.[name]??rows.length,docs:rows.map(doc)};}};return q;},doc(path){reads.push(path);return{async get(){const data=Object.hasOwn(documents,path)?documents[path]:path.startsWith('intranetStaffScopes/')?scope:path.startsWith('intranetFinancials/')?{studentId:financialStudent,periods}:path.startsWith('users/')?{role:'STAFF',status:'ACTIVE'}:{apps:{deskPortal:true}};return{exists:true,data:()=>data};}};}};
++ return{db,reads};
++}
++const lesson=(id,patch={})=>({id,studentId:'one',date:'2026-09-01',className:'수학-개별-검증',teacher:'검증',kind:'regular',start:'17:00',end:'19:00',sourceMinutes:120,billMinutes:120,payMinutes:120,rate:250000,rateUnit:'perClass',reviewed:true,warnings:[],note:'',...patch});
++const history=rows=>({[`intranetLegacyPeriods/${hash('one|2026-09')}`]:{studentId:'one',lessons:rows}});
++
++test('unresolved absence rows do not block confirmed carry or write source records',async()=>{
++ const absences=Array.from({length:4},(_,i)=>lesson('abs-'+i,{kind:'absence',rate:null,billMinutes:null,payMinutes:0,reviewed:false,warnings:['청구 기준 확인']}));
++ const documents=history([lesson('known'),...absences]),before=JSON.stringify(documents);
++ const r=await readFeeCalcOpening(fixture({documents,payments:[payment('paid',{sourceDueMonth:'26-09',amount:-487500})]}).db,'staff','one','2026-10');
++ assert.equal(r.rows[0].amount,-237500);assert.equal(r.rows[0].blocked,'');assert.equal(r.unresolved,0);assert.equal(JSON.stringify(documents),before);
++});
++test('displayed carry subtotal includes known charges while four unknown regular rows block import',async()=>{
++ const pending=Array.from({length:4},(_,i)=>lesson('pending-'+i,{rate:null,reviewed:false,className:'특강-'+i}));
++ const documents=history([lesson('known'),...pending]);
++ const r=await readFeeCalcOpening(fixture({documents,payments:[payment('paid',{sourceDueMonth:'26-09',amount:-487500})]}).db,'staff','one','2026-10');
++ assert.equal(r.rows[0].amount,null);assert.equal(r.rows[0].estimateAmount,-237500);assert.equal(r.unresolved,4);assert.match(r.rows[0].blocked,/4건/);assert.deepEqual(r.rows[0].pendingMonths,[{month:'2026-09',count:4}]);
++});
++test('display estimate never converts missing history to zero and saved opening resets earlier unknowns',async()=>{
++ const {openingDisplayEstimate}=await import('../functions/feecalcBalancePolicy.js');
++ assert.equal(openingDisplayEstimate('2026-10',{},[]).amount,null);
++ const r=openingDisplayEstimate('2026-11',{'2026-10':{opening:{amount:12500}}},[{month:'2026-09',charges:0,paid:0,unresolved:4},{month:'2026-10',charges:50000,paid:0,unresolved:0}]);
++ assert.equal(r.amount,62500);assert.equal(r.unresolved,0);
++});
+--- a/tests/feecalc-progress.test.mjs
++++ b/tests/feecalc-progress.test.mjs
+@@ -79,10 +79,10 @@
+  const data={['intranetStudentDiscounts/qa']:{revision:1,policies:[{month:'2026-08',percent:10,specialHourly:28125,courses:[],reason:'특할인'}]}};
+  const result=await readFeeCalcProgress(database(data),'staff','qa','2026-09');assert.equal(result.lessons[0].amount,50625);
+ });
+-test('unresolved absence charge remains pending instead of silently becoming zero',async()=>{
++test('absence charge is excluded even when its normal recurring rate remains unresolved',async()=>{
+  const data={[`intranetStudentPeriods/${key}`]:{lessons:[lesson('abs',{kind:'absence',reviewed:false,billMinutes:0,payMinutes:0,rate:0,warnings:['학생 연결 확인']})]}};
+  const result=await readFeeCalcProgress(database(data),'staff','qa','2026-09');
+- assert.equal(result.lessons[0].amount,null);
++ assert.equal(result.lessons[0].amount,0);assert.equal(result.lessons[0].forecastAmount,null);
+ });
+ test('calculator and UI share full-session allocation and preserve source attendance',async()=>{
+  const {projectMonthlyLessons,estimatedCharge}=await import('../functions/feecalcBilling.generated.js');

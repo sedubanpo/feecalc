@@ -467,3 +467,5 @@ body.calendar-app{padding:0!important;background:#f2f3f1!important;color:var(--w
 .capture-mode :is(#captureArea,#priorNoticePaper) .notice-calendar-scroll-hint{display:none}
 .capture-mode :is(#captureArea,#priorNoticePaper) .notice-event{grid-template-columns:minmax(0,1fr) auto}
 [data-receipt-part="calendarReceiptLegend"]{font-size:10px;color:var(--work-muted)}
+
+:is(#captureArea,#priorNoticePaper).hide-notice-durations .notice-duration{display:none!important}
