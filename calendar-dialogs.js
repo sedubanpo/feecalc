@@ -50,20 +50,21 @@
     document.body.append(next);
     let nextContext='',plan=null;
     const selectedGroups=()=>plan?.groups.filter((_,i)=>el('nextMonthRows').querySelector(`[data-group="${i}"]`)?.checked)||[];
+    function nextMonthSource(){const result=progressResult();return {...progressState.snapshot,lessons:[...result.actual,...result.predicted]};}
     function previewNext(){const groups=selectedGroups();el('nextMonthTotal').textContent=`${groups.reduce((n,g)=>n+g.count,0)}회 · 수강료 소계 ${money(groups.reduce((n,g)=>n+g.total,0))}`;el('nextMonthConfirm').disabled=currentTab==='progress'&&!groups.length;}
     window.openNextMonthWizard=function(){
         nextContext=context();const d=new Date(Number(el('targetYear').value),Number(el('targetMonth').value),1);const target=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
         const progress=currentTab==='progress';plan=null;el('nextMonthError').textContent='';
         el('nextMonthContext').textContent=`${getCurrentStudentName()||'학생 선택'} · ${month()} → ${target}`;el('nextMonthPatterns').hidden=!progress;el('nextSelectedOption').hidden=progress;el('nextManualOption').hidden=progress;
-        el('nextMonthIntro').textContent=progress?'실제 수업에서 3주 이상 반복된 요일과 단가로 다음 달 초안을 만듭니다. 다음 달 시간표와 변경 사항을 확인해 주세요.':'반 구성과 단가는 유지하고, 새 달에 사용할 날짜와 조정 내역을 정리합니다.';
+        el('nextMonthIntro').textContent=progress?'실제 반복 수업과 현재 계산에 포함된 예상 수업의 요일·시간·단가로 다음 달 초안을 만듭니다. 다음 달 시간표와 변경 사항을 확인해 주세요.':'반 구성과 단가는 유지하고, 새 달에 사용할 날짜와 조정 내역을 정리합니다.';
         el('nextMonthRows').replaceChildren();el('nextMonthConfirm').disabled=false;
         if(progress){
             if(!progressBound()||!progressVerified||progressLoading){el('nextMonthError').textContent='선택한 학생·월의 최신 인트라넷 수업을 먼저 불러오세요.';el('nextMonthConfirm').disabled=true;}
             else{
-                const snapshot={...progressState.snapshot,lessons:progressResult().actual.map(({predicted,edited,...r})=>r)};plan=FeeCalendarCore.nextMonthPlan(snapshot,target);
-                el('nextMonthRows').innerHTML=plan.groups.map((g,i)=>`<label class="next-pattern"><input type="checkbox" data-group="${i}" checked><span><strong>${esc(g.subject)} · ${esc(g.teacher)}</strong><small>${esc(g.type)} · ${g.hours}시간 · ${g.days.map(d=>days[d]).join('·')}요일</small><small>3주 이상 반복 · ${money(g.amount)}/회</small></span><b>${g.count}회<small>+${money(g.total)}</small></b></label>`).join('');
-                el('nextMonthSkipped').textContent=`반영하지 않은 기록 ${plan.skipped}건 · 보충·일회성·3주 미만·단가 미확인 수업은 달력에서 확인 후 추가하세요.`;
-                if(!plan.groups.length)el('nextMonthError').textContent='같은 요일·시간·단가로 3주 이상 진행된 수업이 아직 없습니다. 현재 계산은 유지됩니다.';
+                const snapshot=nextMonthSource();plan=FeeCalendarCore.nextMonthPlan(snapshot,target);
+                el('nextMonthRows').innerHTML=plan.groups.map((g,i)=>`<label class="next-pattern"><input type="checkbox" data-group="${i}" checked><span><strong>${esc(g.subject)} · ${esc(g.teacher)}</strong><small>${esc(g.type)} · ${g.hours}시간 · ${g.days.map(d=>days[d]).join('·')}요일</small><small>${g.forecastBased?'예상 수업 기준 · 일정 확인 필요':'실제 수업 3주 이상 반복'} · ${money(g.amount)}/회</small></span><b>${g.count}회<small>+${money(g.total)}</small></b></label>`).join('');
+                el('nextMonthSkipped').textContent=`반영하지 않은 기록 ${plan.skipped}건 · 보충·일회성·임시·실제 반복 부족·시수/단가 미확인 수업은 달력에서 확인 후 추가하세요.`;
+                if(!plan.groups.length)el('nextMonthError').textContent='이어받을 예상 수업이나 3주 이상 반복된 실제 수업이 없습니다. 현재 계산은 유지됩니다.';
                 previewNext();
             }
         }
@@ -76,9 +77,9 @@
         if(serverSavePending)return originalPrepare(options);
         if(!progressBound()||!progressVerified||progressLoading){setServerRecordStatus('최신 인트라넷 수업을 먼저 불러오세요.','warning');return;}
         const d=new Date(Number(el('targetYear').value),Number(el('targetMonth').value),1),targetMonth=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
-        const source={...progressState.snapshot,lessons:progressResult().actual.map(({predicted,edited,...r})=>r)},available=FeeCalendarCore.nextMonthPlan(source,targetMonth).groups;
+        const source=nextMonthSource(),available=FeeCalendarCore.nextMonthPlan(source,targetMonth).groups;
         const groups=options.progressGroups?available.filter(g=>options.progressGroups.includes(g.id)):available;
-        if(!groups.length){setServerRecordStatus('3주 이상 반복된 수업이 없어 현재 계산을 유지합니다.','warning');return;}
+        if(!groups.length){setServerRecordStatus('이어받을 예상·반복 수업이 없어 현재 계산을 유지합니다.','warning');return;}
         originalPrepare(options);FeeCalendar.seedNextMonth(groups,source);setServerRecordStatus(`${targetMonth} 요일고정 초안을 만들었습니다. ${groups.length}개 수업의 일정과 금액을 확인하세요.`,'success');
     };
     window.applyNextMonthWizard=function(){

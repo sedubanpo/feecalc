@@ -127,14 +127,15 @@
     }
     // Three distinct weekly occurrences with known terms can seed a next-month draft.
     function nextMonthPlan(snapshot,targetMonth){
-        const result=candidates(snapshot);
+        const result=candidates({...snapshot,lessons:snapshot.lessons.filter(r=>!r.temporary)});
         // Count repeated weekdays before splitting by clock time. A shifted
         // start time does not change a lesson's duration or tuition condition.
         const stableGroups=groupCandidates(result.rows).flatMap(group=>{
-            if(!finite(group.amount))return [];
+            if(!finite(group.amount)||!finite(group.hours)||group.hours<=0)return [];
             const days=group.weekdays.filter(({day})=>{
                 const dates=group.sourceDates.filter(date=>weekday(snapshot.month,Number(date.slice(-2)))===day).sort();
-                return dates.length>=3 && (Date.parse(dates.at(-1))-Date.parse(dates[0]))/86400000>=14;
+                const forecast=result.rows.some(r=>r.weekday===day&&group.sourceIds.some(id=>r.sourceIds.includes(id))&&r.sourceIds.some(id=>snapshot.lessons.some(l=>l.id===id&&l.predicted)));
+                return forecast || new Set(dates).size>=3 && (Date.parse(dates.at(-1))-Date.parse(dates[0]))/86400000>=14;
             }).map(w=>w.day);
             const members=result.rows.filter(r=>days.includes(r.weekday)&&group.sourceIds.some(id=>r.sourceIds.includes(id)));
             return groupCandidates(members);
@@ -145,7 +146,8 @@
             const days=group.weekdays.map(w=>w.day),dates=Array.from({length:daysInMonth(targetMonth)},(_,i)=>i+1).filter(d=>days.includes(weekday(targetMonth,d)));
             const overrides={};
             for(const day of dates){const r=members.find(r=>r.weekday===weekday(targetMonth,day));if(/^([01]\d|2[0-3]):[0-5]\d$/.test(r?.start)&&/^([01]\d|2[0-3]):[0-5]\d$/.test(r?.end)&&r.end>r.start)overrides[day]={start:r.start,end:r.end};}
-            return {...group,days,dates,count:dates.length,total:dates.length*Math.round(group.amount),schedule:{overrides}};
+            const forecastBased=group.sourceIds.some(id=>snapshot.lessons.some(r=>r.id===id&&r.predicted));
+            return {...group,forecastBased,days,dates,count:dates.length,total:dates.length*Math.round(group.amount),schedule:{overrides}};
         });
         return {groups,skipped:normalizeSnapshot(snapshot).filter(r=>!groups.some(g=>g.sourceIds.includes(r.id))).length};
     }

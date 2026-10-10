@@ -229,7 +229,7 @@
             options.previous={studentId:snapshot.studentId,month:snapshot.month,hours:C.hoursBySubject(C.normalizeSnapshot(snapshot).filter(r=>r.kind!=='absence'))};
             view='work';switchTab('auto');
         }finally{applying=false;}
-        renderCandidates();el('sourceStatus').textContent='진행형에서 3주 이상 반복된 수업을 이어받았습니다. 이번 달 변경 일정은 달력에서 수정하세요.';updateBatch();commitCalendar();
+        renderCandidates();el('sourceStatus').textContent='진행형의 예상·반복 수업을 이어받았습니다. 이번 달 변경 일정은 달력에서 수정하세요.';updateBatch();commitCalendar();
     }
     function updateBatch(){const r=readRows()[selectedRow];if(!r)return;el('calendarHours').value=r.hours;el('calendarRate').value=r.rate??'';el('calendarTemplate').value=selectedRow;updateDiff();}
     function validBatch(){return el('calendarHours').value!==''&&Number(el('calendarHours').value)>0&&el('calendarRate').value!==''&&Number(el('calendarRate').value)>=0&&Number.isFinite(Number(el('calendarRate').value));}

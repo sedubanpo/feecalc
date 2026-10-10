@@ -63,3 +63,10 @@ test('absence notice missing time and amount is explicitly excluded from notice 
  const snapshot={lessons:[{id:'abs',date:'2026-10-02',className:'영어',teacher:'검증',minutes:null,amount:null,kind:'absence'}]};const before=JSON.stringify(snapshot);
  const row=C.normalizeSnapshot(snapshot)[0];assert.equal(row.hours,0);assert.equal(row.amount,0);assert.equal(row.status,'결석예고');assert.equal(JSON.stringify(snapshot),before);
 });
+
+test('next-month forecasts seed short patterns without importing temporary or unresolved lessons',()=>{
+ const row=(id,date,extra={})=>({id,date,className:'수학-개별(A)-3h',teacher:'A',minutes:180,amount:87500,start:'16:00',end:'19:00',kind:'regular',predicted:true,...extra});
+ const snapshot={month:'2026-10',lessons:[row('forecast','2026-10-30'),row('temporary','2026-10-29',{temporary:true}),row('unknown','2026-10-28',{amount:null}),row('absence','2026-10-27',{kind:'absence'}),row('once','2026-10-26',{note:'오늘만'}),row('actual','2026-10-24',{predicted:false})]};
+ const original=JSON.stringify(snapshot),plan=C.nextMonthPlan(snapshot,'2026-11');
+ assert.equal(plan.groups.length,1);assert.equal(plan.groups[0].forecastBased,true);assert.deepEqual(plan.groups[0].dates,[6,13,20,27]);assert.equal(plan.groups[0].total,350000);assert.equal(plan.skipped,5);assert.equal(JSON.stringify(snapshot),original);
+});

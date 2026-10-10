@@ -426,6 +426,22 @@ const root=path.resolve(__dirname,'..'),evidence=process.env.EVIDENCE_ROOT;
  assert.equal(await page.evaluate(()=>progressResult().predicted.length),2);assert.equal(await page.evaluate(()=>progressResult().predictedAmount),87500);assert.equal(await page.locator('#dispTotal').innerText(),'906,250원');assert.match(await page.locator('#receiptContext').innerText(),/직접 추가·임시/);assert.match(await page.locator('#generatedTextArea').inputValue(),/별도 예상분/);
  await page.evaluate(()=>{window.testNow='2026-09-29T03:00:00Z';});
  });
+ await check('forecast lessons seed next month before three actual weeks, with preview selection and no source writes',async()=>{
+ await page.evaluate(()=>{
+ window.testNow='2026-10-10T03:00:00Z';
+ testProgressSnapshot={studentId:'one',month:'2026-10',fetchedAt:'2026-10-10T00:00:00Z',lessons:[{id:'early',date:'2026-10-02',className:'과학-개별(검증)-3h',teacher:'검증',minutes:180,amount:87500,start:'19:00',end:'22:00',kind:'regular'}]};
+ applyCalculatorState({currentTab:'progress',studentId:'one',studentName:'검증학생',targetYear:2026,targetMonth:10,progress:{snapshot:testProgressSnapshot,mode:'auto',cutoff:'2026-10-02',endDate:'2026-10-31'}});FeeCalendar.navigate('progress');
+ });
+ await page.waitForFunction(()=>progressVerified&&!progressLoading);
+ const before=await page.evaluate(()=>JSON.stringify(progressState.snapshot)),writes=await page.evaluate(()=>testWrites.length);
+ assert.ok(await page.evaluate(()=>progressResult().predicted.length>0));
+ await page.locator('[onclick="openNextMonthWizard()"]').click();
+ assert.equal(await page.locator('#nextMonthRows [data-group]').count(),1);assert.match(await page.locator('#nextMonthRows').innerText(),/예상 수업 기준/);assert.match(await page.locator('#nextMonthTotal').innerText(),/4회.*350,000원/);
+ await page.locator('#nextMonthRows input').uncheck();assert.equal(await page.locator('#nextMonthConfirm').isDisabled(),true);await page.locator('#nextMonthRows input').check();
+ if(evidence){fs.mkdirSync(evidence,{recursive:true});await page.screenshot({path:path.join(evidence,'forecast-next-desktop.png')});await page.setViewportSize({width:390,height:844});await page.screenshot({path:path.join(evidence,'forecast-next-mobile.png')});await page.setViewportSize({width:1440,height:1000});}
+ await page.keyboard.press('Escape');assert.equal(await page.evaluate(()=>JSON.stringify(progressState.snapshot)),before);
+ await page.locator('[onclick="openNextMonthWizard()"]').click();await page.locator('#nextMonthConfirm').click();assert.equal(await page.locator('#targetMonth').inputValue(),'11');assert.equal(await page.locator('#workCalendar .calendar-event').count(),4);assert.equal(await page.locator('#dispTotal').innerText(),'350,000원');assert.equal(await page.evaluate(()=>testWrites.length),writes);
+ });
  await check('signed-out account controls fit narrow and intermediate headers',async()=>{
  await page.evaluate(()=>testAuthState({state:'anonymous',gateway:testGateway}));
  for(const width of [390,600,768,1050,1440]){await page.setViewportSize({width,height:1000});assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),String(width));assert.equal(await page.locator('#staffLoginForm').isVisible(),true);}

@@ -29,7 +29,7 @@
 ## Progress next-month planning — 2026-09-30
 
 - The next-month dialog shares the draft dialog typography, warm paper surface, restrained navy actions, and mobile sizing.
-- Next-month tuition from progress lessons becomes a weekday-fixed draft. Preview and select eligible courses before advancing. Require three distinct weekly occurrences with known duration/fee; do not silently import one-off, makeup, unresolved, or temporary forecast lessons.
+- Next-month tuition from progress lessons becomes a weekday-fixed draft. Preview and select eligible courses before advancing. Actual-only patterns require three distinct weekly occurrences with known duration/fee. As requested on 2026-10-10, calculated forecast lessons may also seed a reviewed next-month draft without that threshold; label forecast-based candidates. Exclude one-off, makeup, unresolved, and temporary lessons.
 - Clicking a calendar lesson opens occurrence editing/deletion, with an amount preview and undo. Progress edits and exclusions are saved only in the calculator draft; the intranet snapshot remains unchanged.
 
 ## Financial source imports — 2026-09-30
