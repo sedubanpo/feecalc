@@ -469,3 +469,24 @@ body.calendar-app{padding:0!important;background:#f2f3f1!important;color:var(--w
 [data-receipt-part="calendarReceiptLegend"]{font-size:10px;color:var(--work-muted)}
 
 :is(#captureArea,#priorNoticePaper).hide-notice-durations .notice-duration{display:none!important}
+
+/* Keep teacher names intact in both the browser and the exported SVG/PNG layout. */
+:is(#captureArea,#priorNoticePaper) .notice-teacher-badge{display:inline-block;width:auto;max-width:none;flex:0 0 auto;white-space:nowrap;word-break:keep-all;overflow-wrap:normal}
+:is(#captureArea,#priorNoticePaper) .receipt-student h2{font-size:34px;line-height:1.35}
+:is(#captureArea,#priorNoticePaper) :is(#dateBadge,[data-receipt-part="dateBadge"],#dispDate,[data-receipt-part="dispDate"]){font-size:20px}
+:is(#captureArea,#priorNoticePaper) .notice-school-meta{font-size:15px;line-height:1.6}
+:is(#captureArea,#priorNoticePaper) :is(#thAmount,[data-receipt-part="thAmount"]){width:100px!important}
+:is(#captureArea,#priorNoticePaper) :is(#receiptBody,[data-receipt-part="receiptBody"])>tr>td:last-child{font-size:14px;font-variant-numeric:tabular-nums}
+:is(#captureArea,#priorNoticePaper) .receipt-variants{grid-template-columns:repeat(auto-fit,minmax(min(100%,115px),1fr))}
+:is(#captureArea,#priorNoticePaper) .receipt-variants>span{font-size:13px}
+:is(#captureArea,#priorNoticePaper) .receipt-variants small{font-size:12px}
+:is(#captureArea,#priorNoticePaper) :is(#priceSummaryArea,[data-receipt-part="priceSummaryArea"]) .flex{font-size:13px;font-variant-numeric:tabular-nums}
+:is(#captureArea,#priorNoticePaper) :is(#dispTotal,[data-receipt-part="dispTotal"]){font-size:24px!important}
+@media(max-width:760px){
+ :is(#captureArea,#priorNoticePaper) .receipt-student h2{font-size:28px}
+ :is(#captureArea,#priorNoticePaper) :is(#dateBadge,[data-receipt-part="dateBadge"],#dispDate,[data-receipt-part="dispDate"]){font-size:18px}
+}
+.capture-mode :is(#captureArea,#priorNoticePaper) .receipt-variants{grid-template-columns:repeat(auto-fit,minmax(min(100%,115px),1fr))}
+@media(min-width:1101px){:is(#captureArea,#priorNoticePaper) .receipt-content{grid-template-columns:minmax(0,.7fr) minmax(0,1fr)}}
+.capture-mode :is(#captureArea,#priorNoticePaper) .receipt-content{grid-template-columns:440px minmax(0,1fr)!important}
+.capture-mode :is(#captureArea,#priorNoticePaper).portrait-notice .receipt-content,.capture-mode[data-mode=timetable] #captureArea:not(.prior-notice-paper) .receipt-content{grid-template-columns:minmax(0,1fr)!important}
