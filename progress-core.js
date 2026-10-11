@@ -13,14 +13,29 @@
     };
     function validateSnapshot(value) {
         if (!value || typeof value.studentId !== 'string' || !value.studentId || !validMonth(value.month) || !Array.isArray(value.lessons) || value.lessons.length > 1000) throw Error('진행형 수업 데이터 형식을 확인해 주세요.');
+        if(value.lessons.reduce((n,r)=>n+(Array.isArray(r?.segments)?r.segments.length:1),0)>1000)throw Error('병합 수업 조회 한도를 초과했습니다.');
         const ids = new Set();
         for (const row of value.lessons) {
             if (!row || typeof row.id !== 'string' || !row.id || ids.has(row.id) || !validDate(row.date) || row.date.slice(0,7) !== value.month || typeof row.className !== 'string' || typeof row.teacher !== 'string' || typeof row.start !== 'string' || typeof row.end !== 'string' || (row.minutes !== null && (!Number.isInteger(row.minutes) || row.minutes < 0 || row.minutes > 1440)) || (row.amount !== null && (typeof row.amount !== 'number' || !Number.isFinite(row.amount) || row.amount < 0 || row.amount > 1e10))) throw Error('진행형 수업 날짜·시간·금액을 확인해 주세요.');
             ids.add(row.id);
+            if(row.segments!==undefined){
+                if(!Array.isArray(row.segments)||row.segments.length<2||row.segments.length>1000||row.segments.some(r=>r?.segments!==undefined))throw Error('병합 수업 원본을 확인해 주세요.');
+                validateSnapshot({studentId:value.studentId,month:value.month,lessons:row.segments});
+                if(row.segments.some(r=>r.date!==row.date||r.kind!==row.kind))throw Error('병합 수업 출결을 확인해 주세요.');
+            }
             if (row.forecastMinutes !== undefined && row.forecastMinutes !== null && (!Number.isInteger(row.forecastMinutes) || row.forecastMinutes <= 0 || row.forecastMinutes > 1440)) throw Error('예상 수업 시간을 확인해 주세요.');
             if (row.forecastAmount !== undefined && row.forecastAmount !== null && (typeof row.forecastAmount !== 'number' || !Number.isFinite(row.forecastAmount) || row.forecastAmount < 0 || row.forecastAmount > 1e10)) throw Error('예상 수업 금액을 확인해 주세요.');
         }
         return JSON.parse(JSON.stringify(value));
+    }
+    // Old drafts may refer to a fragment ID. Keep those customized sessions
+    // split until the user explicitly reloads without preserving the draft.
+    function preserveSessionDraft(snapshot,state) {
+        if(!state)return snapshot;
+        const refs=new Set([...(state.edits||[]).map(r=>r.id),...(state.removedActual||[]),...(state.excluded||[]),...(state.manual||[]).map(r=>r.templateId)]);
+        const sourceRefs=new Set([...refs].map(ref=>String(ref).replace(/@20\d{2}-\d{2}-\d{2}$/,'').replace(/^basis:20\d{2}-\d{2}:/,'')));
+        const referenced=id=>sourceRefs.has(id);
+        return {...snapshot,lessons:snapshot.lessons.flatMap(row=>row.segments?.some(r=>referenced(r.id))?row.segments:[row])};
     }
     function templateRows(snapshot, cutoff) {
         return snapshot.lessons.filter(r=>r.date<=cutoff).flatMap(row=>{
@@ -134,7 +149,7 @@
         predicted.sort((a,b)=>a.date.localeCompare(b.date)||a.start.localeCompare(b.start)||a.className.localeCompare(b.className));
         return {actual,predicted,templates:choices,automaticForecastEnded,actualAmount:actual.reduce((s,r)=>s+(r.amount || 0),0),predictedAmount:predicted.reduce((s,r)=>s+(r.amount || 0),0),pending:[...actual,...predicted].filter(r=>r.amount===null || r.minutes===null).length};
     }
-    const api = {validMonth,validDate,daysInMonth,monthEnd,dayOfWeek,courseKey,validateSnapshot,validateTemporary,validateEdits,overlaps,templates,basisTemplates,validateBasis,previousMonth,defaultCutoff,calculate};
+    const api = {preserveSessionDraft,validMonth,validDate,daysInMonth,monthEnd,dayOfWeek,courseKey,validateSnapshot,validateTemporary,validateEdits,overlaps,templates,basisTemplates,validateBasis,previousMonth,defaultCutoff,calculate};
     if (typeof module !== 'undefined' && module.exports) module.exports = api;
     else root.ProgressCore = api;
 })(typeof window === 'undefined' ? {} : window);

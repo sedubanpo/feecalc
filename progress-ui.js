@@ -8,8 +8,13 @@ const progressMoney = value => value === null ? '확인 필요' : value.toLocale
 const progressMonth = () => `${progressEl('targetYear').value}-${String(progressEl('targetMonth').value).padStart(2,'0')}`;
 const progressToday = () => new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
 function progressBound() { return !!progressState.snapshot && progressState.snapshot.studentId === matchedStudent()?.id && progressState.snapshot.month === progressMonth(); }
-function progressResult() { return ProgressCore.calculate(progressBound() ? progressState : null, progressToday()); }
-function progressReady() { return progressBound() && progressVerified && !progressLoading && (progressResult().actual.length + progressResult().predicted.length) > 0 && progressResult().pending === 0; }
+let progressResultCache=null;
+function progressResult() {
+    const state=progressBound()?progressState:null,today=progressToday(),key=JSON.stringify([today,state]);
+    if(progressResultCache?.key!==key)progressResultCache={key,result:ProgressCore.calculate(state,today)};
+    return progressResultCache.result;
+}
+function progressReady() { if(!progressBound()||!progressVerified||progressLoading)return false;const r=progressResult();return r.actual.length+r.predicted.length>0&&r.pending===0; }
 
 const progressButton = document.createElement('button');
 progressButton.id = 'btn-progress'; progressButton.type = 'button'; progressButton.textContent = '진행형';
@@ -68,10 +73,10 @@ async function loadProgressLessons(options={}) {
         const {data,error}=responses[0];
         if (request!==progressRequest || epoch!==staffAuthEpoch || matchedStudent()?.id!==student.id || progressMonth()!==month) return;
         if (error) throw Error(error.message || '수업 조회에 실패했습니다.');
-        const snapshot=ProgressCore.validateSnapshot(data);
+        const snapshot=ProgressCore.preserveSessionDraft(ProgressCore.validateSnapshot(data),options.preserveForecast?previous:null);
         if (snapshot.studentId!==student.id || snapshot.month!==month) throw Error('학생·월 정보가 맞지 않습니다. 다시 조회해 주세요.');
         if(withBasis && responses[1].error)throw Error(responses[1].error.message || '지난달 기준 수업 조회에 실패했습니다.');
-        const basis=withBasis?ProgressCore.validateBasis([responses[1].data],snapshot):[];
+        const basis=withBasis?ProgressCore.validateBasis([responses[1].data],snapshot).map(s=>ProgressCore.preserveSessionDraft(s,options.preserveForecast?previous:null)):[];
         const latest=ProgressCore.defaultCutoff(snapshot,progressToday());
         const cutoff=options.preserveForecast && previous?.cutoff>latest ? previous.cutoff : latest;
         const savedEnd=previous?.endDate || ProgressCore.monthEnd(snapshot.month);

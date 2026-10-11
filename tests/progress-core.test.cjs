@@ -150,3 +150,15 @@ test('new current-month equivalent course preserves dates and edits selected fro
  const template=core.calculate(s).templates[0],id=template.id;s.manual=[{templateId:id,date:'2026-10-08'}];s.edits=[{id:id+'@2026-10-08',minutes:120,amount:50000,start:'16:00',end:'18:00'}];
  s.snapshot.lessons=[row('current','2026-10-01')];const r=core.calculate(s);assert.equal(r.templates.length,1);assert.ok(r.templates[0].aliases.includes(id));assert.equal(r.predictedAmount,50000);assert.equal(r.predicted[0].id,id+'@2026-10-08');assert.equal(r.predicted[0].templateId,id);
 });
+
+test('merged sessions forecast as one lesson while legacy segment edits remain recoverable',()=>{
+ const C=require('../progress-core.js');
+ const segment=(id,start,end)=>({id,date:'2026-10-02',className:'수학-개별(검증)-2h',teacher:'검증',minutes:60,amount:30000,start,end,kind:'regular'});
+ const segments=[segment('a','16:00','17:00'),segment('b','17:00','18:00')];
+ const snapshot=C.validateSnapshot({studentId:'qa',month:'2026-10',lessons:[{...segments[0],id:'session:ab',end:'18:00',minutes:120,amount:60000,segments,sourceIds:['a','b']}]});
+ const state={snapshot,mode:'auto',cutoff:'2026-10-02',endDate:'2026-10-31'};
+ const result=C.calculate(state,'2026-10-11');assert.equal(result.actual.length,1);assert.equal(result.predicted.length,4);assert.equal(result.predictedAmount,240000);assert.ok(result.predicted.every(r=>r.minutes===120));
+ for(const draft of [{edits:[{id:'a'}]},{removedActual:['b']},{excluded:['a@2026-10-09']},{manual:[{templateId:'b'}]},{manual:[{templateId:'basis:2026-10:a'}]},{edits:[{id:'basis:2026-10:a@2026-11-06'}]}])assert.equal(C.preserveSessionDraft(snapshot,draft).lessons.length,2);
+ const edited=C.calculate({...state,edits:[{id:'session:ab',minutes:120,amount:50000,start:'16:00',end:'18:00'}]},'2026-10-11');assert.equal(edited.actualAmount,50000);assert.equal(snapshot.lessons[0].amount,60000);
+ assert.equal(C.calculate({...state,removedActual:['session:ab']},'2026-10-11').actual.length,0);
+});

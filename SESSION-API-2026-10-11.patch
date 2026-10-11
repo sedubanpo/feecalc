@@ -1,0 +1,55 @@
+--- a/functions/feecalcProgress.js
++++ b/functions/feecalcProgress.js
+@@ -2,7 +2,7 @@
+ import {readCarriedFees} from './carriedFees.js';
+ import {discountPolicyFor} from './studentDiscounts.js';
+ import { createHash } from 'node:crypto';
+-import { projectMonthlyLessons, estimatedCharge, inheritFees, recoverIssueFees } from './feecalcBilling.generated.js';
++import { displayedLessonSessions, projectMonthlyLessons, estimatedCharge, inheritFees, recoverIssueFees } from './feecalcBilling.generated.js';
+ const fail = (status, message) => { throw Object.assign(Error(message), {status}); };
+ // Access keeps fractional hourly prices separately from the integer-rate field.
+ // Round the session charge, not the hourly price; retain the billing engine's
+@@ -58,7 +58,7 @@
+       ...(l.rate>0?{}:legacyRate!==null?{rateUnit:'perHour'}:{}),
+       ...(rateOverride>0?{rateOverride}:{}), ...(access?{access:{...access,billingAuthoritative:false}}:{})};
+   });
+-  const normal = new Map(projectMonthlyLessons(normalRows,studentId,month,{...period,discountPolicy:discount},decisions,true).map(l=>[l.id,l]));
++  const normal = new Map((source.some(l=>l.kind==='absence')?projectMonthlyLessons(normalRows,studentId,month,{...period,discountPolicy:discount},decisions,true):[]).map(l=>[l.id,l]));
+   const lessons = projected.map(l => ({
+     id:String(l.id), date:String(l.date), className:String(l.className || ''), teacher:String(l.teacher || ''),
+     kind:String(l.kind), start:String(l.start || ''), end:String(l.end || ''),
+@@ -67,5 +67,17 @@
+     amount:l.kind==='absence'?0:estimatedCharge(l), reviewed:!!l.reviewed,
+     ...(l.kind==='absence'?{forecastMinutes:normal.get(l.id)?.billMinutes ?? null,forecastAmount:normalForecastCharge(normal.get(l.id))}:{}),
+   })).sort((a,b) => a.date.localeCompare(b.date) || a.start.localeCompare(b.start) || a.id.localeCompare(b.id));
+-  return {studentId,month,fetchedAt:new Date().toISOString(),lessons};
++  // Preserve mixed attendance as individual rows. Homogeneous sessions use the
++  // same explicit/automatic grouping decision as the intranet display.
++  const byId=new Map(lessons.map(l=>[l.id,l]));
++  const combined=displayedLessonSessions(projected,decisions).flatMap(session=>{
++    const rows=session.rows.map(l=>byId.get(String(l.id)));
++    if(rows.length<2||new Set(rows.map(l=>l.kind)).size!==1)return rows;
++    const sum=field=>rows.some(l=>l[field]===null||l[field]===undefined)?null:rows.reduce((n,l)=>n+l[field],0);
++    const id='session:'+createHash('sha256').update(JSON.stringify(rows.map(l=>l.id).sort())).digest('hex').slice(0,24);
++    return [{...rows[0],id,end:rows.at(-1).end,minutes:sum('minutes'),sourceMinutes:sum('sourceMinutes'),amount:sum('amount'),reviewed:rows.every(l=>l.reviewed),
++      ...(rows[0].kind==='absence'?{forecastMinutes:sum('forecastMinutes'),forecastAmount:sum('forecastAmount')}:{}),
++      sourceIds:rows.map(l=>l.id),segments:rows}];
++  });
++  return {studentId,month,fetchedAt:new Date().toISOString(),lessons:combined};
+ }
+--- a/functions/feecalcBilling.generated.js
++++ b/functions/feecalcBilling.generated.js
+@@ -1135,6 +1135,7 @@
+   automaticCourseIdentity,
+   changed,
+   detectFeeAnomalies,
++  displayedLessonSessions,
+   estimatedCharge,
+   inheritFees,
+   mergeCourse,
+@@ -1144,4 +1145,4 @@
+   recoverIssueFees
+ };
+ 
+-export const billingModelVersion = "dd24ccfb5ad8263f4e103fc4cd4aef91ce360eacd08eb7f8e6dcef483f0a7dd8";
++export const billingModelVersion = "8e32dd6dfae117e38f3016e9d9423d36264c77a04fcabb0b049893b74b644583";

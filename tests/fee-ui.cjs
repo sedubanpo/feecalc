@@ -426,6 +426,22 @@ const root=path.resolve(__dirname,'..'),evidence=process.env.EVIDENCE_ROOT;
  assert.equal(await page.evaluate(()=>progressResult().predicted.length),2);assert.equal(await page.evaluate(()=>progressResult().predictedAmount),87500);assert.equal(await page.locator('#dispTotal').innerText(),'906,250원');assert.match(await page.locator('#receiptContext').innerText(),/직접 추가·임시/);assert.match(await page.locator('#generatedTextArea').inputValue(),/별도 예상분/);
  await page.evaluate(()=>{window.testNow='2026-09-29T03:00:00Z';});
  });
+ await check('merged intranet session preserves two hours, one occurrence, edits, restore and next month',async()=>{
+ await page.evaluate(()=>{
+ window.testNow='2026-10-11T03:00:00Z';
+ const segment=(id,start,end)=>({id,date:'2026-10-02',className:'수학-개별(검증)-2h',teacher:'검증',minutes:60,amount:30000,start,end,kind:'regular'});
+ const segments=[segment('a','16:00','17:00'),segment('b','17:00','18:00')];
+ testProgressSnapshot={studentId:'one',month:'2026-10',fetchedAt:'2026-10-11T00:00:00Z',lessons:[{...segments[0],id:'session:ab',end:'18:00',minutes:120,amount:60000,sourceIds:['a','b'],segments}]};
+ applyCalculatorState({currentTab:'progress',studentId:'one',studentName:'검증학생',targetYear:2026,targetMonth:10,progress:{snapshot:testProgressSnapshot,mode:'auto',cutoff:'2026-10-02',endDate:'2026-10-31'}});FeeCalendar.navigate('progress');
+ });
+ await page.waitForFunction(()=>progressVerified&&!progressLoading);
+ assert.equal(await page.locator('#workCalendar .calendar-event').count(),5);assert.equal(await page.locator('#dispTotal').innerText(),'300,000원');
+ await page.getByRole('button',{name:'안내서',exact:true}).click();assert.match(await page.locator('#receiptBody').innerText(),/2h × 1회/);assert.match(await page.locator('#receiptBody').innerText(),/2h × 4회/);
+ await page.getByRole('button',{name:'계산 작업',exact:true}).click();await page.locator('#workCalendar [data-day="2"] .calendar-event').click();await page.locator('#lessonEditRate').fill('50000');await page.locator('#lessonEditSave').click();assert.equal(await page.locator('#dispTotal').innerText(),'290,000원');
+ const saved=await page.evaluate(()=>collectCalculatorState());await page.evaluate(s=>applyCalculatorState(s),saved);await page.waitForFunction(()=>progressVerified&&!progressLoading);assert.equal(await page.locator('#dispTotal').innerText(),'290,000원');
+ const perf=await page.evaluate(()=>{const original=ProgressCore.calculate;let calls=0;ProgressCore.calculate=(...args)=>{calls++;return original(...args)};progressResultCache=null;const start=performance.now();for(let i=0;i<50;i++)progressResult();const ms=performance.now()-start;progressState.endDate='2026-10-23';progressResult();ProgressCore.calculate=original;return {calls,ms};});assert.equal(perf.calls,2);console.log('CACHE',JSON.stringify(perf));
+ await page.locator('[onclick="openNextMonthWizard()"]').click();assert.match(await page.locator('#nextMonthTotal').innerText(),/4회.*240,000원/);await page.locator('#nextMonthConfirm').click();assert.equal(await page.locator('#dispTotal').innerText(),'240,000원');
+ });
  await check('forecast lessons seed next month before three actual weeks, with preview selection and no source writes',async()=>{
  await page.evaluate(()=>{
  window.testNow='2026-10-10T03:00:00Z';
