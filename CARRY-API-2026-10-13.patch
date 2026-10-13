@@ -1,0 +1,39 @@
+--- a/functions/carriedFees.js
++++ b/functions/carriedFees.js
+@@ -1,6 +1,7 @@
+ import {attachFeeApplications} from './feeApplications.js';
+ import {feeClassKey,historyId,inheritFees,recoverIssueFees} from './feeHistory.js';
+ import {publishedView} from './publishedView.js';
++import {savedBillingLessons} from './savedBillingLessons.js';
+ import {projectMonthlyLessons,estimatedCharge,automaticCourseIdentity,mergeCourse} from './feecalcBilling.generated.js';
+ const exceptionalTariff = value => /할인|무료|면제|환불|차감|금액\s*예외|보강|보충|일회성|이번만|(?:이|해당)\s*수업만/.test(String(value || ''));
+ // The missing-fee workbench stores ordinary confirmed prices on one lesson.
+@@ -104,8 +105,12 @@
+ }
+ export async function readConfirmedFeeSources(db,studentId,month,tx){
+  const read=query=>tx?tx.get(query):query.get();
+- const snapshots=await Promise.all(['intranetStudentPeriods','intranetLegacyPeriods'].map(name=>
+-  read(db.collection(name).where('studentId','==',studentId).limit(241))));
++ const [snapshots,draftSnapshot]=await Promise.all([
++  Promise.all(['intranetStudentPeriods','intranetLegacyPeriods'].map(name=>read(db.collection(name).where('studentId','==',studentId).limit(241)))),
++  read(db.collection('intranetLessonDrafts').where('lesson.studentId','==',studentId).limit(1001)),
++ ]);
++ if(draftSnapshot.docs.length>1000)throw Object.assign(Error('단가 승계 수정본 조회 한도를 초과했습니다.'),{status:413});
++ const drafts=draftSnapshot.docs.map(d=>d.data());
+  if(snapshots.some(s=>s.docs.length>240))throw Object.assign(Error('학생의 단가 승계 조회 한도를 초과했습니다.'),{status:413});
+  const maps=snapshots.map(s=>new Map(s.docs.map(d=>d.data()).filter(p=>p.month&&p.month<month).map(p=>[p.month,p])));
+  const months=[...new Set(maps.flatMap(m=>[...m.keys()]))];
+@@ -115,7 +120,12 @@
+    if(p.studentId&&p.studentId!==studentId)throw Object.assign(Error('단가 승계 수업의 학생 정보가 일치하지 않습니다.'),{status:409});
+    if((p.lessons||[]).length>1000||(p.publishedLessons||[]).length>1000)throw Object.assign(Error('학생 월 수업 조회 한도를 초과했습니다.'),{status:413});
+   }
+-  return {month:m,lessons:publishedView(current,legacy.lessons||[]).map(l=>({...l,studentId:l.studentId??studentId}))};
++  const published=publishedView(current,legacy.lessons||[]),ids=new Set(published.map(l=>l.id));
++  // Saved tuition corrections and deletions apply before portal transmission.
++  // Only existing published lessons can donate a recurring price; an entirely
++  // new unsent lesson remains excluded from historical contract evidence.
++  return {month:m,lessons:savedBillingLessons({...current,lessons:published}, {},
++   drafts.filter(d=>ids.has(d.lesson?.id)),studentId,m)};
+  });
+ }
+ export async function readCarriedFees(db,studentId,month,current,tx){
