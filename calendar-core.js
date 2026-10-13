@@ -43,7 +43,7 @@
             const key=JSON.stringify(byTeacher&&teacher?[teacher]:[r.subject,teacher]);
             if(!map.has(key))map.set(key,{subject:r.subject,teacher,subjects:[],total:0,pending:false,variants:new Map()});
             const g=map.get(key);if(!g.subjects.includes(r.subject))g.subjects.push(r.subject);g.total+=r.amount||0;g.pending ||= r.amount===null;
-            const vkey=JSON.stringify([byTeacher?r.subject:null,r.type,r.hours,r.rate,r.rateMode,r.amount,r.status]);
+            const vkey=JSON.stringify([byTeacher?r.subject:null,r.type,r.hours,r.rate,r.rateMode,r.amount,r.status,r.discountParts||[]]);
             if(!g.variants.has(vkey))g.variants.set(vkey,{...r,count:0,totalHours:0});
             const v=g.variants.get(vkey);v.count++;v.totalHours+=r.hours||0;
         }
@@ -65,7 +65,7 @@
         });
     }
     function normalizeSnapshot(snapshot){
-        return snapshot.lessons.map(r=>({...info(r.className,r.teacher),id:r.id,day:Number(r.date.slice(-2)),date:r.date,hours:r.kind==='absence'?0:r.minutes===null?null:(r.minutes||0)/60,amount:r.kind==='absence'?0:r.amount,rate:null,rawName:r.className,start:r.start,end:r.end,status:({regular:'출석',late:'지각',cancel:'당일취소',absence:'결석예고',absenceMakeup:'결석보강',cancelMakeup:'보충',lateMakeup:'보충',free:'프리'})[r.kind]||'확인 필요',kind:r.kind,note:r.note||r.memo||r.reference||'',source:r}));
+        return snapshot.lessons.map(r=>({...info(r.className,r.teacher),id:r.id,day:Number(r.date.slice(-2)),date:r.date,hours:r.kind==='absence'?0:r.minutes===null?null:(r.minutes||0)/60,amount:r.kind==='absence'?0:r.amount,discountParts:r.discountParts,rate:null,rawName:r.className,start:r.start,end:r.end,status:({regular:'출석',late:'지각',cancel:'당일취소',absence:'결석예고',absenceMakeup:'결석보강',cancelMakeup:'보충',lateMakeup:'보충',free:'프리'})[r.kind]||'확인 필요',kind:r.kind,note:r.note||r.memo||r.reference||'',source:r}));
     }
     function validatePriorNotice(d){
         if(d===undefined||d===null)return;

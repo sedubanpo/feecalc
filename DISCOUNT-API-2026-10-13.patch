@@ -1,0 +1,35 @@
+--- a/functions/feecalcProgress.js
++++ b/functions/feecalcProgress.js
+@@ -17,6 +17,12 @@
+     return estimatedCharge({...lesson,rate:amount,rateUnit:'perClass'});
+   }
+   return estimatedCharge(lesson);
++}
++// Expose billing evidence only; private discount reasons stay in the intranet.
++function discountParts(lesson, amount) {
++  const d=lesson?.studentDiscount;
++  if(!d || amount===null || d.amount!==amount || !Number.isFinite(d.base) || d.base<0)return [];
++  return [{base:d.base,amount:d.amount,percent:d.percent,special:!!d.special}];
+ }
+ export async function readFeeCalcProgress(db, uid, studentId, month) {
+   const scope = (await db.doc(`intranetStaffScopes/${uid}`).get()).data();
+@@ -65,7 +71,8 @@
+     minutes:l.kind==='absence'?0:Number.isInteger(l.billMinutes) && l.billMinutes >= 0 ? l.billMinutes : null,
+     sourceMinutes:Number.isInteger(l.sourceMinutes) ? l.sourceMinutes : null,
+     amount:l.kind==='absence'?0:estimatedCharge(l), reviewed:!!l.reviewed,
+-    ...(l.kind==='absence'?{forecastMinutes:normal.get(l.id)?.billMinutes ?? null,forecastAmount:normalForecastCharge(normal.get(l.id))}:{}),
++    discountParts:l.kind==='absence'?[]:discountParts(l,estimatedCharge(l)),
++    ...(l.kind==='absence'?{forecastMinutes:normal.get(l.id)?.billMinutes ?? null,forecastAmount:normalForecastCharge(normal.get(l.id)),forecastDiscountParts:discountParts(normal.get(l.id),normalForecastCharge(normal.get(l.id)))}:{}),
+   })).sort((a,b) => a.date.localeCompare(b.date) || a.start.localeCompare(b.start) || a.id.localeCompare(b.id));
+   // Preserve mixed attendance as individual rows. Homogeneous sessions use the
+   // same explicit/automatic grouping decision as the intranet display.
+@@ -76,7 +83,8 @@
+     const sum=field=>rows.some(l=>l[field]===null||l[field]===undefined)?null:rows.reduce((n,l)=>n+l[field],0);
+     const id='session:'+createHash('sha256').update(JSON.stringify(rows.map(l=>l.id).sort())).digest('hex').slice(0,24);
+     return [{...rows[0],id,end:rows.at(-1).end,minutes:sum('minutes'),sourceMinutes:sum('sourceMinutes'),amount:sum('amount'),reviewed:rows.every(l=>l.reviewed),
+-      ...(rows[0].kind==='absence'?{forecastMinutes:sum('forecastMinutes'),forecastAmount:sum('forecastAmount')}:{}),
++      discountParts:rows.flatMap(r=>r.discountParts||[]),
++      ...(rows[0].kind==='absence'?{forecastMinutes:sum('forecastMinutes'),forecastAmount:sum('forecastAmount'),forecastDiscountParts:rows.flatMap(r=>r.forecastDiscountParts||[])}:{}),
+       sourceIds:rows.map(l=>l.id),segments:rows}];
+   });
+   return {studentId,month,fetchedAt:new Date().toISOString(),lessons:combined};

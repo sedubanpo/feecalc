@@ -1,5 +1,6 @@
 // Pure calendar calculation. No database writes or implicit local clock.
 (function(root) {
+    const D=typeof module!=='undefined'&&module.exports?require('./discount-core.js'):root.FeeDiscount;
     const validMonth = value => /^20\d{2}-(0[1-9]|1[0-2])$/.test(value || '');
     const validDate = value => typeof value === 'string' && /^20\d{2}-\d{2}-\d{2}$/.test(value) && !isNaN(Date.parse(value)) && new Date(value).toISOString().slice(0,10) === value;
     const dayOfWeek = date => new Date(date + 'T00:00:00Z').getUTCDay();
@@ -17,6 +18,7 @@
         const ids = new Set();
         for (const row of value.lessons) {
             if (!row || typeof row.id !== 'string' || !row.id || ids.has(row.id) || !validDate(row.date) || row.date.slice(0,7) !== value.month || typeof row.className !== 'string' || typeof row.teacher !== 'string' || typeof row.start !== 'string' || typeof row.end !== 'string' || (row.minutes !== null && (!Number.isInteger(row.minutes) || row.minutes < 0 || row.minutes > 1440)) || (row.amount !== null && (typeof row.amount !== 'number' || !Number.isFinite(row.amount) || row.amount < 0 || row.amount > 1e10))) throw Error('진행형 수업 날짜·시간·금액을 확인해 주세요.');
+            for(const [key,amount] of [['discountParts',row.amount],['forecastDiscountParts',row.forecastAmount]])if(row[key]!==undefined&&!D.valid(row[key],amount))throw Error('수업 할인 정보를 확인해 주세요.');
             ids.add(row.id);
             if(row.segments!==undefined){
                 if(!Array.isArray(row.segments)||row.segments.length<2||row.segments.length>1000||row.segments.some(r=>r?.segments!==undefined))throw Error('병합 수업 원본을 확인해 주세요.');
@@ -45,7 +47,7 @@
             const start=clock(row.start),end=clock(row.end);
             const minutes=row.forecastMinutes ?? (start!==null && end!==null && end>start ? end-start : null);
             const prior=snapshot.lessons.filter(r=>r.date<row.date && dayOfWeek(r.date)===dayOfWeek(row.date) && courseKey(r)===courseKey(row) && ['regular','late','absenceMakeup'].includes(r.kind) && r.minutes===minutes).sort((a,b)=>b.date.localeCompare(a.date))[0];
-            return [{...row,minutes,amount:row.forecastAmount !== undefined ? row.forecastAmount : prior?.amount ?? null}];
+            return [{...row,minutes,discountParts:row.forecastAmount!==undefined?row.forecastDiscountParts||[]:prior?.discountParts||[],amount:row.forecastAmount !== undefined ? row.forecastAmount : prior?.amount ?? null}];
         });
     }
     function templates(snapshot, cutoff) {
@@ -118,8 +120,8 @@
         const endDate = validDate(state.endDate) && state.endDate.slice(0,7) === snapshot.month ? state.endDate : monthEnd(snapshot.month);
         const choices = state.mode === 'manual' ? basisTemplates(state,cutoff) : templates(snapshot,cutoff), excluded = new Set(state.excluded || []);
         const edits=new Map(validateEdits(state.edits).map(r=>[r.id,r])),removed=new Set(state.removedActual||[]);
-        const adjusted=r=>edits.has(r.id)?{...r,...edits.get(r.id),edited:true}:r;
-        const actual = snapshot.lessons.filter(r=>!removed.has(r.id)).map(r=>{const row=adjusted({...r,predicted:false});return row.kind==='absence'?{...row,minutes:0,amount:0}:row;});
+        const adjusted=r=>edits.has(r.id)?{...r,...edits.get(r.id),discountParts:edits.get(r.id).amount===r.amount&&edits.get(r.id).minutes===r.minutes?r.discountParts:[],edited:true}:r;
+        const actual = snapshot.lessons.filter(r=>!removed.has(r.id)).map(r=>{const row=adjusted({...r,predicted:false});return row.kind==='absence'?{...row,minutes:0,amount:0,discountParts:[]}:row;});
         const occupied = new Set(snapshot.lessons.map(r=>courseKey(r)+'|'+r.date));
         const predicted = [], seen = new Set(), slots = new Set();
         function add(template,date) {

@@ -59,7 +59,7 @@
   template.querySelector('.receipt-fee-table').classList.add('grouped-receipt');
   template.querySelector('.receipt-fee-table thead').innerHTML='<tr><th>과목·강사</th><th>수업 내역</th><th>금액</th></tr>';
   const fetchedDate=new Date(d.fetchedAt).toLocaleDateString('sv-SE',{timeZone:'Asia/Seoul'});
-  part('priceSummaryArea').innerHTML=`<div class="border-t-2 border-gray-200 pt-2 space-y-1 mb-4"><div class="flex justify-between"><span>실제 수업료</span><b class="${tone(sum)}">${money(sum)}</b></div>${adjustments.map(r=>`<div class="flex justify-between"><span>${esc(r.label)}</span><b class="${tone(r.amount)}">${money(r.amount)}</b></div>`).join('')}</div><div class="flex justify-between items-center bg-gray-50 p-4 rounded-xl border border-gray-100 receipt-total prior-total"><strong>이월·초과금</strong><b class="${tone(total(d))}">${money(total(d))}</b></div><p class="prior-context">이월금 − · 초과금 +<br>실제 입력 기록 기준 · ${esc(fetchedDate)} 조회${d.modified?' · 검토 수정본':''}<br>현재 달 청구액에 자동으로 더하지 않습니다.</p>`;
+  part('priceSummaryArea').innerHTML=`${FeeDiscount.summary(lessons)?'<p class="source-discount-summary">'+esc(FeeDiscount.summary(lessons))+'</p>':''}<div class="border-t-2 border-gray-200 pt-2 space-y-1 mb-4"><div class="flex justify-between"><span>실제 수업료</span><b class="${tone(sum)}">${money(sum)}</b></div>${adjustments.map(r=>`<div class="flex justify-between"><span>${esc(r.label)}</span><b class="${tone(r.amount)}">${money(r.amount)}</b></div>`).join('')}</div><div class="flex justify-between items-center bg-gray-50 p-4 rounded-xl border border-gray-100 receipt-total prior-total"><strong>이월·초과금</strong><b class="${tone(total(d))}">${money(total(d))}</b></div><p class="prior-context">이월금 − · 초과금 +<br>실제 입력 기록 기준 · ${esc(fetchedDate)} 조회${d.modified?' · 검토 수정본':''}<br>현재 달 청구액에 자동으로 더하지 않습니다.</p>`;
   part('calTitleReceipt').textContent=`${Number(d.month.slice(5))}월 수업 일정`;
   part('receiptMiniCalGrid').innerHTML=FeeCalendar.noticeCalendar(lessons,d.month);
   part('receiptCalendarArea').hidden=false;
@@ -100,8 +100,8 @@
      };
      l.append(input);box.append(l);
     };
-    field('금액 (원)',row.amount,v=>row.amount=v,'number');
-    if(name==='실제 수업'){field('과목',row.subject,v=>row.subject=v);field('강사',row.teacher,v=>row.teacher=v);field('정산 시수',row.hours,v=>row.hours=v,'number');field('수업일',row.date,v=>{if(new RegExp('^'+d.month+'-\\d{2}$').test(v)&&Number(v.slice(-2))<=C.daysInMonth(d.month)){row.date=v;row.day=Number(v.slice(-2));}},'date');field('시작 시간',row.start,v=>row.start=v,'time');field('종료 시간',row.end,v=>row.end=v,'time');}
+    field('금액 (원)',row.amount,v=>{if(v!==row.amount)row.discountParts=[];row.amount=v;},'number');
+    if(name==='실제 수업'){field('과목',row.subject,v=>row.subject=v);field('강사',row.teacher,v=>row.teacher=v);field('정산 시수',row.hours,v=>{if(v!==row.hours)row.discountParts=[];row.hours=v;},'number');field('수업일',row.date,v=>{if(new RegExp('^'+d.month+'-\\d{2}$').test(v)&&Number(v.slice(-2))<=C.daysInMonth(d.month)){row.date=v;row.day=Number(v.slice(-2));}},'date');field('시작 시간',row.start,v=>row.start=v,'time');field('종료 시간',row.end,v=>row.end=v,'time');}
     else field('내용',row.label,v=>row.label=v);
     group.append(box);
    });editors.append(group);

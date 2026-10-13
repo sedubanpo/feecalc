@@ -143,7 +143,7 @@ function progressLessonList(host,rows,editable) {
         const text=document.createElement('div'),title=document.createElement('strong'),detail=document.createElement('span');
         title.textContent=`${row.date.slice(5)} · ${row.className} · ${row.teacher}`;
         detail.textContent=`${row.start}–${row.end} · ${row.minutes===null?'시간 확인 필요':row.minutes/60+'시간'} · ${progressMoney(row.amount)}${row.temporary?' · 임시':!editable?' · '+progressKind(row.kind):' · 예상'}`;
-        text.append(title,detail);line.append(text);
+        text.append(title,detail);const discountText=FeeDiscount.describe(row);if(discountText){const note=document.createElement('span');note.className='source-discount-note';note.textContent=discountText;text.append(note);}line.append(text);
         if(editable){const button=document.createElement('button');button.type='button';button.className='ui-button';button.textContent='제외';button.setAttribute('aria-label',`${row.date} ${row.className} ${row.temporary?'임시 수업 삭제':'예상 제외'}`);button.onclick=()=>{if(row.temporary)window.FeeCalendar?.remember();removeProgressPrediction(row.id);if(row.temporary)window.FeeCalendar?.commit();};line.append(button);}
         fragment.append(line);
     });host.append(fragment);
@@ -250,7 +250,8 @@ function buildProgressMessage(result,total,discount) {
         `${getCurrentStudentName()} 학생 ${progressEl('targetMonth').value}월 수강료 ${settlement?'정산':'예상'} 내역입니다.`,
         `입력된 수업 ${result.actual.length}회: ${progressMoney(result.actualAmount)}`,
         `추가 예상 수업 ${result.predicted.length}회: ${progressMoney(result.predictedAmount)}${result.predicted.some(r=>r.temporary)?' (임시 '+result.predicted.filter(r=>r.temporary).length+'회 포함)':''}`,
-        `할인: ${progressMoney(discount.amount)}`,
+        ...(FeeDiscount.summary([...result.actual,...result.predicted])?[FeeDiscount.summary([...result.actual,...result.predicted])]:[]),
+        `추가 할인 (계산기): ${progressMoney(discount.amount)}${discount.rate?' ('+discount.rate+'%)':''}`,
         ...buildAdjustmentMessageLines(adjustments),
         ...(adjustments.length>1?[`이월·초과금 조정 합계: ${progressMoney(getAdjustmentTotal(adjustments))}`]:[]),
         `${settlement?'잔여 수강료':'월 예상 납부액'}: ${progressMoney(total)}`,'',

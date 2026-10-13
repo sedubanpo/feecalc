@@ -493,3 +493,8 @@ body.calendar-app{padding:0!important;background:#f2f3f1!important;color:var(--w
 
 /* Unusually long labels must stay inside narrow calendar cells. */
 :is(#captureArea,#priorNoticePaper) .notice-teacher-badge.long-teacher{max-width:100%;min-width:0;flex-shrink:1;white-space:normal;overflow-wrap:anywhere}
+
+/* Source discount amounts are explanatory, already included in tuition. */
+.source-discount-note{display:block!important;font-size:11px!important;line-height:1.6!important;color:#476270!important;white-space:normal;word-break:keep-all;overflow-wrap:normal;font-weight:400;margin-top:4px}
+.source-discount-summary{font-size:12px;line-height:1.7;color:#36596b;background:#edf3f4;padding:10px 12px;border-radius:8px;margin:0 0 12px;overflow-wrap:anywhere}
+.source-discount-summary[hidden]{display:none}
