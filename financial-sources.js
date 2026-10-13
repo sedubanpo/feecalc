@@ -8,6 +8,7 @@
  for(const [provider,label] of [['desk','데스크 수납 가져오기'],['intranet','인트라넷 잔액 가져오기']]){const b=document.createElement('button');b.type='button';b.className='ui-button';b.textContent=label;b.onclick=()=>open(provider,b);buttons.append(b);}heading.append(buttons);
  let active=null;
  document.addEventListener('feecalc-auth-change',()=>active?.close());
+ document.addEventListener('feecalc-adjustments-reset',()=>active?.close());
  for(const type of ['input','change'])document.addEventListener(type,e=>{if(['studentName','targetYear','targetMonth'].includes(e.target.id))active?.close();});
  function open(provider,trigger){
   active?.close();const student=matchedStudent(),targetMonth=month(),key=context();

@@ -38,7 +38,11 @@ test('progress message retains offsetting named adjustments and manual provenanc
  const context=vm.createContext({FeeDiscount:require('../discount-core.js'),collectAdjustmentItems:()=>adjustments,getCurrentStudentName:()=>'검증학생',progressEl:()=>({value:9}),buildPaymentGuideText:()=>'결제링크 안내',progressMoney:n=>n.toLocaleString('ko-KR')+'원',buildAdjustmentMessageLines:items=>items.map(x=>`${x.label}: ${x.amount.toLocaleString('ko-KR')}원`),getAdjustmentTotal:items=>items.reduce((s,x)=>s+x.amount,0),progressState:{cutoff:'2026-09-15',mode:'manual'}});
  vm.runInContext(source.slice(source.indexOf('function buildProgressMessage'),source.indexOf('const progressOriginalSwitch')),context);
  const text=context.buildProgressMessage({actual:[{}],predicted:[{}],actualAmount:100000,predictedAmount:50000},150000,{amount:0});
- assert.match(text,/8월 이월금: -50,000원/);assert.match(text,/8월 초과금: 50,000원/);assert.match(text,/조정 합계: 0원/);assert.match(text,/선택한 날짜/);
+ assert.match(text,/8월 이월금: -50,000원/);assert.match(text,/8월 초과금: 50,000원/);assert.match(text,/조정 합계: 0원/);assert.match(text,/선택한 날짜/);assert.doesNotMatch(text,/할인/);
+ const discounted=context.buildProgressMessage({actual:[{}],predicted:[{}],actualAmount:100000,predictedAmount:50000},135000,{amount:15000,rate:10});
+ assert.match(discounted,/추가 할인 \(계산기\): 15,000원 \(10%\)/);
+ const imported=context.buildProgressMessage({actual:[{amount:70000,discountParts:[{base:100000,amount:70000,percent:30,special:false}]}],predicted:[],actualAmount:70000,predictedAmount:0},70000,{amount:0,rate:0});
+ assert.match(imported,/인트라넷 30% 할인 반영/);assert.doesNotMatch(imported,/추가 할인/);
 });
 test('legacy and modern class names share compact details without repeating teacher',()=>{
  const context=vm.createContext({FeeDiscount:require('../discount-core.js'),parseSubjectInfo:name=>({mainName:name.split('-')[0],type:'김경석'})});

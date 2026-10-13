@@ -251,7 +251,7 @@ function buildProgressMessage(result,total,discount) {
         `입력된 수업 ${result.actual.length}회: ${progressMoney(result.actualAmount)}`,
         `추가 예상 수업 ${result.predicted.length}회: ${progressMoney(result.predictedAmount)}${result.predicted.some(r=>r.temporary)?' (임시 '+result.predicted.filter(r=>r.temporary).length+'회 포함)':''}`,
         ...(FeeDiscount.summary([...result.actual,...result.predicted])?[FeeDiscount.summary([...result.actual,...result.predicted])]:[]),
-        `추가 할인 (계산기): ${progressMoney(discount.amount)}${discount.rate?' ('+discount.rate+'%)':''}`,
+        ...(discount.amount>0?[`추가 할인 (계산기): ${progressMoney(discount.amount)}${discount.rate?' ('+discount.rate+'%)':''}`]:[]),
         ...buildAdjustmentMessageLines(adjustments),
         ...(adjustments.length>1?[`이월·초과금 조정 합계: ${progressMoney(getAdjustmentTotal(adjustments))}`]:[]),
         `${settlement?'잔여 수강료':'월 예상 납부액'}: ${progressMoney(total)}`,'',
