@@ -1,5 +1,6 @@
 // Read-only transformations of lesson records and local draft schedules.
 (function(root){
+    const statusLabels={regular:'출석',late:'지각',cancel:'당일취소',absence:'결석예고',absenceMakeup:'결석보강',cancelMakeup:'당취보충',lateMakeup:'지각보충',free:'무료보충'};
     const finite = v => v !== null && v !== undefined && v !== '' && Number.isFinite(Number(v));
     const daysInMonth = month => new Date(Date.UTC(Number(month.slice(0,4)),Number(month.slice(5)),0)).getUTCDate();
     const weekday = (month,day) => new Date(`${month}-${String(day).padStart(2,'0')}T00:00:00Z`).getUTCDay();
@@ -20,7 +21,7 @@
                 const override=schedule.overrides?.[day]||{},hours=override.hours??row.hours,rate=override.rate??row.rate;
                 const known=override.rate!==undefined?finite(override.rate):row.rateKnown!==false;
                 const amount=known&&finite(rate)&&finite(hours)?Math.round(Number(rate)*(row.rateMode==='perHour'?Number(hours):1)):null;
-                out.push({...info(row.name),row:index,id:`${mode}:${index}:${day}`,day,hours:Number(hours)||0,rate:known?Number(rate):null,rateMode:row.rateMode||'perClass',amount,rawName:row.name,status:'예정',start:override.start||'',end:override.end||''});
+                out.push({...info(row.name),row:index,id:`${mode}:${index}:${day}`,day,hours:Number(hours)||0,rate:known?Number(rate):null,rateMode:row.rateMode||'perClass',amount:['absence','free'].includes(override.kind)?0:amount,kind:override.kind,rawName:row.name,status:statusLabels[override.kind]||'예정',start:override.start||'',end:override.end||''});
             }
             // Old snapshots retain their aggregate-rounded total until this condition is edited.
             if(row.legacyAggregate && selected.length && !Object.keys(schedule.overrides||{}).length){
@@ -31,7 +32,7 @@
                 if(!Number.isInteger(extra.day)||extra.day<1||extra.day>last||excluded.has(extra.day))continue;
                 const hours=extra.hours??row.hours,rate=extra.rate??row.rate;
                 const amount=finite(rate)&&finite(hours)?Math.round(rate*(row.rateMode==='perHour'?hours:1)):null;
-                out.push({...info(row.name),...extra,row:index,id:`${mode}:${index}:extra:${extra.id}`,hours,rate,amount,rateMode:row.rateMode,rawName:row.name,status:'예정'});
+                out.push({...info(row.name),...extra,row:index,id:`${mode}:${index}:extra:${extra.id}`,hours,rate,amount:['absence','free'].includes(extra.kind)?0:amount,rateMode:row.rateMode,rawName:row.name,status:statusLabels[extra.kind]||'예정'});
             }
         });
         return out.sort((a,b)=>a.day-b.day||(a.start||'').localeCompare(b.start||'')||a.subject.localeCompare(b.subject,'ko'));
@@ -158,6 +159,7 @@
             if(!valid(Number(day))||!v||['hours','rate'].some(k=>v[k]!==undefined&&(!finite(v[k])||Number(v[k])<0)))throw Error('회차별 시수·단가를 확인해 주세요.');
         }
         if(s.additional!==undefined&&(!Array.isArray(s.additional)||s.additional.some(v=>!valid(v.day)||typeof v.id!=='string'||!finite(v.hours)||v.hours<0||!finite(v.rate)||v.rate<0)))throw Error('추가 회차를 확인해 주세요.');
+        for(const v of [...Object.values(s.overrides||{}),...(s.additional||[])])if(v.kind!==undefined&&!Object.hasOwn(statusLabels,v.kind))throw Error('수업 상태를 확인해 주세요.');
         const clock=v=>typeof v==='string'&&/^([01]\d|2[0-3]):[0-5]\d$/.test(v);
         for(const v of [...Object.values(s.overrides||{}),...(s.additional||[])])if((v.start||v.end)&&(!clock(v.start)||!clock(v.end)||v.end<=v.start))throw Error('회차별 시작·종료 시각을 확인해 주세요.');
         return JSON.parse(JSON.stringify(s));

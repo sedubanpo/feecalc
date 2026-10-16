@@ -84,7 +84,8 @@
         context=identity();focusDay=day;FeeCalendar.focusDay(day);focusReturn=el('workCalendar').querySelector(`[data-day="${day}"] .calendar-add-lesson`)||document.activeElement;
         const date=progressMonth()+'-'+String(day).padStart(2,'0');
         const distinct=new Map();
-        for(const row of progressBound()?ProgressCore.basisTemplates(progressState):[]){
+        const existing=progressResult();
+        for(const row of progressBound()?[...ProgressCore.basisTemplates(progressState),...existing.actual,...existing.predicted]:[]){
             if(!['regular','late','absenceMakeup'].includes(row.kind)||!row.minutes)continue;
             distinct.set(JSON.stringify([ProgressCore.courseKey(row),row.minutes,row.amount,row.start,row.end]),row);
         }

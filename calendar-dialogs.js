@@ -8,7 +8,7 @@
     const edit=document.createElement('dialog');edit.id='calendarLessonDialog';edit.className='draft-dialog';edit.setAttribute('aria-labelledby','lessonEditTitle');
     edit.innerHTML=`<form id="lessonEditForm" novalidate><div class="temporary-heading"><div><h2 id="lessonEditTitle">수업 수정</h2><p id="lessonEditContext"></p></div><button type="button" class="temporary-close" aria-label="수업 수정 창 닫기">${closeIcon}</button></div>
       <p class="temporary-intro" id="lessonEditIntro"></p><div class="lesson-edit-course"><strong id="lessonEditCourse"></strong><span id="lessonEditTeacher"></span></div>
-      <div class="lesson-edit-fields"><label class="temporary-field">수업 시간<input id="lessonEditHours" type="number" min="0" max="24" step="0.25"><span>시간</span></label><label class="temporary-field"><span id="lessonRateLabel" class="field-title">회당 단가</span><input id="lessonEditRate" type="number" min="0" max="10000000000" step="any"><span>원</span></label><label class="temporary-field">시작 시각<input id="lessonEditStart" type="time"></label><label class="temporary-field">종료 시각<input id="lessonEditEnd" type="time"></label></div>
+      <label class="temporary-field">수업 상태<select id="lessonEditKind"><option value="regular">출석</option><option value="late">지각</option><option value="cancel">당일취소</option><option value="absence">결석예고 (0원)</option><option value="cancelMakeup">당취보충 (금액 입력)</option><option value="absenceMakeup">결석보강</option><option value="lateMakeup">지각보충</option><option value="free">무료보충</option></select></label><div class="lesson-edit-fields"><label class="temporary-field">수업 시간<input id="lessonEditHours" type="number" min="0" max="24" step="0.25"><span>시간</span></label><label class="temporary-field"><span id="lessonRateLabel" class="field-title">회당 단가</span><input id="lessonEditRate" type="number" min="0" max="10000000000" step="any"><span>원</span></label><label class="temporary-field">시작 시각<input id="lessonEditStart" type="time"></label><label class="temporary-field">종료 시각<input id="lessonEditEnd" type="time"></label></div>
       <div class="temporary-preview"><strong id="lessonEditPreview"></strong><p>선택한 날짜의 이 회차만 변경합니다. 실행 취소로 복구할 수 있습니다.</p></div><p id="lessonEditError" class="draft-error" role="alert"></p>
       <div class="temporary-footer"><button type="button" id="lessonEditDelete" class="danger">수업 삭제</button><button type="button" id="lessonEditCancel">취소</button><button type="submit" id="lessonEditSave" class="primary">수정 적용</button></div></form>`;
     document.body.append(edit);
@@ -20,20 +20,21 @@
         el('lessonEditIntro').textContent=currentTab==='progress'?'현재 계산에서만 수정·삭제합니다. 인트라넷 원본은 유지됩니다.':'과목의 반복 조건은 유지하고, 선택한 회차만 수정·삭제합니다.';
         el('lessonEditCourse').textContent=r.subject+' · '+r.type;el('lessonEditTeacher').textContent=r.teacher||'강사 미기재';
         el('lessonRateLabel').textContent=currentTab==='progress'?'이 회차 금액':r.rateMode==='perHour'?'시간당 단가':'회당 단가';
+        el('lessonEditKind').value=r.kind||'regular';
         el('lessonEditHours').value=r.hours;el('lessonEditRate').value=currentTab==='progress'?r.amount??'':r.rate??'';
         el('lessonEditStart').value=r.start||'';el('lessonEditEnd').value=r.end||'';previewEdit();
         edit.showModal();el('lessonEditHours').focus();
     }
     function terms(){
         if(editContext!==context()||!FeeCalendar.activeLessons().some(r=>r.id===editing?.id))throw Error('학생·월 또는 수업이 변경되었습니다. 창을 닫고 다시 선택하세요.');
-        const hours=Number(el('lessonEditHours').value),rate=Number(el('lessonEditRate').value),start=el('lessonEditStart').value,end=el('lessonEditEnd').value;
+        const kind=el('lessonEditKind').value,hours=Number(el('lessonEditHours').value),rate=['absence','free'].includes(kind)?0:Number(el('lessonEditRate').value),start=el('lessonEditStart').value,end=el('lessonEditEnd').value;
         if(el('lessonEditHours').value===''||!Number.isFinite(hours)||hours<0||hours>24||(!['출석','결석예고','당일취소','보충','프리'].some(s=>editing.status.startsWith(s))&&hours===0)||!Number.isInteger(hours*60))throw Error('수업 시간을 확인해 주세요.');
-        if(el('lessonEditRate').value===''||!Number.isFinite(rate)||rate<0||rate>1e10)throw Error('단가를 입력해 주세요. 무료 수업은 0원을 입력하세요.');
+        if((!['absence','free'].includes(kind)&&el('lessonEditRate').value==='')||!Number.isFinite(rate)||rate<0||rate>1e10)throw Error('단가를 입력해 주세요. 무료 수업은 0원을 입력하세요.');
         if((start||end)&&(!start||!end||end<=start))throw Error('종료 시각은 시작 시각 이후로 선택하세요.');
-        return {hours,rate,start,end};
+        return {hours,rate,start,end,kind};
     }
-    function previewEdit(){try{const t=terms();el('lessonEditPreview').textContent='변경 후 '+money(Math.round(t.rate*(currentTab!=='progress'&&editing.rateMode==='perHour'?t.hours:1)));el('lessonEditError').textContent='';el('lessonEditSave').disabled=false;}catch(e){el('lessonEditError').textContent=e.message;el('lessonEditPreview').textContent='시간·금액 확인';el('lessonEditSave').disabled=true;}}
-    edit.addEventListener('input',previewEdit);
+    function previewEdit(){el('lessonEditRate').disabled=['absence','free'].includes(el('lessonEditKind').value);try{const t=terms();el('lessonEditPreview').textContent='변경 후 '+money(Math.round(t.rate*(currentTab!=='progress'&&editing.rateMode==='perHour'?t.hours:1)));el('lessonEditError').textContent='';el('lessonEditSave').disabled=false;}catch(e){el('lessonEditError').textContent=e.message;el('lessonEditPreview').textContent='시간·금액 확인';el('lessonEditSave').disabled=true;}}
+    edit.addEventListener('input',previewEdit);edit.addEventListener('change',previewEdit);
     el('lessonEditForm').onsubmit=e=>{e.preventDefault();try{FeeCalendar.changeLesson(editing.id,terms());edit.close();}catch(e){el('lessonEditError').textContent=e.message;}};
     el('lessonEditDelete').onclick=()=>{try{if(editContext!==context())throw Error('학생·월이 변경되었습니다. 다시 선택하세요.');FeeCalendar.changeLesson(editing.id,null);edit.close();}catch(e){el('lessonEditError').textContent=e.message;}};
     for(const button of edit.querySelectorAll('.temporary-close,#lessonEditCancel'))button.onclick=()=>edit.close();

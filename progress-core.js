@@ -1,6 +1,8 @@
 // Pure calendar calculation. No database writes or implicit local clock.
 (function(root) {
     const D=typeof module!=='undefined'&&module.exports?require('./discount-core.js'):root.FeeDiscount;
+    const kinds=['regular','late','cancel','absence','absenceMakeup','cancelMakeup','lateMakeup','free'];
+    const applyStatus=r=>['absence','free'].includes(r.kind)?{...r,amount:0,discountParts:[]}:r;
     const validMonth = value => /^20\d{2}-(0[1-9]|1[0-2])$/.test(value || '');
     const validDate = value => typeof value === 'string' && /^20\d{2}-\d{2}-\d{2}$/.test(value) && !isNaN(Date.parse(value)) && new Date(value).toISOString().slice(0,10) === value;
     const dayOfWeek = date => new Date(date + 'T00:00:00Z').getUTCDay();
@@ -92,6 +94,8 @@
         if (!Array.isArray(rows) || rows.length > 1000) throw Error('임시 수업 개수를 확인해 주세요.');
         const copy = validateSnapshot({studentId:'local',month,lessons:rows}).lessons;
         for (const row of copy) {
+            if(row.kind!==undefined&&!kinds.includes(row.kind))throw Error('수업 상태를 확인해 주세요.');
+            if(['absence','free'].includes(row.kind))row.amount=0;
             const clock = value => /^([01]\d|2[0-3]):[0-5]\d$/.test(value) ? Number(value.slice(0,2))*60+Number(value.slice(3)) : null;
             const start=clock(row.start),end=clock(row.end);
             if (!row.id.startsWith('local:') || !row.className.trim() || !row.teacher.trim() || row.minutes === null || row.minutes <= 0 || row.amount === null || start === null || end === null || end-start !== row.minutes) throw Error('임시 수업의 과목·강사·시간·금액을 확인해 주세요.');
@@ -107,7 +111,8 @@
         const ids=new Set(),clock=v=>typeof v==='string'&&/^([01]\d|2[0-3]):[0-5]\d$/.test(v);
         return rows.map(r=>{
             if(!r||typeof r.id!=='string'||!r.id||ids.has(r.id)||!Number.isInteger(r.minutes)||r.minutes<0||r.minutes>1440||typeof r.amount!=='number'||!Number.isFinite(r.amount)||r.amount<0||r.amount>1e10||typeof r.start!=='string'||typeof r.end!=='string'||((r.start||r.end)&&(!clock(r.start)||!clock(r.end)||r.end<=r.start)))throw Error('수업 수정 시간·금액을 확인해 주세요.');
-            ids.add(r.id);return {id:r.id,minutes:r.minutes,amount:r.amount,start:r.start,end:r.end};
+            if(r.kind!==undefined&&!kinds.includes(r.kind))throw Error('수업 상태를 확인해 주세요.');
+            ids.add(r.id);return {...(r.kind?{kind:r.kind}:{}),id:r.id,minutes:r.minutes,amount:['absence','free'].includes(r.kind)?0:r.amount,start:r.start,end:r.end};
         });
     }
     function calculate(state, today) {
@@ -143,10 +148,10 @@
                 for (const row of choices) if (dayOfWeek(date) === dayOfWeek(row.date)) add(row,date);
             }
         }
-        for(let i=0;i<predicted.length;i++)predicted[i]=adjusted(predicted[i]);
+        for(let i=0;i<predicted.length;i++)predicted[i]=applyStatus(adjusted(predicted[i]));
         for (const row of validateTemporary(state.temporary,snapshot.month)) {
             if ([...actual,...predicted].some(existing=>overlaps(existing,row))) continue;
-            predicted.push({...row,kind:'regular',predicted:true,temporary:true});
+            predicted.push(applyStatus({...row,kind:row.kind||'regular',predicted:true,temporary:true}));
         }
         predicted.sort((a,b)=>a.date.localeCompare(b.date)||a.start.localeCompare(b.start)||a.className.localeCompare(b.className));
         return {actual,predicted,templates:choices,automaticForecastEnded,actualAmount:actual.reduce((s,r)=>s+(r.amount || 0),0),predictedAmount:predicted.reduce((s,r)=>s+(r.amount || 0),0),pending:[...actual,...predicted].filter(r=>r.amount===null || r.minutes===null).length};

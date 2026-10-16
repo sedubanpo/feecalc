@@ -498,3 +498,12 @@ body.calendar-app{padding:0!important;background:#f2f3f1!important;color:var(--w
 .source-discount-note{display:block!important;font-size:11px!important;line-height:1.6!important;color:#476270!important;white-space:normal;word-break:keep-all;overflow-wrap:normal;font-weight:400;margin-top:4px}
 .source-discount-summary{font-size:12px;line-height:1.7;color:#36596b;background:#edf3f4;padding:10px 12px;border-radius:8px;margin:0 0 12px;overflow-wrap:anywhere}
 .source-discount-summary[hidden]{display:none}
+
+/* Keep notice branding balanced with the student identity. */
+:is(#captureArea,#priorNoticePaper) .receipt-brand img{width:60px;height:60px}
+:is(#captureArea,#priorNoticePaper) .receipt-brand h1{font-size:21px;line-height:1.5}
+.hide-notice-teachers .notice-teacher-name{display:none!important}
+@media(max-width:760px){:is(#captureArea,#priorNoticePaper) .receipt-brand img{width:42px;height:42px}:is(#captureArea,#priorNoticePaper) .receipt-brand h1{font-size:16px}}
+
+:is(#captureArea,#priorNoticePaper) .notice-event{display:flex;flex-wrap:wrap}
+:is(#captureArea,#priorNoticePaper) .notice-event strong{white-space:nowrap;word-break:keep-all}

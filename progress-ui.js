@@ -148,7 +148,7 @@ function progressLessonList(host,rows,editable) {
         fragment.append(line);
     });host.append(fragment);
 }
-function progressKind(kind){return ({regular:'출석',late:'지각',cancel:'당일취소',absence:'결석예고',absenceMakeup:'대체수업',cancelMakeup:'보충',lateMakeup:'보충',free:'프리'})[kind] || '확인 필요';}
+function progressKind(kind){return ({regular:'출석',late:'지각',cancel:'당일취소',absence:'결석예고',absenceMakeup:'결석보강',cancelMakeup:'당취보충',lateMakeup:'지각보충',free:'무료보충'})[kind] || '확인 필요';}
 function renderProgress() {
     if(currentTab!=='progress' || !progressEl('progressStatus')) return;
     const context=(matchedStudent()?.id || '')+'|'+progressMonth();
@@ -196,7 +196,7 @@ function groupProgressReceipt(rows) {
         // Modern class names omit the teacher's T suffix; do not mistake that
         // last name segment for the teaching format or split equivalent rows.
         const format=String(row.className||'').split('-')[1]?.split('(')[0]?.trim();
-        const group=teachers.get(teacher),type=format || '수업',kind=row.predicted?'regular':row.kind;
+        const group=teachers.get(teacher),type=format || '수업',kind=row.kind||'regular';
         const key=JSON.stringify([type,row.minutes,row.amount,kind]);
         if(!group.variants.has(key))group.variants.set(key,{type,minutes:row.minutes,amount:row.amount,kind,count:0,predicted:0,dates:[]});
         const variant=group.variants.get(key);variant.count++;variant.predicted+=row.predicted?1:0;variant.dates.push(Number(row.date.slice(8)));
@@ -236,7 +236,7 @@ function renderProgressReceipt(result,bound) {
     const total=discount.discountedBase+(Number(progressEl('adjustment').value)||0);
     progressEl('dispTotal').textContent=!bound?'조회 필요':!progressVerified?'최신 확인 필요':result.pending?'확인 필요':progressMoney(total);
     progressEl('captureArea').classList.add('progress-document');
-    renderCommonReceiptCalendar([...result.actual,...result.predicted].sort((a,b)=>a.date.localeCompare(b.date)||a.start.localeCompare(b.start)).map(row=>({day:Number(row.date.slice(8)),name:parseSubjectInfo(row.className).mainName,rawName:row.className,durationHours:(row.minutes||0)/60,isPredicted:row.predicted,isAbsent:!row.predicted && row.kind==='absence'})));
+    renderCommonReceiptCalendar([...result.actual,...result.predicted].sort((a,b)=>a.date.localeCompare(b.date)||a.start.localeCompare(b.start)).map(row=>({day:Number(row.date.slice(8)),name:parseSubjectInfo(row.className).mainName,rawName:row.className,durationHours:(row.minutes||0)/60,isPredicted:row.predicted,isAbsent:row.kind==='absence'})));
     let legend=progressEl('progressCalendarLegend');
     if(!legend){legend=document.createElement('p');legend.id='progressCalendarLegend';progressEl('receiptMiniCalGrid').after(legend);}
     legend.textContent=`진행 수업 ${progressMoney(result.actualAmount)} · 예상 ${progressMoney(result.predictedAmount)} | 점선: 예상·임시 · 회색: 결석예고(0원)`;
