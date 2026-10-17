@@ -540,3 +540,9 @@ body.calendar-app{padding:0!important;background:#f2f3f1!important;color:var(--w
 .notice-teacher-profile{flex-wrap:wrap;white-space:normal;gap:5px}
 .notice-teacher-profile>span:last-child{max-width:100%;overflow-wrap:anywhere;word-break:keep-all}
 :is(#captureArea,#priorNoticePaper) .notice-event{flex-shrink:0}
+/* Two lines: subject + duration, then teacher + attendance. */
+:is(#captureArea,#priorNoticePaper) .notice-event .notice-meta{flex-wrap:nowrap;min-width:0;gap:3px}
+:is(#captureArea,#priorNoticePaper) .notice-status{white-space:nowrap;flex-shrink:0;color:inherit}
+:is(#captureArea,#priorNoticePaper) .notice-meta .notice-teacher-name{min-width:0;white-space:normal;overflow-wrap:anywhere}
+:is(#captureArea,#priorNoticePaper) .notice-event{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:start;gap:3px 4px}
+:is(#captureArea,#priorNoticePaper) .notice-event .notice-meta{grid-column:1/-1;flex-basis:auto}

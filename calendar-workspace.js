@@ -276,13 +276,32 @@
         if(options.cancelAsAttendance)lessons=lessons.map(r=>({...r,status:r.status.replace(/당일취소/g,'출석')}));
         return C.groups(lessons,true).map(g=>`<tr><td><strong>${g.subjects.map(subject=>subjectIcon(subject)+esc(subject)).join(' · ')}</strong>${window.FeeTeacherProfiles?.badge(g.teacher)||esc(g.teacher||'강사 미기재')}</td><td><div class="receipt-variants">${[...g.variants.values()].map(v=>`<span class="receipt-variant${v.status.includes('결석예고')?' notice-absence':''}"><span class="variant-condition">${g.subjects.length>1?esc(v.subject)+' · ':''}${esc(v.type==='개별정규'?'개별':v.type)} <span class="notice-duration">${v.hours===null?'?':v.hours}시간 </span>${v.count}${unit}${!v.status||v.status==='예정'||(v.status==='출석'&&!options.cancelAsAttendance)?'':' · '+esc(v.status)}</span><small>${v.rate!==null&&v.rate!==undefined?money(v.rate)+(v.rateMode==='perHour'?'/시간':'/회'):v.amount===null?'금액 확인 필요':money(v.amount)+'/회'}</small>${discountNote(v)}</span>`).join('')}</div></td><td class="${tone(g.total)}">${signed(g.pending?null:g.total)}</td></tr>`).join('');
     }
+    function noticeCalendarStatus(row){
+        const raw=String(row.status||'');
+        if(/휴강/.test(raw))return '휴강';
+        if(/보충|보강|프리/.test(raw))return '보충';
+        if(/당일취소|당취/.test(raw))return options.cancelAsAttendance?'정규':'당취';
+        if(/결석/.test(raw))return '결석';
+        if(/지각/.test(raw))return '지각';
+        if(/특강/.test(raw))return '특강';
+        if(/자습/.test(raw))return '자습';
+        const remaining=noticeStatus(raw).split(' · ').filter(part=>part!=='임시').join(' · ');
+        return remaining||'정규';
+    }
+    function noticeCalendarDuration(row){
+        const clock=value=>/^([01]\d|2[0-3]):[0-5]\d$/.test(value||'')?Number(value.slice(0,2))*60+Number(value.slice(3)):null;
+        const start=clock(row.start),end=clock(row.end);
+        // Calendar duration describes the scheduled lesson, including zero-charge absences.
+        const hours=start!==null&&end!==null&&end>start?(end-start)/60:row.hours;
+        return hours===null||hours===undefined||!Number.isFinite(Number(hours))?'시간 확인 필요':`${Number(Number(hours).toFixed(2))}시간`;
+    }
     function noticeCalendar(lessons,whichMonth,hideDetails=false){
         let html='<div class="receipt-cal-cell outside"></div>'.repeat(C.weekday(whichMonth,1));
         for(let d=1;d<=C.daysInMonth(whichMonth);d++){
             html+=`<div class="receipt-cal-cell"><div class="rc-date">${d}</div>`;
             if(!hideDetails)for(const r of lessons.filter(r=>r.day===d)){
-                const status=noticeStatus(options.cancelAsAttendance?r.status.replace(/당일취소/g,'출석'):r.status);
-                html+=`<div class="notice-event ${getSubjectColorClass(r.subject,false,false)}${r.predicted?' predicted':''}${r.type==='1:1'?' notice-private':''}${status.includes('결석예고')?' notice-absence':''}"><strong>${subjectIcon(r.subject)}${esc(r.subject)}</strong><span class="notice-time">${esc(r.start&&r.end?formatCompactTimeRange(r.start,r.end):(r.hours===null?'시간 확인 필요':r.hours+'시간'))}</span><small class="notice-meta">${r.type==='1:1'?'<span class="notice-private-label">1:1</span>':''}${r.teacher?'<span class="notice-teacher-name notice-teacher-badge'+(r.teacher.length>6?' long-teacher':'')+'">'+esc(r.teacher)+'</span>':''}${!status||status==='예정'||(status==='출석'&&!options.cancelAsAttendance)?'':'<span class="notice-status">'+esc(status)+'</span>'}</small></div>`;
+                const status=noticeCalendarStatus(r);
+                html+=`<div class="notice-event ${getSubjectColorClass(r.subject,false,false)}${r.predicted?' predicted':''}${r.type==='1:1'?' notice-private':''}${status==='결석'||status==='휴강'?' notice-absence':''}"><strong>${subjectIcon(r.subject)}${esc(r.subject)}</strong><span class="notice-time">${esc(noticeCalendarDuration(r))}</span><small class="notice-meta">${r.type==='1:1'?'<span class="notice-private-label">1:1</span>':''}${r.teacher?'<span class="notice-teacher-name notice-teacher-badge'+(r.teacher.length>6?' long-teacher':'')+'">'+esc(r.teacher)+'</span>':''}<span class="notice-status">${esc(status)}</span></small></div>`;
             }
             html+='</div>';
         }
