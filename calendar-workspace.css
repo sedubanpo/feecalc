@@ -576,3 +576,15 @@ body.calendar-app{padding:0!important;background:#f2f3f1!important;color:var(--w
 .capture-mode[data-mode=timetable] #captureArea:not(.prior-notice-paper) .receipt-content{grid-template-columns:minmax(0,1fr)!important}
 :is(#captureArea,#priorNoticePaper) .notice-meta .notice-private-label{margin-right:0}
 :is(#captureArea,#priorNoticePaper) .notice-meta .notice-teacher-badge{padding:1px 2px}
+/* Full-width, evenly spaced details when the notice calendar is omitted. */
+:is(#captureArea,#priorNoticePaper).hide-notice-calendar :is(#receiptCalendarArea,[data-receipt-part="receiptCalendarArea"]){display:none!important}
+:is(#captureArea,#priorNoticePaper).hide-notice-calendar .receipt-content,
+.capture-mode :is(#captureArea,#priorNoticePaper).hide-notice-calendar .receipt-content{grid-template-columns:minmax(0,1fr)!important}
+:is(#captureArea,#priorNoticePaper).hide-notice-calendar .receipt-fee-table.grouped-receipt tbody{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 24px;align-items:start}
+:is(#captureArea,#priorNoticePaper).hide-notice-calendar .receipt-fee-table.grouped-receipt thead{display:none}
+:is(#captureArea,#priorNoticePaper).hide-notice-calendar .receipt-fee-table.grouped-receipt tbody tr{height:100%;align-content:start}
+:is(#captureArea,#priorNoticePaper).hide-notice-calendar .receipt-right{width:100%;min-width:0}
+@media(max-width:600px){
+ :is(#captureArea,#priorNoticePaper).hide-notice-calendar .receipt-fee-table.grouped-receipt tbody{gap:0 12px}
+ :is(#captureArea,#priorNoticePaper).hide-notice-calendar .receipt-variants{grid-template-columns:minmax(0,1fr)}
+}

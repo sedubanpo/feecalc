@@ -161,6 +161,22 @@ const root=path.resolve(__dirname,'..');
  await page.locator('#captureArea').screenshot({path:'/tmp/feecalc-columns.png'});
  const download=page.waitForEvent('download');await page.getByRole('button',{name:'이미지 저장',exact:true}).click();await(await download).saveAs('/tmp/feecalc-columns-export.png');
  });
+ await check('hide notice calendar expands details and survives draft restore',async()=>{
+ await page.evaluate(()=>{
+  const base=progressState.snapshot.lessons[0];
+  progressState.snapshot.lessons.push({...base,id:'layout:english',className:'영어-개별-영어강사',teacher:'영어강사'});
+  FeeCalendar.commit();FeeCalendar.navigate('notice');
+ });
+ await page.locator('#hideNoticeCalendar').check();
+ assert.equal(await page.locator('#receiptCalendarArea').isVisible(),false);
+ assert.equal(await page.evaluate(()=>getComputedStyle(document.querySelector('#receiptBody')).gridTemplateColumns.split(' ').length),2);
+ assert.equal(await page.evaluate(()=>collectCalculatorState().calendarWorkspace.hideNoticeCalendar),true);
+ const download=page.waitForEvent('download');await page.getByRole('button',{name:'이미지 저장',exact:true}).click();await(await download).saveAs('/tmp/feecalc-no-calendar.png');
+ await page.evaluate(()=>{const data=collectCalculatorState();applyCalculatorState(data);FeeCalendar.navigate('notice');});
+ assert.equal(await page.locator('#hideNoticeCalendar').isChecked(),true);
+ assert.equal(await page.locator('#receiptCalendarArea').isVisible(),false);
+ await page.locator('#hideNoticeCalendar').uncheck();assert.equal(await page.locator('#receiptCalendarArea').isVisible(),true);
+ });
  assert.deepEqual(errors,[]);console.log(JSON.stringify(results));
  }finally{await browser.close();server.close();}
 })();
