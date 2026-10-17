@@ -55,13 +55,15 @@ const root=path.resolve(__dirname,'..');
  const result=await page.evaluate(()=>{
   const base={subject:'국어',teacher:'검증강사',type:'개별정규',day:1,hours:0,start:'15:00',end:'18:00'};
   const host=document.createElement('div');host.innerHTML=FeeCalendar.noticeCalendar(['출석','예상','당취보충','당일취소','결석예고','휴강','지각','확인 필요'].map(status=>({...base,status})),'2026-10');
-  return {times:[...host.querySelectorAll('.notice-time')].map(e=>e.textContent),statuses:[...host.querySelectorAll('.notice-status')].map(e=>e.textContent),pairs:[...host.querySelectorAll('.notice-status')].every(e=>e.previousElementSibling?.classList.contains('notice-teacher-name'))};
+  host.id='priorNoticePaper';document.body.append(host);const colors=[...host.querySelectorAll('.notice-status')].map(e=>getComputedStyle(e).color);host.remove();
+  return {colors,times:[...host.querySelectorAll('.notice-time')].map(e=>e.textContent),statuses:[...host.querySelectorAll('.notice-status')].map(e=>e.textContent),pairs:[...host.querySelectorAll('.notice-status')].every(e=>e.previousElementSibling?.classList.contains('notice-teacher-name'))};
  });
  assert.deepEqual(result.times,Array(8).fill('3시간'));
  assert.deepEqual(result.statuses,['정규','정규','보충','당취','결석','휴강','지각','확인 필요']);assert.ok(result.pairs);
+ assert.deepEqual(result.colors.slice(2,6),['rgb(18, 99, 188)','rgb(189, 51, 64)','rgb(104, 112, 120)','rgb(104, 112, 120)']);
  await page.evaluate(()=>FeeCalendar.navigate('notice'));
  await page.locator('#noticeCancelAsAttendance').check();
- assert.match(await page.evaluate(()=>FeeCalendar.noticeCalendar([{subject:'국어',teacher:'검증',day:1,hours:2,status:'당일취소'}],'2026-10')),/notice-status">정규/);
+ assert.match(await page.evaluate(()=>FeeCalendar.noticeCalendar([{subject:'국어',teacher:'검증',day:1,hours:2,status:'당일취소'}],'2026-10')),/data-attendance="정규">정규/);
  await page.locator('#noticeCancelAsAttendance').uncheck();await page.evaluate(()=>FeeCalendar.navigate('progress'));
  });
  await check('delete, move, repeat, pending recommendations and adjustment explanation',async()=>{

@@ -301,7 +301,7 @@
             html+=`<div class="receipt-cal-cell"><div class="rc-date">${d}</div>`;
             if(!hideDetails)for(const r of lessons.filter(r=>r.day===d)){
                 const status=noticeCalendarStatus(r);
-                html+=`<div class="notice-event ${getSubjectColorClass(r.subject,false,false)}${r.predicted?' predicted':''}${r.type==='1:1'?' notice-private':''}${status==='결석'||status==='휴강'?' notice-absence':''}"><strong>${subjectIcon(r.subject)}${esc(r.subject)}</strong><span class="notice-time">${esc(noticeCalendarDuration(r))}</span><small class="notice-meta">${r.type==='1:1'?'<span class="notice-private-label">1:1</span>':''}${r.teacher?'<span class="notice-teacher-name notice-teacher-badge'+(r.teacher.length>6?' long-teacher':'')+'">'+esc(r.teacher)+'</span>':''}<span class="notice-status">${esc(status)}</span></small></div>`;
+                html+=`<div class="notice-event ${getSubjectColorClass(r.subject,false,false)}${r.predicted?' predicted':''}${r.type==='1:1'?' notice-private':''}${status==='결석'||status==='휴강'?' notice-absence':''}"><strong>${subjectIcon(r.subject)}${esc(r.subject)}</strong><span class="notice-time">${esc(noticeCalendarDuration(r))}</span><small class="notice-meta">${r.type==='1:1'?'<span class="notice-private-label">1:1</span>':''}${r.teacher?'<span class="notice-teacher-name notice-teacher-badge'+(r.teacher.length>6?' long-teacher':'')+'">'+esc(r.teacher)+'</span>':''}<span class="notice-status" data-attendance="${esc(status)}">${esc(status)}</span></small></div>`;
             }
             html+='</div>';
         }
