@@ -67,17 +67,19 @@
  function explanation(){
   el('noticeBalanceExplanation')?.remove();if(currentTab!=='progress')return;
   const adjustments=collectAdjustmentItems();if(!adjustments.length)return;
-  const box=document.createElement('section');box.id='noticeBalanceExplanation';const title=document.createElement('strong');title.textContent='수업·이월·초과금 산출 내역';box.append(title);
-  const result=progressResult(),groups=new Map();for(const r of result.actual){const key=JSON.stringify([r.className,r.amount]);const g=groups.get(key)||{name:r.className,amount:r.amount,count:0};g.count++;groups.set(key,g);}
-  const lines=[...groups.values()].map(g=>`${g.name} ${g.count}회 × ${g.amount===null?'금액 확인 필요':money(g.amount)}`);
-  lines.push(`진행 수업 합계 ${result.actual.some(r=>r.amount===null)?'확인 필요':money(result.actualAmount)}`);
-  for(const a of adjustments)lines.push(`${a.amount<0?'이월·차감':'초과·추가'} ${money(Math.abs(a.amount))} · ${a.label}`);
-  if(result.actual.some(r=>r.amount===null||r.minutes===null))lines.push('진행 기준 차액: 수업 금액·시간 확인 후 계산');
-  else {const billed=getPercentDiscountInfo(result.actualAmount).discountedBase,adjusted=adjustments.reduce((n,a)=>n+a.amount,0),balance=billed+adjusted;
-   lines.push(`진행 수업 ${money(billed)}${billed!==result.actualAmount?' (할인 반영)':''} ${adjusted<0?'−':'+'} 조정 ${money(Math.abs(adjusted))} = ${balance<0?'이월':balance>0?'초과':'차액'} ${money(Math.abs(balance))}`);
-  }
-  lines.push('진행 기준 차액에는 입력한 수납·전월 잔액 등의 조정을 포함하며, 앞으로의 예상 수업은 제외합니다.');
-  for(const line of lines){const p=document.createElement('p');p.textContent=line;box.append(p);}el('dispTotal')?.parentElement.after(box);
+  const box=document.createElement('section');box.id='noticeBalanceExplanation';
+  const title=document.createElement('strong');title.textContent='현재까지 정산';box.append(title);
+  const line=(label,amount)=>{const p=document.createElement('p');p.append(document.createTextNode(label));if(amount!==undefined){const value=document.createElement('span');value.className=amount<0?'negative':amount>0?'positive':'neutral';value.textContent=(amount<0?'−':amount>0?'+':'')+money(Math.abs(amount));p.append(value);}box.append(p);};
+  const result=progressResult(),groups=new Map();for(const r of result.actual){const name=[r.subject||r.className?.split('-')[0],r.teacher].filter(Boolean).join(' · ')||r.className;const key=JSON.stringify([name,r.amount]);const g=groups.get(key)||{name,amount:r.amount,count:0};g.count++;groups.set(key,g);}
+  for(const g of groups.values())line(`${g.name} ${g.count}회 · 회당 ${g.amount===null?'금액 확인 필요':money(g.amount)}`);
+  const unknown=result.actual.some(r=>r.amount===null||r.minutes===null);
+  const billed=getPercentDiscountInfo(result.actualAmount).discountedBase;
+  if(unknown)line('진행한 수업료: 확인 필요');else line(`진행한 수업료${billed!==result.actualAmount?' (할인 반영)':''}`,billed);
+  for(const a of adjustments)line(a.label|| (a.amount<0?'이월·차감':'초과·추가'),a.amount);
+  if(unknown)line('수업 금액·시간 확인 후 잔액을 계산합니다.');
+  else {const balance=billed+adjustments.reduce((n,a)=>n+a.amount,0);line(balance<0?'남은 이월금':balance>0?'현재 초과금':'현재 잔액',balance);box.lastElementChild.classList.add('balance-result');}
+  const note=document.createElement('small');note.textContent='앞으로의 수업료는 제외한 금액입니다.';box.append(note);
+  el('dispTotal')?.parentElement.after(box);
  }
  window.ProgressActions={deleteDay,move,repeat,decorate,pending,explanation,run};
  FeeCalendar.refresh();

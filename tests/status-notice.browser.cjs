@@ -10,6 +10,7 @@ const root=path.resolve(__dirname,'..');
  // Planning fixtures have an explicit academy date, independent of the host clock.
  await context.addInitScript(()=>{const NativeDate=Date;window.testNow='2026-09-29T03:00:00Z';window.Date=class extends NativeDate{constructor(...args){super(...(args.length?args:[window.testNow]));}static now(){return new NativeDate(window.testNow).getTime();}};});
  page.on('pageerror',e=>errors.push(e.message)); page.on('dialog',d=>d.accept());
+ await page.context().route('https://firebasestorage.googleapis.com/test-photo',r=>r.fulfill({contentType:'image/png',body:fs.readFileSync(path.join(root,'assets/subjects/korean.png'))}));
  // All private service access is synthetic; never use user accounts or write production data.
  await page.context().route('**/*.cloudfunctions.net/**',r=>r.abort());await page.context().route('**/*.supabase.co/**',r=>r.abort());
  await page.context().route('**/auth-client.mjs*',r=>r.fulfill({contentType:'text/javascript',body:`export async function initializeAuth(onState){
@@ -38,6 +39,18 @@ const root=path.resolve(__dirname,'..');
  applyCalculatorState({currentTab:'progress',studentId:'one',studentName:'검증학생',targetYear:2026,targetMonth:10,progress:{snapshot:testProgressSnapshot,mode:'auto',cutoff:'2026-10-15',endDate:'2026-10-31',temporary:[{...row,id:'local:math',date:'2026-10-18',className:'수학-개별-검증강사',teacher:'검증강사',amount:62500,minutes:120,start:'12:00',end:'14:00'}]}});FeeCalendar.navigate('progress');
  });
  await page.waitForFunction(()=>progressVerified&&!progressLoading);
+ await check('readable lesson totals and account profile photos',async()=>{
+ await page.evaluate(async()=>{
+  await FeeTeacherProfiles.load({teacherProfiles:async()=>[{name:'배유진',url:'https://firebasestorage.googleapis.com/test-photo'}]});
+  FeeCalendar.navigate('notice');
+ });
+ assert.ok(await page.locator('.notice-teacher-avatar').count()>0);
+ const details=await page.locator('#receiptBody').innerText();
+ assert.match(details,/개별 3시간/);assert.doesNotMatch(details,/예상|3h|×/);
+ const combined=await page.evaluate(()=>{const row={subject:'국어',teacher:'검증',type:'개별정규',hours:2,rate:62500,amount:62500,rateMode:'perClass',status:'출석'};return FeeCalendar.noticeRows([row,{...row,status:'예상'},{...row,status:'예상'}]);});
+ assert.match(combined,/2시간 <\/span>3회/);
+ await page.evaluate(()=>FeeCalendar.navigate('progress'));
+ });
  await check('delete, move, repeat, pending recommendations and adjustment explanation',async()=>{
  const initial=await page.evaluate(()=>collectCalculatorState());
  await page.locator('[data-lesson-id="source"]').dragTo(page.locator('#workCalendar [data-day="10"]'));
@@ -52,7 +65,8 @@ const root=path.resolve(__dirname,'..');
  await page.locator('[aria-label="18일 수학 검증강사 수업 삭제"]').click();
  assert.equal(await page.evaluate(()=>progressResult().predicted.some(r=>r.id==='local:math')),false);
  await page.evaluate(()=>{addAdjustmentItem('기수납',-100000);FeeCalendar.navigate('notice');});
- assert.match(await page.locator('#noticeBalanceExplanation').innerText(),/이월 12,500원/);
+ assert.match(await page.locator('#noticeBalanceExplanation').innerText(),/남은 이월금\s*−12,500원/);
+ assert.equal(await page.locator('#noticeBalanceExplanation .balance-result .negative').evaluate(e=>getComputedStyle(e).color),'rgb(189, 51, 64)');
  assert.doesNotMatch(await page.locator('#captureArea').innerText(),/수정/);
  await page.locator('#hideBalanceExplanation').check();
  assert.equal(await page.locator('#noticeBalanceExplanation').isVisible(),false);
@@ -63,6 +77,11 @@ const root=path.resolve(__dirname,'..');
  assert.equal(await page.locator('#noticeBalanceExplanation').isVisible(),false);
  await page.locator('#hideBalanceExplanation').uncheck();
  assert.equal(await page.locator('#noticeBalanceExplanation').isVisible(),true);
+ await page.locator('#captureArea').screenshot({path:'/tmp/feecalc-readable-balance.png'});
+ const download=page.waitForEvent('download');await page.getByRole('button',{name:'이미지 저장',exact:true}).click();
+ await (await download).saveAs('/tmp/feecalc-readable-export.png');
+ assert.match(await page.locator('#imageOutputStatus').innerText(),/파일 저장/);
+
 
  await page.evaluate(()=>FeeCalendar.navigate('progress'));
  await page.evaluate(()=>{const row={...progressState.snapshot.lessons[0],id:'pending',date:'2026-10-13',amount:null};progressState.snapshot.lessons.push(row);FeeCalendar.commit();});

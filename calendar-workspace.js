@@ -270,11 +270,11 @@
     }
     // Both months use the same presentation; edits remain in their own draft.
     function discountNote(row){const text=FeeDiscount.describe(row);return text?`<small class="source-discount-note">${esc(text)}</small>`:'';}
-    const noticeStatus=status=>String(status||'').split(' · ').filter(part=>part.trim()!=='수정').join(' · ');
+    const noticeStatus=status=>String(status||'').split(' · ').filter(part=>!['수정','예상','출석','예정'].includes(part.trim())).join(' · ');
     function noticeRows(lessons,unit='회'){
         lessons=lessons.map(r=>({...r,status:noticeStatus(r.status)}));
         if(options.cancelAsAttendance)lessons=lessons.map(r=>({...r,status:r.status.replace(/당일취소/g,'출석')}));
-        return C.groups(lessons,true).map(g=>`<tr><td><strong>${g.subjects.map(subject=>subjectIcon(subject)+esc(subject)).join(' · ')}</strong><span class="receipt-teacher notice-teacher-badge${(g.teacher||'').length>6?' long-teacher':''}">${esc(g.teacher||'강사 미기재')}</span></td><td><div class="receipt-variants">${[...g.variants.values()].map(v=>`<span class="receipt-variant${v.status.includes('결석예고')?' notice-absence':''}"><span class="variant-condition">${g.subjects.length>1?esc(v.subject)+' · ':''}${esc(v.type==='개별정규'?'개별':v.type)} <span class="notice-duration">${v.hours===null?'?':v.hours}h × </span>${v.count}${unit}${v.status==='예정'||(v.status==='출석'&&!options.cancelAsAttendance)?'':' · '+esc(v.status)}</span><small>${v.rate!==null&&v.rate!==undefined?money(v.rate)+(v.rateMode==='perHour'?'/시간':'/회'):v.amount===null?'금액 확인 필요':money(v.amount)+'/회'}</small>${discountNote(v)}</span>`).join('')}</div></td><td class="${tone(g.total)}">${signed(g.pending?null:g.total)}</td></tr>`).join('');
+        return C.groups(lessons,true).map(g=>`<tr><td><strong>${g.subjects.map(subject=>subjectIcon(subject)+esc(subject)).join(' · ')}</strong>${window.FeeTeacherProfiles?.badge(g.teacher)||esc(g.teacher||'강사 미기재')}</td><td><div class="receipt-variants">${[...g.variants.values()].map(v=>`<span class="receipt-variant${v.status.includes('결석예고')?' notice-absence':''}"><span class="variant-condition">${g.subjects.length>1?esc(v.subject)+' · ':''}${esc(v.type==='개별정규'?'개별':v.type)} <span class="notice-duration">${v.hours===null?'?':v.hours}시간 </span>${v.count}${unit}${!v.status||v.status==='예정'||(v.status==='출석'&&!options.cancelAsAttendance)?'':' · '+esc(v.status)}</span><small>${v.rate!==null&&v.rate!==undefined?money(v.rate)+(v.rateMode==='perHour'?'/시간':'/회'):v.amount===null?'금액 확인 필요':money(v.amount)+'/회'}</small>${discountNote(v)}</span>`).join('')}</div></td><td class="${tone(g.total)}">${signed(g.pending?null:g.total)}</td></tr>`).join('');
     }
     function noticeCalendar(lessons,whichMonth,hideDetails=false){
         let html='<div class="receipt-cal-cell outside"></div>'.repeat(C.weekday(whichMonth,1));
@@ -282,7 +282,7 @@
             html+=`<div class="receipt-cal-cell"><div class="rc-date">${d}</div>`;
             if(!hideDetails)for(const r of lessons.filter(r=>r.day===d)){
                 const status=noticeStatus(options.cancelAsAttendance?r.status.replace(/당일취소/g,'출석'):r.status);
-                html+=`<div class="notice-event ${getSubjectColorClass(r.subject,false,false)}${r.predicted?' predicted':''}${r.type==='1:1'?' notice-private':''}${status.includes('결석예고')?' notice-absence':''}"><strong>${subjectIcon(r.subject)}${esc(r.subject)}</strong><span class="notice-time">${esc(r.start&&r.end?formatCompactTimeRange(r.start,r.end):(r.hours===null?'시간 확인 필요':r.hours+'시간'))}</span><small class="notice-meta">${r.type==='1:1'?'<span class="notice-private-label">1:1</span>':''}${r.teacher?'<span class="notice-teacher-name notice-teacher-badge'+(r.teacher.length>6?' long-teacher':'')+'">'+esc(r.teacher)+'</span>':''}${status==='예정'||(status==='출석'&&!options.cancelAsAttendance)?'':'<span class="notice-status">'+esc(status)+'</span>'}</small></div>`;
+                html+=`<div class="notice-event ${getSubjectColorClass(r.subject,false,false)}${r.predicted?' predicted':''}${r.type==='1:1'?' notice-private':''}${status.includes('결석예고')?' notice-absence':''}"><strong>${subjectIcon(r.subject)}${esc(r.subject)}</strong><span class="notice-time">${esc(r.start&&r.end?formatCompactTimeRange(r.start,r.end):(r.hours===null?'시간 확인 필요':r.hours+'시간'))}</span><small class="notice-meta">${r.type==='1:1'?'<span class="notice-private-label">1:1</span>':''}${r.teacher?'<span class="notice-teacher-name notice-teacher-badge'+(r.teacher.length>6?' long-teacher':'')+'">'+esc(r.teacher)+'</span>':''}${!status||status==='예정'||(status==='출석'&&!options.cancelAsAttendance)?'':'<span class="notice-status">'+esc(status)+'</span>'}</small></div>`;
             }
             html+='</div>';
         }
@@ -549,10 +549,11 @@
         outputButtons.forEach(({button})=>button.disabled=true);
         try{
             if(typeof html2canvas!=='function')throw Error('이미지 변환기를 불러오지 못했습니다. 네트워크를 확인한 뒤 재시도하세요.');
+            await window.FeeTeacherProfiles?.ready();
             await document.fonts.ready;
             await Promise.all([...target.querySelectorAll('img')].map(img=>img.complete?Promise.resolve():new Promise(resolve=>{img.addEventListener('load',resolve,{once:true});img.addEventListener('error',resolve,{once:true});setTimeout(resolve,8000);}))); 
             const embeddedImages=[...target.querySelectorAll('img')].map(img=>{
-                if(!img.naturalWidth&&img.classList.contains('notice-school-emblem'))return null;
+                if(!img.naturalWidth&&(img.classList.contains('notice-school-emblem')||img.classList.contains('notice-teacher-avatar')))return null;
                 if(!img.naturalWidth)throw Error('안내서 이미지를 불러오지 못했습니다. 잠시 후 다시 출력하세요.');
                 const bitmap=document.createElement('canvas');bitmap.width=img.naturalWidth;bitmap.height=img.naturalHeight;
                 bitmap.getContext('2d').drawImage(img,0,0);return bitmap.toDataURL('image/png');

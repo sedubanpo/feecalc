@@ -42,6 +42,28 @@ export function createGateway({getUser, fetcher = fetch, onDenied = () => {}}) {
     return {
         get actor() { return actor; },
         reset() { actor = null; generation++; },
+        async teacherProfiles() {
+            const user = getUser(), expected = generation;
+            if (!actor || !user || actor.uid !== user.uid) throw stale();
+            const token = await user.getIdToken();
+            if (expected !== generation || getUser()?.uid !== user.uid) throw stale();
+            const response = await fetcher('https://firestore.googleapis.com/v1/projects/fir-lms-prod/databases/(default)/documents:runQuery', {
+                method: 'POST', headers: {Authorization: `Bearer ${token}`, 'Content-Type': 'application/json'},
+                body: JSON.stringify({structuredQuery: {
+                    from: [{collectionId: 'sharedIconAssets'}],
+                    select: {fields: ['displayName','imageUrl','downloadURL','lookupKey','status'].map(fieldPath=>({fieldPath}))},
+                    where: {fieldFilter: {field: {fieldPath:'category'}, op:'EQUAL', value:{stringValue:'PERSON'}}}
+                }}), signal: AbortSignal.timeout(10000)
+            });
+            if (!response.ok) throw new Error('강사 사진을 불러오지 못했습니다.');
+            const rows = await response.json();
+            if (expected !== generation || getUser()?.uid !== user.uid) throw stale();
+            return rows.flatMap(row=>{
+                const f=row.document?.fields, value=k=>f?.[k]?.stringValue||'';
+                return f && value('lookupKey').startsWith('user:') && value('status')!=='DELETED'
+                    ? [{name:value('displayName'),url:value('imageUrl')||value('downloadURL')}] : [];
+            });
+        },
         async authorize() {
             const expected = generation;
             const result = await request('/session', undefined, expected);

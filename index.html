@@ -4212,7 +4212,7 @@
         async function initializeServerRecordFlow() {
             renderServerRecordList();
             try {
-                const { initializeAuth } = await import('./auth-client.mjs?v=20260930-funds');
+                const { initializeAuth } = await import('./auth-client.mjs?v=20261017-profiles');
                 staffAuth = await initializeAuth(handleStaffAuthState);
                 supabaseClient = staffAuth.gateway;
                 document.getElementById('staffLoginButton').disabled = false;
@@ -4245,6 +4245,8 @@
             document.getElementById('staffLogout').hidden = !user;
             document.getElementById('staffAuthRetry').hidden = !['error', 'denied'].includes(state);
             document.getElementById('staffAuthStatus').textContent = message || (state === 'ready' ? `${actor.name || '직원'}님으로 로그인했습니다.` : state === 'pending' ? '직원 권한을 확인하고 있습니다.' : '직원 계정으로 로그인해 주세요.');
+            globalThis.FeeTeacherProfiles?.clear();
+            if (staffAuthReady) globalThis.FeeTeacherProfiles?.load(gateway || supabaseClient);
             if (!staffAuthReady) { setServerRecordStatus(message || '로그인 후 서버 기록을 사용할 수 있습니다.', 'info'); return; }
             // The auth observer can run before initializeAuth resolves.
             await Promise.resolve();
@@ -4346,15 +4348,16 @@
     <link rel="stylesheet" href="workspace-ui.css?v=20260918">
     <script src="workspace-ui.js?v=20260930-layout-compact"></script>
     <script src="subject-icons.js?v=20260930-compact"></script>
+    <script src="teacher-profiles.js?v=20261017-readable"></script>
     <script src="school-icons.js?v=20260930"></script>
     <script src="calendar-core.js?v=20261017-actions"></script>
-    <link rel="stylesheet" href="calendar-workspace.css?v=20261017-notice">
-    <script src="calendar-workspace.js?v=20261017-notice"></script>
+    <link rel="stylesheet" href="calendar-workspace.css?v=20261017-readable">
+    <script src="calendar-workspace.js?v=20261017-readable"></script>
     <script src="temporary-lessons.js?v=20261017-actions"></script>
     <script src="calendar-dialogs.js?v=20261017-actions"></script>
     <link rel="stylesheet" href="financial-sources.css?v=20260930-funds">
     <script src="financial-sources.js?v=20261013-reset"></script>
-    <script src="progress-actions.js?v=20261017-actions"></script>
+    <script src="progress-actions.js?v=20261017-readable"></script>
     <script src="prior-notice.js?v=20261013-discount"></script>
     <link rel="stylesheet" href="prior-notice.css?v=20261003-usage-audit">
 </body>

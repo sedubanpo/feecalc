@@ -158,3 +158,23 @@ test('same UID denial/pending/ready retains loaded identity and settings; signed
 });
 
 test('financial read scope denial retains calculator authorization',async()=>{let denied=false;const gateway=createGateway({getUser:()=>user('a'),onDenied:()=>{denied=true;},fetcher:async url=>reply(url.endsWith('/session')?{data:{uid:'a'}}:{error:{code:'FINANCIAL_SCOPE_REQUIRED',message:'수납 조회 권한 필요'}},url.endsWith('/session')?200:403)});await gateway.authorize();assert.match((await gateway.rpc('feecalc_intranet_opening')).error.message,/수납/);assert.equal(gateway.actor.uid,'a');assert.equal(denied,false);});
+
+test('teacher registry uses authenticated read-only projection and excludes unrelated icons',async()=>{
+ const doc=data=>({document:{fields:Object.fromEntries(Object.entries(data).map(([k,v])=>[k,{stringValue:v}]))}});
+ let query;
+ const gateway=createGateway({getUser:()=>user('a'),fetcher:async(url,init)=>{
+  if(url.endsWith('/session'))return reply({data:{uid:'a'}});
+  query=JSON.parse(init.body);assert.equal(init.headers.Authorization,'Bearer test-token');
+  return reply([doc({lookupKey:'user:1',displayName:'강사',imageUrl:'https://example.test/photo'}),doc({lookupKey:'student-gender:male',displayName:'남학생'}),doc({lookupKey:'user:2',status:'DELETED'})]);
+ }});
+ await assert.rejects(gateway.teacherProfiles());await gateway.authorize();
+ assert.deepEqual(await gateway.teacherProfiles(),[{name:'강사',url:'https://example.test/photo'}]);
+ assert.equal(query.structuredQuery.from[0].collectionId,'sharedIconAssets');
+ assert.equal(query.structuredQuery.select.fields.length,5);
+});
+test('teacher photo response from a prior login is rejected',async()=>{
+ let resolve,current=user('a');
+ const gateway=createGateway({getUser:()=>current,fetcher:async url=>url.endsWith('/session')?reply({data:{uid:'a'}}):new Promise(r=>resolve=r)});
+ await gateway.authorize();const pending=gateway.teacherProfiles();await new Promise(r=>setImmediate(r));
+ current=user('b');gateway.reset();resolve(reply([]));await assert.rejects(pending,{code:'AUTH_CHANGED'});
+});
