@@ -9,3 +9,12 @@ test('provisional subtotal is display-only and cannot supply provenance or becom
  const reviewed=C.review({...data,rows:[provisional]},ctx);assert.equal(reviewed[0].estimateAmount,-237500);assert.equal(reviewed[0].source,null);assert.deepEqual(C.selected(reviewed,['receipt']),[]);
  assert.equal(C.review({...data,rows:[{...provisional,estimateAmount:'0'}]},ctx)[0].estimateAmount,null);
 });
+
+test('fractional opening balance keeps exact amount through selection and provenance restore',()=>{
+ for(const value of [1334062.5,-1334062.5]){
+  const reviewed=C.review({...data,rows:[{...row,amount:value,kind:value<0?'carry':'extra'}]},{...ctx,provider:'intranet'});
+  assert.equal(reviewed[0].reason,'');const selected=C.selected(reviewed,['receipt']);
+  assert.equal(selected[0].amount,value);assert.equal(C.provenance(JSON.parse(JSON.stringify(selected[0].source))).originalAmount,value);
+ }
+ for(const value of [Infinity,-Infinity])assert.ok(C.review({...data,rows:[{...row,amount:value}]},ctx)[0].reason);
+});

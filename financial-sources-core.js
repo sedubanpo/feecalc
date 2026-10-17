@@ -1,6 +1,6 @@
 (function(root,factory){const api=factory();if(typeof module==='object'&&module.exports)module.exports=api;else root.FeeFinancialSources=api;})(typeof globalThis==='object'?globalThis:this,function(){
  const month=v=>typeof v==='string'&&/^20\d{2}-(0[1-9]|1[0-2])$/.test(v);
- const amount=v=>typeof v==='number'&&Number.isSafeInteger(v)&&Math.abs(v)<=1e10;
+ const amount=v=>typeof v==='number'&&Number.isFinite(v)&&Math.abs(v)<=1e10;
  function provenance(s){
   if(!s||!['desk','intranet'].includes(s.provider)||typeof s.id!=='string'||!s.id||s.id.length>200||typeof s.studentId!=='string'||!s.studentId||s.studentId.length>200||!month(s.month)||!month(s.targetMonth)||typeof s.fingerprint!=='string'||!/^[a-f0-9]{64}$/.test(s.fingerprint)||!amount(s.originalAmount))return null;
   return {provider:s.provider,id:s.id,studentId:s.studentId,month:s.month,targetMonth:s.targetMonth,fingerprint:s.fingerprint,originalAmount:s.originalAmount};
