@@ -524,3 +524,5 @@ body.calendar-app{padding:0!important;background:#f2f3f1!important;color:var(--w
 #workCalendar .calendar-day-head .calendar-delete{width:22px;flex-shrink:0}
 #calendarWorkspace .calendar-event-wrap .calendar-event{padding-right:24px}
 @media(max-width:760px){#workCalendar .calendar-day-head>button:first-child{flex-basis:100%;text-align:left}}
+
+.hide-balance-explanation #noticeBalanceExplanation{display:none!important}

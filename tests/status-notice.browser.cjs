@@ -53,6 +53,17 @@ const root=path.resolve(__dirname,'..');
  assert.equal(await page.evaluate(()=>progressResult().predicted.some(r=>r.id==='local:math')),false);
  await page.evaluate(()=>{addAdjustmentItem('기수납',-100000);FeeCalendar.navigate('notice');});
  assert.match(await page.locator('#noticeBalanceExplanation').innerText(),/이월 12,500원/);
+ assert.doesNotMatch(await page.locator('#captureArea').innerText(),/수정/);
+ await page.locator('#hideBalanceExplanation').check();
+ assert.equal(await page.locator('#noticeBalanceExplanation').isVisible(),false);
+ assert.equal(await page.evaluate(()=>collectCalculatorState().calendarWorkspace.hideBalanceExplanation),true);
+ await page.evaluate(()=>{const saved=collectCalculatorState();applyCalculatorState(saved);FeeCalendar.navigate('notice');});
+ await page.waitForFunction(()=>progressVerified&&!progressLoading);
+ assert.equal(await page.locator('#hideBalanceExplanation').isChecked(),true);
+ assert.equal(await page.locator('#noticeBalanceExplanation').isVisible(),false);
+ await page.locator('#hideBalanceExplanation').uncheck();
+ assert.equal(await page.locator('#noticeBalanceExplanation').isVisible(),true);
+
  await page.evaluate(()=>FeeCalendar.navigate('progress'));
  await page.evaluate(()=>{const row={...progressState.snapshot.lessons[0],id:'pending',date:'2026-10-13',amount:null};progressState.snapshot.lessons.push(row);FeeCalendar.commit();});
  assert.match(await page.locator('#pendingLessons').innerText(),/추천 87,500원/);
