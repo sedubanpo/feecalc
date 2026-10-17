@@ -3157,7 +3157,7 @@
                 <div class="mb-3"><input type="text" class="sub-name w-full text-base font-bold border-b p-1 focus:outline-none focus:border-rose-500" placeholder="예: 수학-개별정규-홍길동T-3h" value="${escapeHtml(nameVal)}" oninput="renderFirstRegistrationView()"></div>
                 <div class="grid grid-cols-2 gap-2 text-xs">
                     <div><label class="block text-gray-400 mb-0.5">등원 시작일</label><input type="date" class="first-start-date w-full p-2 border rounded text-sm font-bold" value="${escapeHtml(startDate)}" onchange="renderFirstRegistrationView()"></div>
-                    <div><label class="block text-gray-400 mb-1">수업 요일</label><div class="flex justify-between px-1">${dayButtons}</div></div>
+                    <div class="col-span-2 first-weekday-field"><label class="block text-gray-400 mb-1">수업 요일</label><div class="first-weekday-options">${dayButtons}</div></div>
                     <div><label class="block text-gray-400 mb-0.5">수업 시간</label><input type="number" class="first-hours w-full p-2 border rounded text-right text-sm font-bold" placeholder="3" value="${safeHours}" oninput="renderFirstRegistrationView()"></div>
                     <div><label class="block text-gray-400 mb-0.5">단가 기준</label>${buildRateModeSelect(rateModeVal, 'renderFirstRegistrationView()')}</div>
                     <div class="col-span-2"><label class="block text-gray-400 mb-0.5">수강료 단가</label><input type="number" min="0" class="sub-rate rate-value-input" placeholder="0" value="${safeRate}" oninput="renderFirstRegistrationView()"><div class="rate-preset-row mt-2 flex flex-wrap gap-1.5">${buildRatePresetButtons()}</div></div>
@@ -4351,7 +4351,7 @@
     <script src="teacher-profiles.js?v=20261017-readable"></script>
     <script src="school-icons.js?v=20260930"></script>
     <script src="calendar-core.js?v=20261017-actions"></script>
-    <link rel="stylesheet" href="calendar-workspace.css?v=20261017-no-calendar">
+    <link rel="stylesheet" href="calendar-workspace.css?v=20261017-first-weekdays">
     <script src="calendar-workspace.js?v=20261017-no-calendar"></script>
     <script src="temporary-lessons.js?v=20261017-actions"></script>
     <script src="calendar-dialogs.js?v=20261017-actions"></script>
