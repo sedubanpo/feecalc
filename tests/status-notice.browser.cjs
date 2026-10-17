@@ -144,6 +144,23 @@ const root=path.resolve(__dirname,'..');
  await page.locator('#hideNoticeTeachers').uncheck();assert.ok(await page.locator('#captureArea .notice-teacher-name:visible').count()>0);
  await page.setViewportSize({width:390,height:844});await page.waitForTimeout(300);await page.locator('#captureArea').scrollIntoViewIfNeeded();await page.screenshot({path:'/private/tmp/feecalc-status-mobile.png'});
  });
+ await check('compact notice columns keep private type and teacher on one line',async()=>{
+ await page.setViewportSize({width:1800,height:1100});
+ await page.evaluate(()=>{
+  const base=progressState.snapshot.lessons[0];
+  progressState.snapshot.lessons=[2,3,2,3].map((hours,i)=>({...base,id:'layout:'+i,date:'2026-10-'+String(9+i).padStart(2,'0'),className:i%2?'수학-개별-검증강사':'수학-1:1-검증강사',teacher:'검증강사',kind:'regular',start:'15:00',end:(15+hours)+':00',minutes:hours*60,amount:62500+i*10000}));
+  progressState.overrides={};progressState.removedActual=[];addAdjustmentItem('이월금',-100000);FeeCalendar.commit();FeeCalendar.navigate('notice');
+ });
+ const layout=await page.evaluate(()=>{
+  const type=document.querySelector('#captureArea .notice-private-label');
+  const variants=document.querySelector('#captureArea .receipt-variants');
+  return {nowrap:getComputedStyle(type).whiteSpace,bold:getComputedStyle(type).fontWeight,columns:getComputedStyle(variants).gridTemplateColumns.split(' ').length,settlement:getComputedStyle(document.querySelector('.balance-lesson-grid')).gridTemplateColumns.split(' ').length};
+ });
+ assert.deepEqual(layout,{nowrap:'nowrap',bold:'700',columns:2,settlement:2});
+ assert.ok(await page.evaluate(()=>[...document.querySelectorAll('#captureArea .notice-status')].every(e=>e.getBoundingClientRect().right<=e.closest('.notice-event').getBoundingClientRect().right+1)));
+ await page.locator('#captureArea').screenshot({path:'/tmp/feecalc-columns.png'});
+ const download=page.waitForEvent('download');await page.getByRole('button',{name:'이미지 저장',exact:true}).click();await(await download).saveAs('/tmp/feecalc-columns-export.png');
+ });
  assert.deepEqual(errors,[]);console.log(JSON.stringify(results));
  }finally{await browser.close();server.close();}
 })();

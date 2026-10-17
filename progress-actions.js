@@ -71,7 +71,9 @@
   const title=document.createElement('strong');title.textContent='현재까지 정산';box.append(title);
   const line=(label,amount)=>{const p=document.createElement('p');p.append(document.createTextNode(label));if(amount!==undefined){const value=document.createElement('span');value.className=amount<0?'negative':amount>0?'positive':'neutral';value.textContent=(amount<0?'−':amount>0?'+':'')+money(Math.abs(amount));p.append(value);}box.append(p);};
   const result=progressResult(),groups=new Map();for(const r of result.actual){const name=[r.subject||r.className?.split('-')[0],r.teacher].filter(Boolean).join(' · ')||r.className;const key=JSON.stringify([name,r.amount]);const g=groups.get(key)||{name,amount:r.amount,count:0};g.count++;groups.set(key,g);}
-  for(const g of groups.values())line(`${g.name} ${g.count}회 · 회당 ${g.amount===null?'금액 확인 필요':money(g.amount)}`);
+  const details=document.createElement('div');details.className='balance-lesson-grid';
+  for(const g of groups.values()){line(`${g.name} ${g.count}회 · 회당 ${g.amount===null?'금액 확인 필요':money(g.amount)}`);details.append(box.lastElementChild);}
+  box.append(details);
   const unknown=result.actual.some(r=>r.amount===null||r.minutes===null);
   const billed=getPercentDiscountInfo(result.actualAmount).discountedBase;
   if(unknown)line('진행한 수업료: 확인 필요');else line(`진행한 수업료${billed!==result.actualAmount?' (할인 반영)':''}`,billed);
