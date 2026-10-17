@@ -507,3 +507,20 @@ body.calendar-app{padding:0!important;background:#f2f3f1!important;color:var(--w
 
 :is(#captureArea,#priorNoticePaper) .notice-event{display:flex;flex-wrap:wrap}
 :is(#captureArea,#priorNoticePaper) .notice-event strong{white-space:nowrap;word-break:keep-all}
+/* Direct calendar actions stay separate from the lesson edit button. */
+.calendar-event-wrap{position:relative;min-width:0}
+.calendar-event-wrap .calendar-event{width:100%;padding-right:26px}
+.calendar-delete{display:inline-flex;align-items:center;justify-content:center;width:26px;height:28px;padding:4px!important;background:transparent!important;color:#64748b;border:0!important}
+.calendar-delete svg{width:16px;height:16px}
+.calendar-event-wrap>.calendar-delete{position:absolute;right:1px;top:2px}
+.calendar-delete:hover{color:#b91c1c;background:#fee2e2!important}
+.calendar-day.drop-target{background:#e4eff5;outline:2px dashed #64748b;outline-offset:-3px}
+#pendingLessons{margin-top:24px;padding-top:16px;border-top:1px solid #dbe4e6}
+#pendingLessons p{font-size:12px;line-height:1.6}
+#noticeBalanceExplanation{margin:16px 0;font-size:11px;line-height:1.6;color:#536577}
+#noticeBalanceExplanation p{margin:4px 0;overflow-wrap:anywhere}
+#workCalendar .calendar-day-head{flex-wrap:wrap}
+#workCalendar .calendar-day-head .calendar-add-lesson{min-width:22px;width:22px;padding:2px}
+#workCalendar .calendar-day-head .calendar-delete{width:22px;flex-shrink:0}
+#calendarWorkspace .calendar-event-wrap .calendar-event{padding-right:24px}
+@media(max-width:760px){#workCalendar .calendar-day-head>button:first-child{flex-basis:100%;text-align:left}}

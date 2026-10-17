@@ -112,7 +112,8 @@
         return rows.map(r=>{
             if(!r||typeof r.id!=='string'||!r.id||ids.has(r.id)||!Number.isInteger(r.minutes)||r.minutes<0||r.minutes>1440||typeof r.amount!=='number'||!Number.isFinite(r.amount)||r.amount<0||r.amount>1e10||typeof r.start!=='string'||typeof r.end!=='string'||((r.start||r.end)&&(!clock(r.start)||!clock(r.end)||r.end<=r.start)))throw Error('수업 수정 시간·금액을 확인해 주세요.');
             if(r.kind!==undefined&&!kinds.includes(r.kind))throw Error('수업 상태를 확인해 주세요.');
-            ids.add(r.id);return {...(r.kind?{kind:r.kind}:{}),id:r.id,minutes:r.minutes,amount:['absence','free'].includes(r.kind)?0:r.amount,start:r.start,end:r.end};
+            if(r.movedDate!==undefined&&!validDate(r.movedDate))throw Error('이동 날짜를 확인해 주세요.');
+            ids.add(r.id);return {...(r.movedDate?{movedDate:r.movedDate}:{}),...(r.kind?{kind:r.kind}:{}),id:r.id,minutes:r.minutes,amount:['absence','free'].includes(r.kind)?0:r.amount,start:r.start,end:r.end};
         });
     }
     function calculate(state, today) {
@@ -125,9 +126,10 @@
         const endDate = validDate(state.endDate) && state.endDate.slice(0,7) === snapshot.month ? state.endDate : monthEnd(snapshot.month);
         const choices = state.mode === 'manual' ? basisTemplates(state,cutoff) : templates(snapshot,cutoff), excluded = new Set(state.excluded || []);
         const edits=new Map(validateEdits(state.edits).map(r=>[r.id,r])),removed=new Set(state.removedActual||[]);
-        const adjusted=r=>edits.has(r.id)?{...r,...edits.get(r.id),discountParts:edits.get(r.id).amount===r.amount&&edits.get(r.id).minutes===r.minutes?r.discountParts:[],edited:true}:r;
+        for(const edit of edits.values())if(edit.movedDate&&edit.movedDate.slice(0,7)!==snapshot.month)throw Error('같은 달 안에서 이동하세요.');
+        const adjusted=r=>edits.has(r.id)?{...r,...edits.get(r.id),date:edits.get(r.id).movedDate||r.date,discountParts:edits.get(r.id).amount===r.amount&&edits.get(r.id).minutes===r.minutes?r.discountParts:[],edited:true}:r;
         const actual = snapshot.lessons.filter(r=>!removed.has(r.id)).map(r=>{const row=adjusted({...r,predicted:false});return row.kind==='absence'?{...row,minutes:0,amount:0,discountParts:[]}:row;});
-        const occupied = new Set(snapshot.lessons.map(r=>courseKey(r)+'|'+r.date));
+        const occupied = new Set([...snapshot.lessons,...actual].map(r=>courseKey(r)+'|'+r.date));
         const predicted = [], seen = new Set(), slots = new Set();
         function add(template,date) {
             if (!template || !validDate(date) || date.slice(0,7) !== snapshot.month || date <= cutoff || date > endDate || occupied.has(courseKey(template)+'|'+date)) return;

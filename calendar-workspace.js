@@ -163,10 +163,10 @@
             const head=document.createElement('div');head.className='calendar-day-head';const title=document.createElement('button');title.type='button';title.textContent=day;title.setAttribute('aria-label',`${day}일 수업 내역`);title.onclick=()=>{detailDay=day;renderDay(lessons);};head.append(title);
             if(currentTab==='progress'){const add=document.createElement('button');add.type='button';add.className='calendar-add-lesson';add.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>';add.setAttribute('aria-label',`${day}일 임시 수업 추가`);add.onclick=()=>window.TemporaryLessons?.open(day);head.append(add);}
             if(editable){const label=document.createElement('label'),box=document.createElement('input');box.type='checkbox';box.checked=selectedDays.has(day);box.setAttribute('aria-label',`${day}일 날짜 선택`);box.onchange=()=>{selectedExtraId=null;if(box.checked)selectedDays.add(day);else selectedDays.delete(day);cell.classList.toggle('selected-date',box.checked);updateDiff();};label.append(box);head.append(label);}cell.append(head);if(excludedDates.has(day))cell.insertAdjacentHTML('beforeend','<span class="global-holiday">전체 휴강</span>');
-            for(const r of lessons.filter(r=>r.day===day&&(selectedSubject==='전체'||r.subject===selectedSubject))){const b=document.createElement('button');b.type='button';b.className=`calendar-event ${getSubjectColorClass(r.subject,false,false)}${r.row===selectedRow&&editable?' active-condition':''}`;b.innerHTML=`<strong>${subjectIcon(r.subject)}${esc(r.subject)}${r.teacher?' · '+esc(r.teacher):''}</strong><span>${esc(r.start&&r.end?`${r.start}–${r.end}`:r.hours+'시간')}${r.status==='예정'?'':' · '+esc(r.status)}</span>${currentTab==='timetable'?'':`<small class="${tone(r.amount)}">${signed(r.amount)}</small>${discountNote(r)}`}`;b.onclick=()=>{detailDay=day;if(editable){selectedExtraId=null;selectedRow=r.row;updateBatch();}renderWork();if(editable||currentTab==='progress')window.CalendarLessonEditor?.open(r.id);};cell.append(b);}host.append(cell);
+            for(const r of lessons.filter(r=>r.day===day&&(selectedSubject==='전체'||r.subject===selectedSubject))){const b=document.createElement('button');b.type='button';b.dataset.lessonId=r.id;b.className=`calendar-event ${getSubjectColorClass(r.subject,false,false)}${r.row===selectedRow&&editable?' active-condition':''}`;b.innerHTML=`<strong>${subjectIcon(r.subject)}${esc(r.subject)}${r.teacher?' · '+esc(r.teacher):''}</strong><span>${esc(r.start&&r.end?`${r.start}–${r.end}`:r.hours+'시간')}${r.status==='예정'?'':' · '+esc(r.status)}</span>${currentTab==='timetable'?'':`<small class="${tone(r.amount)}">${signed(r.amount)}</small>${discountNote(r)}`}`;b.onclick=()=>{detailDay=day;if(editable){selectedExtraId=null;selectedRow=r.row;updateBatch();}renderWork();if(editable||currentTab==='progress')window.CalendarLessonEditor?.open(r.id);};cell.append(b);}host.append(cell);
         }
         el('calendarWorkspace').querySelector('.calendar-help').textContent=currentTab==='progress'?'날짜의 빈 공간이나 + 버튼을 누르면 임시 수업을 추가합니다. 수업을 누르면 해당 회차를 수정하거나 삭제합니다.':'날짜의 체크 상자는 여러 날짜 선택, 날짜 제목은 당일 내역 확인입니다. 수업을 누르면 해당 회차를 수정하거나 삭제합니다.';
-        el('globalExcludeDays').hidden=!editable;el('restoreGlobalDays').hidden=!editable;renderDay(lessons);updateDiff();
+        el('globalExcludeDays').hidden=!editable;el('restoreGlobalDays').hidden=!editable;renderDay(lessons);updateDiff();window.ProgressActions?.decorate();
     }
     function renderDay(lessons){
         const day=el('dayDetail');day.innerHTML=`<h3>${detailDay}일 수업 내역</h3>`;
@@ -181,6 +181,7 @@
             day.append(line);
         }
         if(currentTab==='progress'){const add=document.createElement('button');add.type='button';add.textContent='임시 수업 추가';add.onclick=()=>window.TemporaryLessons?.open(detailDay);day.append(add);}
+        window.ProgressActions?.pending();
         if(!daily.length)day.insertAdjacentHTML('beforeend','<p>등록된 수업이 없습니다.</p>');
         if(['auto','select'].includes(currentTab)){const b=document.createElement('button');b.type='button';b.textContent='같은 조건의 별도 회차 추가';b.onclick=()=>{const row=rowList()[selectedRow],hours=Number(el('calendarHours').value),rate=Number(el('calendarRate').value);if(!row||!validBatch())return;saveUndo();const s=scheduleOf(row);s.additional=[...(s.additional||[]),{id:crypto.randomUUID(),day:detailDay,hours,rate}];row.dataset.legacyAggregate='false';row.dataset.schedule=JSON.stringify(s);commitCalendar();};day.append(b);}
     }
@@ -191,7 +192,7 @@
             const result=progressResult(),raw=[...result.actual,...result.predicted].find(r=>r.id===id);
             const temporary=(progressState.temporary||[]).find(r=>r.id===id);
             if(terms){
-                const patch={id,minutes:Math.round(terms.hours*60),amount:['absence','free'].includes(terms.kind)?0:terms.rate,start:terms.start,end:terms.end,kind:terms.kind||raw.kind};
+                const patch={id,...((progressState.edits||[]).find(r=>r.id===id)?.movedDate?{movedDate:raw.date}:{}),minutes:Math.round(terms.hours*60),amount:['absence','free'].includes(terms.kind)?0:terms.rate,start:terms.start,end:terms.end,kind:terms.kind||raw.kind};
                 ProgressCore.validateEdits([patch]);
                 if(temporary){const next={...temporary,...patch};ProgressCore.validateTemporary([next],month());if([...result.actual,...result.predicted].some(r=>r.id!==id&&ProgressCore.overlaps(r,next)))throw Error('같은 수업의 시간이 겹칩니다.');}
                 saveUndo();
@@ -320,7 +321,7 @@
         if(!discountSummary){discountSummary=document.createElement('p');discountSummary.id='sourceDiscountSummary';discountSummary.className='source-discount-summary';el('priceSummaryArea').prepend(discountSummary);}
         discountSummary.textContent=FeeDiscount.summary(lessons);discountSummary.hidden=!discountSummary.textContent;
         const discountLabel=el('dispDiscountRow')?.firstElementChild;if(discountLabel)discountLabel.textContent=discountSummary.hidden?'퍼센트 할인':'추가 할인 (계산기)';
-        decorateConditions();renderGroupedReceipt(lessons);renderWork();renderComparison(lessons);renderPlacements();
+        decorateConditions();renderGroupedReceipt(lessons);renderWork();renderComparison(lessons);renderPlacements();window.ProgressActions?.explanation();
         for(const id of ['dispSubtotal','dispDiscount','dispAdj']){
             const n=el(id);if(!n)continue;
             const match=/[+−-]?\d[\d,]*(?:\.\d+)?/.exec(n.textContent);

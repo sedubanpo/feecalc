@@ -10,12 +10,12 @@
       <p class="temporary-intro" id="lessonEditIntro"></p><div class="lesson-edit-course"><strong id="lessonEditCourse"></strong><span id="lessonEditTeacher"></span></div>
       <label class="temporary-field">수업 상태<select id="lessonEditKind"><option value="regular">출석</option><option value="late">지각</option><option value="cancel">당일취소</option><option value="absence">결석예고 (0원)</option><option value="cancelMakeup">당취보충 (금액 입력)</option><option value="absenceMakeup">결석보강</option><option value="lateMakeup">지각보충</option><option value="free">무료보충</option></select></label><div class="lesson-edit-fields"><label class="temporary-field">수업 시간<input id="lessonEditHours" type="number" min="0" max="24" step="0.25"><span>시간</span></label><label class="temporary-field"><span id="lessonRateLabel" class="field-title">회당 단가</span><input id="lessonEditRate" type="number" min="0" max="10000000000" step="any"><span>원</span></label><label class="temporary-field">시작 시각<input id="lessonEditStart" type="time"></label><label class="temporary-field">종료 시각<input id="lessonEditEnd" type="time"></label></div>
       <div class="temporary-preview"><strong id="lessonEditPreview"></strong><p>선택한 날짜의 이 회차만 변경합니다. 실행 취소로 복구할 수 있습니다.</p></div><p id="lessonEditError" class="draft-error" role="alert"></p>
-      <div class="temporary-footer"><button type="button" id="lessonEditDelete" class="danger">수업 삭제</button><button type="button" id="lessonEditCancel">취소</button><button type="submit" id="lessonEditSave" class="primary">수정 적용</button></div></form>`;
+      <div class="temporary-footer"><button type="button" id="lessonRepeat">이후 같은 요일 반복</button><button type="button" id="lessonEditDelete" class="danger">수업 삭제</button><button type="button" id="lessonEditCancel">취소</button><button type="submit" id="lessonEditSave" class="primary">수정 적용</button></div></form>`;
     document.body.append(edit);
     let editing=null,editContext='',editDay=1;
     function openEdit(id){
         const r=FeeCalendar.activeLessons().find(r=>r.id===id);if(!r)return;
-        editing=r;editContext=context();editDay=r.day;
+        editing=r;editContext=context();editDay=r.day;el('lessonRepeat').hidden=currentTab!=='progress';
         el('lessonEditContext').textContent=`${getCurrentStudentName()} · ${month()}-${String(r.day).padStart(2,'0')} (${days[FeeCalendarCore.weekday(month(),r.day)]})`;
         el('lessonEditIntro').textContent=currentTab==='progress'?'현재 계산에서만 수정·삭제합니다. 인트라넷 원본은 유지됩니다.':'과목의 반복 조건은 유지하고, 선택한 회차만 수정·삭제합니다.';
         el('lessonEditCourse').textContent=r.subject+' · '+r.type;el('lessonEditTeacher').textContent=r.teacher||'강사 미기재';
@@ -36,6 +36,7 @@
     function previewEdit(){el('lessonEditRate').disabled=['absence','free'].includes(el('lessonEditKind').value);try{const t=terms();el('lessonEditPreview').textContent='변경 후 '+money(Math.round(t.rate*(currentTab!=='progress'&&editing.rateMode==='perHour'?t.hours:1)));el('lessonEditError').textContent='';el('lessonEditSave').disabled=false;}catch(e){el('lessonEditError').textContent=e.message;el('lessonEditPreview').textContent='시간·금액 확인';el('lessonEditSave').disabled=true;}}
     edit.addEventListener('input',previewEdit);edit.addEventListener('change',previewEdit);
     el('lessonEditForm').onsubmit=e=>{e.preventDefault();try{FeeCalendar.changeLesson(editing.id,terms());edit.close();}catch(e){el('lessonEditError').textContent=e.message;}};
+    el('lessonRepeat').onclick=()=>{if(editContext!==context())return;ProgressActions.run(()=>ProgressActions.repeat(editing.id));};
     el('lessonEditDelete').onclick=()=>{try{if(editContext!==context())throw Error('학생·월이 변경되었습니다. 다시 선택하세요.');FeeCalendar.changeLesson(editing.id,null);edit.close();}catch(e){el('lessonEditError').textContent=e.message;}};
     for(const button of edit.querySelectorAll('.temporary-close,#lessonEditCancel'))button.onclick=()=>edit.close();
     edit.addEventListener('close',()=>document.querySelector(`#workCalendar [data-day="${editDay}"] .calendar-event,#workCalendar [data-day="${editDay}"] .calendar-day-head button`)?.focus());

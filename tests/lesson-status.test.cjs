@@ -18,3 +18,12 @@ test('weekday and selected-date occurrence statuses survive schedule serializati
  const r=rows.find(r=>r.day===9);assert.equal(r.amount,kind==='cancelMakeup'?50000:0);assert.equal(r.kind,kind);assert.notEqual(r.status,'예정');
  }
 });
+
+test('explicit movedDate preserves source and survives JSON while rejecting other months',()=>{
+ const P=require('../progress-core.js');
+ const row={id:'move',date:'2026-10-09',className:'국어-개별-검증',teacher:'검증',start:'15:00',end:'17:00',minutes:120,amount:62500,kind:'regular'};
+ const state={snapshot:{studentId:'one',month:'2026-10',lessons:[row]},mode:'auto',cutoff:'2026-10-15',endDate:'2026-10-31',edits:[{id:'move',movedDate:'2026-10-10',minutes:120,amount:62500,start:'15:00',end:'17:00',kind:'regular'}]};
+ const result=P.calculate(JSON.parse(JSON.stringify(state)),'2026-10-17');
+ assert.equal(result.actual[0].date,'2026-10-10');assert.equal(result.actualAmount,62500);assert.equal(row.date,'2026-10-09');
+ state.edits[0].movedDate='2026-11-01';assert.throws(()=>P.calculate(state,'2026-10-17'),/같은 달/);
+});
