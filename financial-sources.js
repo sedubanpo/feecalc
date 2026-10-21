@@ -19,9 +19,11 @@
   const valid=()=>dialog.open&&key===context()&&!!matchedStudent()&&isServerConfigured();
   const error=message=>{const e=dialog.querySelector('.draft-error');e.hidden=!message;e.textContent=message||'';};
   const rpc=provider==='desk'?'feecalc_desk_payments':'feecalc_intranet_opening';
-  const request=m=>getSupabaseClient().rpc(rpc,{p_student_id:student.id,p_month:m});
+  const request=(m,fresh=false)=>getSupabaseClient().rpc(rpc,{p_student_id:student.id,p_month:m},{fresh});
   const options=m=>({provider,studentId:student.id,month:m,targetMonth});
   function preview(){
+   el('financialSourceReload').disabled=pending;
+   el('financialSourceMonth').disabled=pending;
    const selected=C.selected(rows,[...ids]),delta=selected.reduce((sum,r)=>sum+r.amount,0),existing=getAdjustmentTotal();
    el('financialSourcePreview').replaceChildren();
    for(const [label,value] of [['현재 조정 합계',existing],[`선택 ${selected.length}건`,delta],['반영 후 조정 합계',existing+delta]]){const div=document.createElement('div'),span=document.createElement('span'),strong=document.createElement('strong');span.textContent=label;strong.textContent=money(value);strong.className=value<0?'financial-negative':value>0?'financial-positive':'';div.append(span,strong);el('financialSourcePreview').append(div);}
@@ -34,6 +36,7 @@
    }preview();
   }
   async function load(){
+   if(pending)return;
    if(!valid()){error('직원 로그인 후 등록 학생을 선택해 주세요.');return;}
    const m=el('financialSourceMonth').value;if(!/^20\d{2}-(0[1-9]|1[0-2])$/.test(m)){error('조회할 월을 선택해 주세요.');return;}
    const token=++generation;pending=true;rows=[];ids.clear();queryMonth='';error('');render();el('financialSourceStatus').textContent='원본 기록을 조회하고 있습니다.';
@@ -41,13 +44,13 @@
    }catch(e){if(token===generation&&dialog.open){el('financialSourceStatus').textContent='조회하지 못했습니다. 현재 계산은 유지됩니다.';error(e.message);}}
    finally{if(token===generation&&dialog.open){pending=false;render();}}
   }
-  el('financialSourceReload').onclick=load;el('financialSourceMonth').onchange=()=>{generation++;pending=false;rows=[];ids.clear();queryMonth='';el('financialSourceStatus').textContent='월을 변경했습니다. 조회 버튼을 눌러 주세요.';render();};
+  el('financialSourceReload').onclick=load;el('financialSourceMonth').onchange=()=>{if(pending)return;generation++;pending=false;rows=[];ids.clear();queryMonth='';el('financialSourceStatus').textContent='월을 변경했습니다. 조회 버튼을 눌러 주세요.';render();};
   el('financialSourceApply').onclick=async()=>{
    if(!valid()){error('학생·월 또는 로그인 상태가 바뀌었습니다. 닫고 다시 조회해 주세요.');return;}
    const selected=C.selected(rows,[...ids]),m=queryMonth;if(!selected.length||pending||el('financialSourceMonth').value!==m)return;
    pending=true;const token=++generation;preview();error('');
    try{
-    const {data,error:e}=await request(m);if(token!==generation||!valid())throw Error('학생·월 또는 로그인 상태가 바뀌어 반영을 취소했습니다.');if(e)throw Error(e.message);
+    const {data,error:e}=await request(m,true);if(token!==generation||!valid())throw Error('학생·월 또는 로그인 상태가 바뀌어 반영을 취소했습니다.');if(e)throw Error(e.message);
     const latest=C.review(data,options(m),collectAdjustmentItems(true));
     if(selected.some(s=>!latest.some(r=>r.id===s.source.id&&!r.reason&&r.source.fingerprint===s.source.fingerprint&&r.amount===s.amount)))throw Error('선택한 원본 기록이 변경되었거나 이미 반영되었습니다. 다시 조회하고 검토해 주세요.');
     FeeCalendar.remember();selected.forEach(item=>addAdjustmentItem(item.label,item.amount,{kind:item.kind,source:item.source,silent:true}));syncLegacyAdjustmentInput();FeeCalendar.commit();dialog.close();

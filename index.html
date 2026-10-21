@@ -4212,7 +4212,7 @@
         async function initializeServerRecordFlow() {
             renderServerRecordList();
             try {
-                const { initializeAuth } = await import('./auth-client.mjs?v=20261021-history');
+                const { initializeAuth } = await import('./auth-client.mjs?v=20261021-request-sharing');
                 staffAuth = await initializeAuth(handleStaffAuthState);
                 supabaseClient = staffAuth.gateway;
                 document.getElementById('staffLoginButton').disabled = false;
@@ -4356,7 +4356,7 @@
     <script src="temporary-lessons.js?v=20261017-actions"></script>
     <script src="calendar-dialogs.js?v=20261017-actions"></script>
     <link rel="stylesheet" href="financial-sources.css?v=20260930-funds">
-    <script src="financial-sources.js?v=20261013-reset"></script>
+    <script src="financial-sources.js?v=20261021-request-sharing"></script>
     <script src="progress-actions.js?v=20261017-compact-columns"></script>
     <script src="prior-notice.js?v=20261013-discount"></script>
     <link rel="stylesheet" href="prior-notice.css?v=20261003-usage-audit">

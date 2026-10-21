@@ -8,6 +8,22 @@ export function normalizeLogin(value) {
 }
 export function createGateway({getUser, fetcher = fetch, onDenied = () => {}}) {
     let actor = null, generation = 0;
+    // Share only concurrent reads inside this gateway/auth generation, never settled data.
+    const pendingReads = new Map();
+    const sharedReads = new Set(['feecalc_students', 'feecalc_student_memos',
+        'feecalc_progress', 'feecalc_desk_payments', 'feecalc_intranet_opening']);
+    const stable = value => Array.isArray(value) ? value.map(stable) : value && typeof value === 'object'
+        ? Object.fromEntries(Object.keys(value).sort().map(key => [key, stable(value[key])])) : value;
+    function read(rpc, params, fresh) {
+        if (fresh || !sharedReads.has(rpc)) return request('', {rpc, params});
+        const key = JSON.stringify([generation, getUser()?.uid, rpc, stable(params)]);
+        if (pendingReads.has(key)) return pendingReads.get(key);
+        const task = request('', {rpc, params}).finally(() => {
+            if (pendingReads.get(key) === task) pendingReads.delete(key);
+        });
+        pendingReads.set(key, task);
+        return task;
+    }
     const stale = () => Object.assign(new Error('로그인 상태가 바뀌었습니다. 다시 시도해 주세요.'), {code: 'AUTH_CHANGED'});
     async function request(path, body, expected = generation) {
         const user = getUser();
@@ -32,7 +48,7 @@ export function createGateway({getUser, fetcher = fetch, onDenied = () => {}}) {
                 throw new Error(result.error?.message || '입력값을 확인하고 다시 시도해 주세요.');
             }
             const message = response.status === 401 ? '로그인이 만료되었습니다. 다시 로그인해 주세요.' : response.status === 403 ? '이 계정에는 기록 접근 권한이 없습니다. 담당자에게 확인해 주세요.' : '기록 서버에 연결하지 못했습니다. 잠시 후 다시 시도해 주세요.';
-            if ([401, 403].includes(response.status)) { actor = null; generation++; onDenied(message); }
+            if ([401, 403].includes(response.status)) { actor = null; generation++; pendingReads.clear(); onDenied(message); }
             throw new Error(message);
         }
         const result = await response.json();
@@ -41,7 +57,7 @@ export function createGateway({getUser, fetcher = fetch, onDenied = () => {}}) {
     }
     return {
         get actor() { return actor; },
-        reset() { actor = null; generation++; },
+        reset() { actor = null; generation++; pendingReads.clear(); },
         async teacherProfiles() {
             const user = getUser(), expected = generation;
             if (!actor || !user || actor.uid !== user.uid) throw stale();
@@ -71,9 +87,9 @@ export function createGateway({getUser, fetcher = fetch, onDenied = () => {}}) {
             if (!actor || actor.uid !== getUser()?.uid) { actor = null; throw new Error('직원 권한을 확인하지 못했습니다. 다시 시도해 주세요.'); }
             return actor;
         },
-        async rpc(rpc, params = {}) {
+        async rpc(rpc, params = {}, {fresh = false} = {}) {
             if (!actor || actor.uid !== getUser()?.uid) return {data: null, error: {message: '서버 기록을 사용하려면 직원 계정으로 로그인해 주세요.'}};
-            try { return await request('', {rpc, params}); }
+            try { return structuredClone(await read(rpc, params, fresh)); }
             catch (error) {
                 if (error.code !== 'AUTH_CHANGED' && (error instanceof TypeError || error.name === 'TimeoutError')) {
                     const write = /_(save|update|delete)_/.test(rpc);
