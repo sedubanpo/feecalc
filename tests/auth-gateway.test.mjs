@@ -178,3 +178,5 @@ test('teacher photo response from a prior login is rejected',async()=>{
  await gateway.authorize();const pending=gateway.teacherProfiles();await new Promise(r=>setImmediate(r));
  current=user('b');gateway.reset();resolve(reply([]));await assert.rejects(pending,{code:'AUTH_CHANGED'});
 });
+
+ test('monthly history scope denial retains calculator authorization',async()=>{let denied=false;const gateway=createGateway({getUser:()=>user('a'),onDenied:()=>{denied=true;},fetcher:async url=>reply(url.endsWith('/session')?{data:{uid:'a'}}:{error:{code:'FINANCIAL_SCOPE_REQUIRED',message:'수납 조회 권한 필요'}},url.endsWith('/session')?200:403)});await gateway.authorize();assert.match((await gateway.rpc('feecalc_monthly_history',{p_student_id:'qa',p_month:'2026-10'})).error.message,/수납/);assert.equal(gateway.actor.uid,'a');assert.equal(denied,false);});

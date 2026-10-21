@@ -22,7 +22,7 @@ export function createGateway({getUser, fetcher = fetch, onDenied = () => {}}) {
         });
         if (expected !== generation || getUser()?.uid !== user.uid) throw stale();
         if (!response.ok) {
-            if (response.status === 403 && ['feecalc_progress','feecalc_intranet_opening'].includes(body?.rpc)) {
+            if (response.status === 403 && ['feecalc_progress','feecalc_intranet_opening','feecalc_monthly_history'].includes(body?.rpc)) {
                 const result = await response.json().catch(() => ({}));
                 // A separate Intranet scope does not revoke the calculator session.
                 if (['PROGRESS_SCOPE_REQUIRED','FINANCIAL_SCOPE_REQUIRED'].includes(result.error?.code)) throw new Error(result.error.message);

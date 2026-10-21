@@ -33,6 +33,8 @@
     function saveUndo(){undo.push({state:collectCalculatorState(),loaded:currentLoadedRecordId});if(undo.length>25)undo.shift();}
     function restoreUndo(){const item=undo.pop();if(!item)return;const rest=undo;applyCalculatorState(item.state);undo=rest;currentLoadedRecordId=item.loaded;markTouched();refresh();}
     function navigate(purpose){
+        if(purpose==='monthly-history'){window.FeeMonthlyHistory?.open();return;}
+        window.FeeMonthlyHistory?.close();
         if(purpose==='settings'){openAppSettings();return;}
         if(purpose==='notice'){view='notice';if(currentTab==='timetable')switchTab(lastMode);refresh();return;}
         view='work';
@@ -365,7 +367,7 @@
         }
         if(currentTab==='ai'){el('calendarWorkspace').hidden=true;view='notice';document.body.dataset.view='notice';el('noticeColumn').hidden=false;el('controlColumn').hidden=true;el('calendarBatch').hidden=true;}
         renderSchoolIdentity();window.FeePriorNotice?.render({options,student:matchedStudent(),month:month(),priorMonth:priorMonth(),notice:view==='notice',fetchSnapshot,markTouched,schoolHtml});
-        updateServerSaveModeUi();decorateRecords();scheduleSourceLookup();
+        updateServerSaveModeUi();decorateRecords();if(!window.FeeMonthlyHistory?.active)scheduleSourceLookup();window.FeeMonthlyHistory?.sync();
     }
     function renderComparison(lessons){
         const host=el('monthComparison');host.hidden=!options.showComparison||!['auto','select','history','progress','first'].includes(currentTab);

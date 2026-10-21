@@ -4212,7 +4212,7 @@
         async function initializeServerRecordFlow() {
             renderServerRecordList();
             try {
-                const { initializeAuth } = await import('./auth-client.mjs?v=20261017-profiles');
+                const { initializeAuth } = await import('./auth-client.mjs?v=20261021-history');
                 staffAuth = await initializeAuth(handleStaffAuthState);
                 supabaseClient = staffAuth.gateway;
                 document.getElementById('staffLoginButton').disabled = false;
@@ -4352,7 +4352,7 @@
     <script src="school-icons.js?v=20260930"></script>
     <script src="calendar-core.js?v=20261017-actions"></script>
     <link rel="stylesheet" href="calendar-workspace.css?v=20261017-first-weekdays">
-    <script src="calendar-workspace.js?v=20261017-no-calendar"></script>
+    <script src="calendar-workspace.js?v=20261021-monthly-history"></script>
     <script src="temporary-lessons.js?v=20261017-actions"></script>
     <script src="calendar-dialogs.js?v=20261017-actions"></script>
     <link rel="stylesheet" href="financial-sources.css?v=20260930-funds">
@@ -4360,5 +4360,9 @@
     <script src="progress-actions.js?v=20261017-compact-columns"></script>
     <script src="prior-notice.js?v=20261013-discount"></script>
     <link rel="stylesheet" href="prior-notice.css?v=20261003-usage-audit">
+    <link rel="stylesheet" href="monthly-history.css?v=20261021">
+    <script src="monthly-history-core.js?v=20261021"></script>
+    <script src="history-pdf.js?v=20261021"></script>
+    <script src="monthly-history.js?v=20261021"></script>
 </body>
 </html>
