@@ -3707,45 +3707,17 @@
             updateServerSaveModeUi();
             list.innerHTML = '';
             const keyword = String(document.getElementById('serverRecordSearch')?.value || '').trim();
-            if (!isServerConfigured()) { list.textContent = '로그인 후 저장 기록을 확인할 수 있습니다.'; return; }
+            if (!isServerConfigured()) { FeeRecordHistory.reset(); list.textContent = '로그인 후 저장 기록을 확인할 수 있습니다.'; return; }
             if (!serverRecordHistory.length) {
                 list.innerHTML = keyword
                     ? '<div class="text-[11px] text-gray-400 text-center py-6 border border-dashed border-gray-200 rounded-lg">검색 결과가 없습니다.</div>'
                     : '<div class="text-[11px] text-gray-400 text-center py-6 border border-dashed border-gray-200 rounded-lg">저장된 기록이 없습니다.</div>';
                 return;
             }
-            serverRecordHistory.forEach(record => {
-                const isActive = currentLoadedRecordId && currentLoadedRecordId === record.recordId;
-                const wrapper = document.createElement('div');
-                wrapper.className = `record-item p-3 transition ${isActive ? 'record-item-active' : ''}`;
-                wrapper.dataset.mode = record.currentTab || 'auto';
-                wrapper.innerHTML = `
-                    <div class="flex items-start justify-between gap-3">
-                        <div class="min-w-0">
-                            <div class="text-[11px] font-black text-sky-700">${formatSavedAt(record.savedAt)}</div>
-                            <div class="text-base font-black text-slate-900 truncate mt-1">${escapeHtml(record.studentName || '학생명')}</div>
-                            <div class="mt-1 text-[11px] text-slate-500">${record.targetYear || '-'}년 ${record.targetMonth || '-'}월</div>
-                        </div>
-                        <div class="flex flex-col items-end gap-2 shrink-0">
-                            <span class="text-[10px] px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 font-black">${escapeHtml(TAB_LABELS[record.currentTab] || (record.currentTab || '기록'))}</span>
-                            <button type="button" class="record-delete-btn px-2.5 py-1 rounded-lg bg-rose-50 text-rose-700 text-[10px] font-black hover:bg-rose-100">삭제</button>
-                        </div>
-                    </div>
-                    <button type="button" class="record-open-btn mt-3 w-full text-left rounded-2xl border border-slate-200 bg-white px-3 py-2.5 hover:border-sky-300 hover:bg-sky-50/40">
-                        <div class="flex items-center justify-between gap-3">
-                            <span class="text-[11px] text-slate-500 font-bold">저장본 열기</span>
-                            <span class="text-sm font-black text-slate-800">${escapeHtml(record.totalText || '0원')}</span>
-                        </div>
-                    </button>
-                `;
-                wrapper.querySelector('.record-open-btn')?.addEventListener('click', () => {
-                    window.open(getRecordOpenUrl(record.recordId), '_blank');
-                });
-                wrapper.querySelector('.record-delete-btn')?.addEventListener('click', (event) => {
-                    deleteServerRecord(record.recordId, event);
-                });
-                list.appendChild(wrapper);
-            });
+            FeeRecordHistory.render({list,records:serverRecordHistory,loadedId:currentLoadedRecordId,
+                labels:TAB_LABELS,formatTime:formatSavedAt,
+                onOpen:recordId=>window.open(getRecordOpenUrl(recordId),'_blank'),
+                onDelete:(recordId,event)=>deleteServerRecord(recordId,event),onSelect:(card,record)=>window.decorateRecordIdentity?.(card,record)});
         }
         function handleServerRecordSearchInput() {
             clearTimeout(serverRecordSearchTimer);
@@ -4343,16 +4315,17 @@
     <script src="financial-sources-core.js?v=20261017-fractional-balance"></script>
     <script src="fee-ui.js?v=20260930-funds"></script>
     <script src="discount-core.js?v=20261013-discount"></script>
-    <script src="progress-core.js?v=20261017-actions"></script>
-    <script src="progress-ui.js?v=20261017-actions"></script>
+    <script src="record-history.js?v=20261025-versions"></script>
+    <script src="progress-core.js?v=20261025-makeup"></script>
+    <script src="progress-ui.js?v=20261025-versions-makeup"></script>
     <link rel="stylesheet" href="workspace-ui.css?v=20260918">
     <script src="workspace-ui.js?v=20260930-layout-compact"></script>
     <script src="subject-icons.js?v=20260930-compact"></script>
     <script src="teacher-profiles.js?v=20261017-readable"></script>
     <script src="school-icons.js?v=20260930"></script>
-    <script src="calendar-core.js?v=20261017-actions"></script>
-    <link rel="stylesheet" href="calendar-workspace.css?v=20261017-first-weekdays">
-    <script src="calendar-workspace.js?v=20261021-monthly-history"></script>
+    <script src="calendar-core.js?v=20261025-versions-makeup"></script>
+    <link rel="stylesheet" href="calendar-workspace.css?v=20261025-versions-makeup">
+    <script src="calendar-workspace.js?v=20261025-versions-makeup"></script>
     <script src="temporary-lessons.js?v=20261017-actions"></script>
     <script src="calendar-dialogs.js?v=20261017-actions"></script>
     <link rel="stylesheet" href="financial-sources.css?v=20260930-funds">

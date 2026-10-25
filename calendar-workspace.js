@@ -677,24 +677,27 @@
         let identity=host.querySelector('.notice-school-identity');if(!identity){identity=document.createElement('div');identity.className='notice-school-identity';host.append(identity);}
         const html=schoolHtml(matchedStudent());if(identity.dataset.html!==html){identity.innerHTML=html;identity.dataset.html=html;}
     }
+    function decorateRecordIdentity(card,record){
+        const byName=studentRegistry.filter(s=>String(s.name||'').trim()===String(record.studentName||'').trim());
+        const student=record.payload?.studentId?studentRegistry.find(s=>s.id===record.payload.studentId):byName.length===1?byName[0]:null;
+        const url=student?.schoolLogoUrl||student?.schoolEmblemUrl||knownSchools[student?.school];
+        const identity=JSON.stringify([student?.school,url,byName.length>1]);
+        if(card.dataset.schoolIdentity===identity)return;
+        card.dataset.schoolIdentity=identity;
+        card.querySelector('.school-label')?.remove();card.querySelector('.school-watermark')?.remove();
+        const heading=card.querySelector('.record-folder-heading');
+        if(student?.school||byName.length>1){
+            const label=document.createElement('span');label.className='school-label';label.textContent=student?.school||'동명이인 · 저장본에서 학생 확인';heading?.append(label);
+        }
+        if(url&&/^https:\/\//.test(url)){
+            const img=document.createElement('img');img.className='school-watermark';img.alt='';img.setAttribute('aria-hidden','true');img.onerror=()=>img.hidden=true;img.src=url;card.prepend(img);
+        }
+    }
+    window.decorateRecordIdentity=decorateRecordIdentity;
     function decorateRecords(){
-        if(!isServerConfigured()&&!document.querySelector('#serverRecordList .record-item')){el('serverRecordList').textContent='';return;}
-        [...document.querySelectorAll('#serverRecordList .record-item')].forEach((card,i)=>{
-            const record=serverRecordHistory[i];if(!record)return;
-            const byName=studentRegistry.filter(s=>s.name===record.studentName),student=record.payload?.studentId?studentRegistry.find(s=>s.id===record.payload.studentId):byName.length===1?byName[0]:null;
-            const open=card.querySelector('.record-open-btn'),remove=card.querySelector('.record-delete-btn');if(!open||!remove)return;
-            if(!card.querySelector('.record-student')){
-                open.innerHTML=`<span class="record-kind">${esc(TAB_LABELS[record.currentTab]||'수강료 기록')}</span><strong class="record-student">${esc(record.studentName||'학생명')}</strong><span class="record-month">${esc(record.targetYear||'—')}년 ${esc(record.targetMonth||'—')}월</span><b class="record-amount">${esc(record.totalText||'0원')}</b><span class="record-open-label">저장본 열기 <span aria-hidden="true">↗</span></span><time class="record-saved-at">${esc(formatSavedAt(record.savedAt))}</time>`;
-                remove.title=`${record.studentName||'학생'} 저장 기록 삭제`;card.replaceChildren(open,remove);
-            }
-            // Registry and records arrive independently; enrich an existing card once school data arrives.
-            if(!student?.school)return;
-            let label=card.querySelector('.school-label');if(!label){label=document.createElement('span');label.className='school-label';card.querySelector('.record-month').before(label);}label.textContent=student.school;
-            const url=student.schoolLogoUrl||student.schoolEmblemUrl||knownSchools[student.school];
-            if(url&&/^https:\/\//.test(url)){
-                let img=card.querySelector('.school-watermark');if(!img){img=document.createElement('img');img.className='school-watermark';img.alt='';img.setAttribute('aria-hidden','true');img.onerror=()=>img.hidden=true;card.prepend(img);}
-                if(img.getAttribute('src')!==url){img.hidden=false;img.src=url;}
-            }else card.querySelector('.school-watermark')?.remove();
+        const byId=new Map(serverRecordHistory.map(record=>[record.recordId,record]));
+        document.querySelectorAll('#serverRecordList .record-item').forEach(card=>{
+            const record=byId.get(card.dataset.recordId);if(record)decorateRecordIdentity(card,record);
         });
     }
     let headerAuth={state:'loading',actor:null};

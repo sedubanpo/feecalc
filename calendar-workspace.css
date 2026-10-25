@@ -216,6 +216,17 @@ body.calendar-app{padding:0!important;background:#f2f3f1!important;color:var(--w
 .record-saved-at{display:block;margin-top:12px;font-size:10px;color:#617583}
 #serverRecordList .record-delete-btn{position:absolute;top:10px;right:8px;z-index:2;min-height:32px;padding:4px 6px;font-size:11px;font-weight:400;color:#a13240;border:0;border-radius:4px}
 #serverRecordList .school-watermark{width:140px;height:140px;right:-8px;bottom:20px;opacity:.065}
+/* Keep every fetched version inside its student's folder, with no extra reads. */
+#serverRecordList .record-folder-heading{padding:16px 13px 12px}
+#serverRecordList .record-folder-heading .school-label{display:block;margin:8px 0 0;line-height:1.6}
+#serverRecordList .record-version-count{display:block;margin-top:4px;color:var(--work-muted);font-size:11px}
+#serverRecordList .record-version-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;padding:0 12px 12px;border-bottom:1px solid var(--work-border)}
+#serverRecordList .record-version-tab{min-width:0;min-height:36px;padding:6px 2px;border:1px solid transparent;border-radius:5px;font-size:11px;font-weight:500;background:#f2f5f4;color:#385567}
+#serverRecordList .record-version-tab:hover{background:#e7eef2}
+#serverRecordList .record-version-tab[aria-selected=true]{background:#e4edf4;border-color:#a9bfce;color:#204c73;font-weight:700}
+#serverRecordList .record-version-panel{position:relative}
+#serverRecordList .record-folder .record-kind{margin-bottom:4px}
+#serverRecordList .record-folder .record-month{margin-top:0}
 :is(#captureArea,#priorNoticePaper) .receipt-document-title{grid-column:1/-1;margin:0;font-size:25px;line-height:1.4;font-weight:700;letter-spacing:-.6px;color:var(--work-ink)}
 :is(#captureArea,#priorNoticePaper) .receipt-student h2{font-size:20px;font-weight:700;letter-spacing:-.4px}
 :is(#captureArea,#priorNoticePaper) .receipt-fee-table th{font-size:11px;color:var(--work-muted)}

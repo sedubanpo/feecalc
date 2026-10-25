@@ -1,5 +1,6 @@
 // Read-only transformations of lesson records and local draft schedules.
 (function(root){
+    const P=typeof module!=='undefined'&&module.exports?require('./progress-core.js'):root.ProgressCore;
     const statusLabels={regular:'출석',late:'지각',cancel:'당일취소',absence:'결석예고',absenceMakeup:'결석보강',cancelMakeup:'당취보충',lateMakeup:'지각보충',free:'무료보충'};
     const finite = v => v !== null && v !== undefined && v !== '' && Number.isFinite(Number(v));
     const daysInMonth = month => new Date(Date.UTC(Number(month.slice(0,4)),Number(month.slice(5)),0)).getUTCDate();
@@ -87,7 +88,7 @@
     function candidates(snapshot){
         const map=new Map(),excluded=[];
         for(const r of normalizeSnapshot(snapshot)){
-            if(r.kind!=='regular'||/오늘만|보충|일회|변경|특강|대체/.test(`${r.note} ${r.type}`)||r.hours<=0){excluded.push(r);continue;}
+            if(r.kind!=='regular'||P.isMakeupLesson(r.source)||/오늘만|보충|보강|일회|변경|특강|대체/.test(`${r.note} ${r.type}`)||r.hours<=0){excluded.push(r);continue;}
             const key=JSON.stringify([r.subject,r.teacher,r.type,weekday(snapshot.month,r.day),r.hours,r.amount,r.start,r.end]);
             if(!map.has(key))map.set(key,{id:key,...r,weekday:weekday(snapshot.month,r.day),sourceIds:[],sourceDates:[],reasons:[]});
             const c=map.get(key);c.sourceIds.push(r.id);c.sourceDates.push(r.date);

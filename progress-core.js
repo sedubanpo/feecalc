@@ -8,6 +8,10 @@
     const dayOfWeek = date => new Date(date + 'T00:00:00Z').getUTCDay();
     const daysInMonth = month => new Date(Date.UTC(Number(month.slice(0,4)),Number(month.slice(5)),0)).getUTCDate();
     const monthEnd = month => month+'-'+String(daysInMonth(month)).padStart(2,'0');
+    // Attendance is authoritative. Legacy class/status labels may also identify
+    // a makeup; never infer recurrence from its fee or from repeated attendance.
+    const isMakeupLesson = row => row?.kind === 'free' || /makeup|보충|보강/i.test(
+        [row?.kind,row?.status,row?.className].filter(Boolean).join(' '));
     const courseKey = row => {
         const teacher = String(row.teacher || '').trim().replace(/\s+/g,'').replace(/T$/i,'');
         let course = String(row.className || '').replace(/\s+/g,'').replace(/개별정규/g,'개별').replace(/-?\d+(?:\.\d+)?h$/i,'');
@@ -41,20 +45,21 @@
         const referenced=id=>sourceRefs.has(id);
         return {...snapshot,lessons:snapshot.lessons.flatMap(row=>row.segments?.some(r=>referenced(r.id))?row.segments:[row])};
     }
-    function templateRows(snapshot, cutoff) {
+    function templateRows(snapshot, cutoff, automatic=false) {
         return snapshot.lessons.filter(r=>r.date<=cutoff).flatMap(row=>{
+            if (automatic && isMakeupLesson(row)) return [];
             if (['regular','late','absenceMakeup'].includes(row.kind) && row.minutes) return [row];
             if (row.kind !== 'absence') return [];
             const clock = value => {const m=/^(\d{1,2}):(\d{2})$/.exec(value);return m && +m[1]<24 && +m[2]<60 ? +m[1]*60 + +m[2] : null;};
             const start=clock(row.start),end=clock(row.end);
             const minutes=row.forecastMinutes ?? (start!==null && end!==null && end>start ? end-start : null);
-            const prior=snapshot.lessons.filter(r=>r.date<row.date && dayOfWeek(r.date)===dayOfWeek(row.date) && courseKey(r)===courseKey(row) && ['regular','late','absenceMakeup'].includes(r.kind) && r.minutes===minutes).sort((a,b)=>b.date.localeCompare(a.date))[0];
+            const prior=snapshot.lessons.filter(r=>r.date<row.date && dayOfWeek(r.date)===dayOfWeek(row.date) && courseKey(r)===courseKey(row) && !isMakeupLesson(r) && ['regular','late'].includes(r.kind) && r.minutes===minutes).sort((a,b)=>b.date.localeCompare(a.date))[0];
             return [{...row,minutes,discountParts:row.forecastAmount!==undefined?row.forecastDiscountParts||[]:prior?.discountParts||[],amount:row.forecastAmount !== undefined ? row.forecastAmount : prior?.amount ?? null}];
         });
     }
     function templates(snapshot, cutoff) {
         const latest = new Map();
-        for (const row of templateRows(snapshot,cutoff)) {
+        for (const row of templateRows(snapshot,cutoff,true)) {
             const key = courseKey(row) + '|' + dayOfWeek(row.date), old = latest.get(key);
             if (!old || row.date > old.date) latest.set(key,{date:row.date,rows:[row]});
             else if (old.date === row.date) old.rows.push(row);
@@ -105,6 +110,15 @@
     function overlaps(a,b) {
         return a.date === b.date && courseKey(a) === courseKey(b) && (!a.start || !a.end || !b.start || !b.end || (a.start < b.end && b.start < a.end));
     }
+    function blocksForecast(existing,template,date) {
+        if (existing.date!==date || courseKey(existing)!==courseKey(template)) return false;
+        // Regular/absence records retain the conservative date-level duplicate
+        // guard. A makeup at another time must not erase the regular lesson.
+        if (!isMakeupLesson(existing)) return true;
+        const clock=v=>typeof v==='string'&&/^([01]\d|2[0-3]):[0-5]\d$/.test(v);
+        if (![existing.start,existing.end,template.start,template.end].every(clock) || existing.end<=existing.start || template.end<=template.start) return true;
+        return overlaps(existing,{...template,date});
+    }
     function validateEdits(rows){
         if(rows===undefined)return [];
         if(!Array.isArray(rows)||rows.length>1000)throw Error('수업 수정 내역을 확인해 주세요.');
@@ -124,15 +138,27 @@
         const automaticForecastEnded = validDate(today) && snapshot.month < today.slice(0,7);
         const cutoff = validDate(state.cutoff) && state.cutoff.slice(0,7) === snapshot.month ? state.cutoff : snapshot.month + '-01';
         const endDate = validDate(state.endDate) && state.endDate.slice(0,7) === snapshot.month ? state.endDate : monthEnd(snapshot.month);
-        const choices = state.mode === 'manual' ? basisTemplates(state,cutoff) : templates(snapshot,cutoff), excluded = new Set(state.excluded || []);
         const edits=new Map(validateEdits(state.edits).map(r=>[r.id,r])),removed=new Set(state.removedActual||[]);
+        // A draft makeup correction can exclude a basis. Other one-session
+        // attendance, date, fee and time edits do not redefine the schedule or
+        // promote an original makeup into evidence of a recurring lesson.
+        const basisSnapshot={...snapshot,lessons:snapshot.lessons.map(r=>{
+            const kind=edits.get(r.id)?.kind;
+            return kind&&isMakeupLesson({kind})?{...r,kind}:r;
+        })};
+        const choices = state.mode === 'manual' ? basisTemplates(state,cutoff) : templates(basisSnapshot,cutoff), excluded = new Set(state.excluded || []);
         for(const edit of edits.values())if(edit.movedDate&&edit.movedDate.slice(0,7)!==snapshot.month)throw Error('같은 달 안에서 이동하세요.');
         const adjusted=r=>edits.has(r.id)?{...r,...edits.get(r.id),date:edits.get(r.id).movedDate||r.date,discountParts:edits.get(r.id).amount===r.amount&&edits.get(r.id).minutes===r.minutes?r.discountParts:[],edited:true}:r;
         const actual = snapshot.lessons.filter(r=>!removed.has(r.id)).map(r=>{const row=adjusted({...r,predicted:false});return row.kind==='absence'?{...row,minutes:0,amount:0,discountParts:[]}:row;});
-        const occupied = new Set([...snapshot.lessons,...actual].map(r=>courseKey(r)+'|'+r.date));
+        const occupied = new Map();
+        for(const row of [...snapshot.lessons,...actual]){
+            const key=courseKey(row)+'|'+row.date;
+            if(!occupied.has(key))occupied.set(key,[]);
+            occupied.get(key).push(row);
+        }
         const predicted = [], seen = new Set(), slots = new Set();
         function add(template,date) {
-            if (!template || !validDate(date) || date.slice(0,7) !== snapshot.month || date <= cutoff || date > endDate || occupied.has(courseKey(template)+'|'+date)) return;
+            if (!template || !validDate(date) || date.slice(0,7) !== snapshot.month || date <= cutoff || date > endDate || (occupied.get(courseKey(template)+'|'+date)||[]).some(r=>blocksForecast(r,template,date))) return;
             const id = template.id + '@' + date;
             const slot = courseKey(template)+'|'+date+'|'+template.start+'|'+template.end;
             if (state.mode === 'manual' && (slots.has(slot) || predicted.some(r=>courseKey(r)===courseKey(template) && r.date===date && r.start<template.end && template.start<r.end))) return;
@@ -156,9 +182,9 @@
             predicted.push(applyStatus({...row,kind:row.kind||'regular',predicted:true,temporary:true}));
         }
         predicted.sort((a,b)=>a.date.localeCompare(b.date)||a.start.localeCompare(b.start)||a.className.localeCompare(b.className));
-        return {actual,predicted,templates:choices,automaticForecastEnded,actualAmount:actual.reduce((s,r)=>s+(r.amount || 0),0),predictedAmount:predicted.reduce((s,r)=>s+(r.amount || 0),0),pending:[...actual,...predicted].filter(r=>r.amount===null || r.minutes===null).length};
+        return {actual,predicted,templates:choices,automaticForecastEnded,excludedMakeupCount:basisSnapshot.lessons.filter(r=>r.date<=cutoff&&isMakeupLesson(r)).length,actualAmount:actual.reduce((s,r)=>s+(r.amount || 0),0),predictedAmount:predicted.reduce((s,r)=>s+(r.amount || 0),0),pending:[...actual,...predicted].filter(r=>r.amount===null || r.minutes===null).length};
     }
-    const api = {preserveSessionDraft,validMonth,validDate,daysInMonth,monthEnd,dayOfWeek,courseKey,validateSnapshot,validateTemporary,validateEdits,overlaps,templates,basisTemplates,validateBasis,previousMonth,defaultCutoff,calculate};
+    const api = {isMakeupLesson,blocksForecast,preserveSessionDraft,validMonth,validDate,daysInMonth,monthEnd,dayOfWeek,courseKey,validateSnapshot,validateTemporary,validateEdits,overlaps,templates,basisTemplates,validateBasis,previousMonth,defaultCutoff,calculate};
     if (typeof module !== 'undefined' && module.exports) module.exports = api;
     else root.ProgressCore = api;
 })(typeof window === 'undefined' ? {} : window);

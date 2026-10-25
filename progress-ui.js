@@ -40,7 +40,8 @@ progressPanel.innerHTML = `
    <label class="progress-field">예상 종료일<input id="progressEnd" type="date" onchange="setProgressEnd(this.value)"></label>
   </div>
   <p id="progressCoverage" class="ui-help"></p>
-  <p class="ui-help">기준일 다음 날부터 종료일까지 예상합니다. 종료일은 예상 수업에만 적용하며 실제 입력 수업은 모두 유지합니다. 같은 과목·강사·날짜의 실제 수업과 중복 계산하지 않습니다.</p>
+  <p class="ui-help">기준일 다음 날부터 종료일까지 정규 요일을 예상합니다. 보강·보충은 실제 수업료에만 포함하고 자동 반복하지 않습니다. 실제 수업과 중복되는 예상 수업은 제외합니다.</p>
+  <p id="progressMakeupNotice" class="ui-help" hidden></p>
   <div id="progressManual" hidden>
    <label class="progress-field">추가할 기준 수업<select id="progressTemplate"></select></label>
    <p class="ui-help">아래 날짜를 누르면 기준 수업이 추가됩니다. 다시 누르면 취소됩니다.</p>
@@ -125,7 +126,7 @@ function renderProgressDates() {
     const template=progressResult().templates.find(r=>r.id===progressEl('progressTemplate').value);
     for(let day=1;day<=ProgressCore.daysInMonth(progressMonth());day++) {
         const date=progressMonth()+'-'+String(day).padStart(2,'0'), button=document.createElement('button');
-        const occupied=template && progressState.snapshot.lessons.some(r=>r.date===date && ProgressCore.courseKey(r)===ProgressCore.courseKey(template));
+        const occupied=template && progressState.snapshot.lessons.some(r=>ProgressCore.blocksForecast(r,template,date));
         const selected=!!template && progressState.manual.some(r=>r.date===date&&(r.templateId===template.id||template.aliases?.includes(r.templateId)));
         button.type='button';button.className='ui-button';button.textContent=String(day);button.dataset.weekday=ProgressCore.dayOfWeek(date);
         button.setAttribute('aria-label',`${date} 예상 수업${occupied?' · 입력 수업 있음':''}`);button.setAttribute('aria-pressed',String(selected));
@@ -172,6 +173,9 @@ function renderProgress() {
         progressEl('progressBasisStatus').textContent=progressState.basis?.length?`${progressState.basis[0].month} · ${progressMonth()} 수업을 추가 기준으로 사용합니다. 지난달 수업은 자동 청구하지 않으며, 시간·금액을 확인하고 날짜를 선택하세요.`:'기준 수업은 조회한 이번 달 기록입니다. 월 초에는 지난달 수업도 불러올 수 있습니다.';
         progressEl('progressManual').hidden=progressState.mode!=='manual';progressEl('progressRestore').hidden=progressState.mode!=='auto';
         progressEl('progressRestore').disabled=!progressState.excluded.length;
+        const makeupNotice=progressEl('progressMakeupNotice');
+        makeupNotice.hidden=progressState.mode==='manual'||!result.excludedMakeupCount;
+        makeupNotice.textContent=`보강·보충 ${result.excludedMakeupCount||0}건은 정규 요일의 반복 기준에서 제외했습니다. 입력된 수업 내역과 금액은 유지합니다.`;
         const select=progressEl('progressTemplate'),previous=select.value;select.replaceChildren();
         result.templates.forEach(r=>{const option=document.createElement('option');option.value=r.id;option.textContent=`${r.className} · ${r.teacher} · ${r.minutes===null?'시간 확인 필요':r.minutes/60+'시간'} · ${r.date.slice(5)} ${r.start}`;select.append(option);});
         const retained=result.templates.find(r=>r.id===previous||r.aliases?.includes(previous));if(retained)select.value=retained.id;
