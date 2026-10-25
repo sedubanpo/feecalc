@@ -102,7 +102,10 @@ const root=path.resolve(__dirname,'..'),evidence=process.env.EVIDENCE_ROOT;
  const layout=await page.evaluate(()=>{const paper=document.getElementById('captureArea').getBoundingClientRect(),variants=[...document.querySelectorAll('.receipt-variants')][0].children;const buttons=['saveNoticeImage','copyNoticeImage'].map(id=>document.getElementById(id).getBoundingClientRect());const event=document.querySelector('.notice-event'),subject=event.querySelector('strong').getBoundingClientRect(),time=event.querySelector('.notice-time').getBoundingClientRect();return{width:paper.width,variantsSameRow:Math.abs(variants[0].getBoundingClientRect().top-variants[1].getBoundingClientRect().top)<2,buttonsEqual:Math.abs(buttons[0].width-buttons[1].width)<1&&buttons[0].height===buttons[1].height&&buttons[0].top===buttons[1].top,horizontal:time.left>=subject.left&&Math.abs(time.top-subject.top)<3};});
  assert.equal(layout.width,1120);assert.ok(layout.variantsSameRow);assert.ok(layout.buttonsEqual);assert.ok(layout.horizontal);
  assert.match(await page.locator('#receiptBody').innerText(),/결석예고/);
- assert.match(await page.locator('#receiptMiniCalGrid').innerText(),/20:30/);
+ // Parent notices show per-session duration, including the scheduled duration
+ // of an absence; clock ranges remain an editing-screen concern.
+ assert.deepEqual(await page.locator('#receiptMiniCalGrid .notice-time').allTextContents(),['2시간','2.5시간','2시간','1시간']);
+ assert.doesNotMatch(await page.locator('#receiptMiniCalGrid').innerText(),/\d{1,2}:\d{2}/);
  assert.equal(await page.locator('#dispSubtotal').innerText(),'+357,292원');
  assert.equal(await page.locator('#dispSubtotal').evaluate(e=>getComputedStyle(e).fontWeight),'700');
  await page.waitForFunction(()=>Array.from(document.querySelectorAll('img[src*="sedu-warm"]')).every(i=>i.naturalWidth>0));
@@ -329,9 +332,10 @@ const root=path.resolve(__dirname,'..'),evidence=process.env.EVIDENCE_ROOT;
  const before=await page.evaluate(()=>({source:JSON.stringify(historyData),total:document.getElementById('dispTotal').textContent}));
  assert.match(await page.locator('#receiptBody').innerText(),/당일취소/);
  assert.equal(await page.locator('#captureArea .notice-private').count(),1);
- assert.equal(await page.locator('#captureArea .notice-teacher-badge').count(),2);
+ assert.equal(await page.locator('#receiptMiniCalGrid .notice-teacher-badge').count(),1);
+ assert.equal(await page.locator('#receiptBody [data-teacher-profile="검증강사"]').count(),1);
  await page.locator('#noticeCancelAsAttendance').check();
- assert.doesNotMatch(await page.locator('#receiptBody').innerText(),/당일취소/);assert.match(await page.locator('#receiptBody').innerText(),/출석/);
+ assert.doesNotMatch(await page.locator('#receiptBody').innerText(),/당일취소/);assert.equal(await page.locator('#receiptMiniCalGrid .notice-status').innerText(),'정규');
  assert.doesNotMatch(await page.locator('#receiptMiniCalGrid').innerText(),/당일취소/);
  assert.deepEqual(await page.evaluate(()=>({source:JSON.stringify(historyData),total:document.getElementById('dispTotal').textContent})),before);
  const state=await page.evaluate(()=>collectCalculatorState());assert.equal(state.calendarWorkspace.cancelAsAttendance,true);
@@ -436,7 +440,12 @@ const root=path.resolve(__dirname,'..'),evidence=process.env.EVIDENCE_ROOT;
  });
  await page.waitForFunction(()=>progressVerified&&!progressLoading);
  assert.equal(await page.locator('#workCalendar .calendar-event').count(),5);assert.equal(await page.locator('#dispTotal').innerText(),'300,000원');
- await page.getByRole('button',{name:'안내서',exact:true}).click();assert.match(await page.locator('#receiptBody').innerText(),/2h × 1회/);assert.match(await page.locator('#receiptBody').innerText(),/2h × 4회/);
+ await page.getByRole('button',{name:'안내서',exact:true}).click();assert.match(await page.locator('#receiptBody').innerText(),/개별 2시간 5회/);
+ assert.doesNotMatch(await page.locator('#receiptBody').innerText(),/2h|예상/);
+ assert.deepEqual(await page.locator('#receiptMiniCalGrid .notice-time').allTextContents(),Array(5).fill('2시간'));
+ assert.doesNotMatch(await page.locator('#receiptMiniCalGrid').innerText(),/\d{1,2}:\d{2}/);
+ // One actual merged session and four forecasts still remain distinct internally.
+ assert.deepEqual(await page.evaluate(()=>({actual:progressResult().actual.length,forecast:progressResult().predicted.length})),{actual:1,forecast:4});
  await page.getByRole('button',{name:'계산 작업',exact:true}).click();await page.locator('#workCalendar [data-day="2"] .calendar-event').click();await page.locator('#lessonEditRate').fill('50000');await page.locator('#lessonEditSave').click();assert.equal(await page.locator('#dispTotal').innerText(),'290,000원');
  const saved=await page.evaluate(()=>collectCalculatorState());await page.evaluate(s=>applyCalculatorState(s),saved);await page.waitForFunction(()=>progressVerified&&!progressLoading);assert.equal(await page.locator('#dispTotal').innerText(),'290,000원');
  const perf=await page.evaluate(()=>{const original=ProgressCore.calculate;let calls=0;ProgressCore.calculate=(...args)=>{calls++;return original(...args)};progressResultCache=null;const start=performance.now();for(let i=0;i<50;i++)progressResult();const ms=performance.now()-start;progressState.endDate='2026-10-23';progressResult();ProgressCore.calculate=original;return {calls,ms};});assert.equal(perf.calls,2);console.log('CACHE',JSON.stringify(perf));

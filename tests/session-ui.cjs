@@ -38,7 +38,12 @@ const root=path.resolve(__dirname,'..'),evidence=process.env.EVIDENCE_ROOT;
  });
  await page.waitForFunction(()=>progressVerified&&!progressLoading);
  assert.equal(await page.locator('#workCalendar .calendar-event').count(),5);assert.equal(await page.locator('#dispTotal').innerText(),'300,000원');
- await page.getByRole('button',{name:'안내서',exact:true}).click();assert.match(await page.locator('#receiptBody').innerText(),/2h × 1회/);assert.match(await page.locator('#receiptBody').innerText(),/2h × 4회/);
+ await page.getByRole('button',{name:'안내서',exact:true}).click();assert.match(await page.locator('#receiptBody').innerText(),/개별 2시간 5회/);
+ assert.doesNotMatch(await page.locator('#receiptBody').innerText(),/2h|예상/);
+ assert.deepEqual(await page.locator('#receiptMiniCalGrid .notice-time').allTextContents(),Array(5).fill('2시간'));
+ assert.doesNotMatch(await page.locator('#receiptMiniCalGrid').innerText(),/\d{1,2}:\d{2}/);
+ // One actual merged session and four forecasts still remain distinct internally.
+ assert.deepEqual(await page.evaluate(()=>({actual:progressResult().actual.length,forecast:progressResult().predicted.length})),{actual:1,forecast:4});
  if(evidence){fs.mkdirSync(evidence,{recursive:true});await page.locator('#captureArea').screenshot({path:path.join(evidence,'merged-notice.png')});}
  await page.evaluate(()=>{window.copiedNotice=null;Object.defineProperty(navigator.clipboard,'write',{configurable:true,value:async items=>{window.copiedNotice=await items[0].getType('image/png');}});});
  await page.locator('#copyNoticeImage').click();await page.waitForFunction(()=>!!window.copiedNotice);

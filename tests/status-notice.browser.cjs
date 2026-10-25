@@ -127,6 +127,12 @@ const root=path.resolve(__dirname,'..');
  assert.match(await page.locator('#workCalendar').innerText(),/당취보충/);
  });
  await check('forecast and temporary absence keep zero amount after restore',async()=>{
+ // Makeup no longer seeds recurring forecasts. Restore a regular basis for this independent case.
+ assert.equal(await page.evaluate(()=>progressResult().predicted.filter(r=>!r.temporary).length),0);
+ await page.evaluate(()=>CalendarLessonEditor.open('source'));
+ await page.locator('#lessonEditKind').selectOption('regular');
+ await page.locator('#lessonEditSave').click();
+ assert.ok(await page.evaluate(()=>progressResult().predicted.some(r=>!r.temporary)));
  for(const id of [await page.evaluate(()=>progressResult().predicted.find(r=>!r.temporary).id),'local:math']){
  await page.evaluate(id=>CalendarLessonEditor.open(id),id);await page.locator('#lessonEditKind').selectOption('absence');await page.locator('#lessonEditSave').click();
  }

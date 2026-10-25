@@ -87,6 +87,14 @@ const root=path.resolve(__dirname,'..'),evidence=process.env.EVIDENCE_ROOT;
  if(evidence){fs.mkdirSync(evidence,{recursive:true});await page.locator('#priorNoticeSection').screenshot({path:path.join(evidence,'audit-prior-mobile.png')});}
  const scroll=page.locator('#priorNoticePaper .notice-calendar-scroll');await scroll.focus();await page.keyboard.press('ArrowRight');await page.waitForTimeout(150);assert.ok(await scroll.evaluate(e=>e.scrollLeft>0));
  await page.setViewportSize({width:1920,height:1100});
+ // Long names may wrap, but names must not be clipped and the 1:1 label stays intact.
+ for(const capture of [false,true]){
+ await page.evaluate(value=>document.body.classList.toggle('capture-mode',value),capture);
+ assert.ok(await page.locator('#priorNoticePaper').evaluate(host=>[...host.querySelectorAll('.notice-event,.notice-teacher-badge')].every(e=>e.scrollWidth<=e.clientWidth+1)));
+ assert.ok(await page.locator('#priorNoticePaper .notice-teacher-badge.long-teacher').count()>0);
+ assert.ok(await page.locator('#priorNoticePaper .notice-private-label').evaluateAll(nodes=>nodes.every(e=>e.textContent==='1:1'&&getComputedStyle(e).whiteSpace==='nowrap')));
+ }
+ await page.evaluate(()=>document.body.classList.remove('capture-mode'));
  if(evidence)await page.locator('#priorNoticeSection').screenshot({path:path.join(evidence,'audit-prior-desktop.png')});
  });
  await check('previous-month source records remain unchanged through editing',async()=>{

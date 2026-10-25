@@ -604,3 +604,6 @@ body.calendar-app{padding:0!important;background:#f2f3f1!important;color:var(--w
 .first-weekday-options{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:3px;min-width:0}
 .first-weekday-options>div{min-width:0;display:flex;justify-content:center}
 .first-weekday-options label{width:100%;max-width:32px;flex-shrink:1}
+
+/* Keep format/status intact while unusually long teacher names fit the calendar cell. */
+:is(#captureArea,#priorNoticePaper) .notice-event .notice-meta>.notice-teacher-badge.long-teacher{flex-shrink:1;min-width:0;white-space:normal;overflow-wrap:anywhere}

@@ -42,7 +42,8 @@ const root=path.resolve(__dirname,'..'),evidence=process.env.EVIDENCE_ROOT;
  assert.match(await page.locator('#receiptBody').innerText(),/30% 할인 적용/);
  assert.match(await page.locator('#sourceDiscountSummary').innerText(),/1,518,750원 → 1,063,134원/);
  assert.match(await page.locator('#generatedTextArea').inputValue(),/인트라넷 30% 할인 반영/);
- assert.match(await page.locator('#generatedTextArea').inputValue(),/추가 할인 \(계산기\): 0원/);
+ assert.doesNotMatch(await page.locator('#generatedTextArea').inputValue(),/추가 할인 \(계산기\)/);
+ assert.match(await page.locator('#generatedTextArea').inputValue(),/월 예상 납부액: 1,063,134원/);
  await page.evaluate(()=>{window.copiedNotice=null;Object.defineProperty(navigator.clipboard,'write',{configurable:true,value:async items=>{window.copiedNotice=await items[0].getType('image/png');}});});
  await page.locator('#copyNoticeImage').click();await page.waitForFunction(()=>!!window.copiedNotice);
  if(evidence){fs.mkdirSync(evidence,{recursive:true});const png=await page.evaluate(async()=>Array.from(new Uint8Array(await copiedNotice.arrayBuffer())));fs.writeFileSync(path.join(evidence,'discount-export.png'),Buffer.from(png));}
