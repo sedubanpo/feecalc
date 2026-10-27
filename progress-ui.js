@@ -14,6 +14,7 @@ function progressResult() {
     if(progressResultCache?.key!==key)progressResultCache={key,result:ProgressCore.calculate(state,today)};
     return progressResultCache.result;
 }
+function progressDraftReady() { if(!progressBound()||!progressVerified||progressLoading)return false;const r=progressResult();return r.actual.length+r.predicted.length>0; }
 function progressReady() { if(!progressBound()||!progressVerified||progressLoading)return false;const r=progressResult();return r.actual.length+r.predicted.length>0&&r.pending===0; }
 
 const progressButton = document.createElement('button');
@@ -40,7 +41,7 @@ progressPanel.innerHTML = `
    <label class="progress-field">예상 종료일<input id="progressEnd" type="date" onchange="setProgressEnd(this.value)"></label>
   </div>
   <p id="progressCoverage" class="ui-help"></p>
-  <p class="ui-help">기준일 다음 날부터 종료일까지 정규 요일을 예상합니다. 보강·보충은 실제 수업료에만 포함하고 자동 반복하지 않습니다. 실제 수업과 중복되는 예상 수업은 제외합니다.</p>
+  <p class="ui-help">기준일 다음 날부터 종료일까지 정규 요일을 예상합니다. 보강·보충은 실제 수업료에만 포함하고 자동 반복하지 않습니다. 실제 수업과 중복되는 예상 수업은 제외합니다. 기간을 직접 변경하면 임시·이어받은 수업에도 적용됩니다. 실제 입력 수업은 모두 유지됩니다.</p>
   <p id="progressMakeupNotice" class="ui-help" hidden></p>
   <div id="progressManual" hidden>
    <label class="progress-field">추가할 기준 수업<select id="progressTemplate"></select></label>
@@ -79,10 +80,11 @@ async function loadProgressLessons(options={}) {
         if(withBasis && responses[1].error)throw Error(responses[1].error.message || '지난달 기준 수업 조회에 실패했습니다.');
         const basis=withBasis?ProgressCore.validateBasis([responses[1].data],snapshot).map(s=>ProgressCore.preserveSessionDraft(s,options.preserveForecast?previous:null)):[];
         const latest=ProgressCore.defaultCutoff(snapshot,progressToday());
-        const cutoff=options.preserveForecast && previous?.cutoff>latest ? previous.cutoff : latest;
+        const cutoff=options.preserveForecast && (previous?.rangeExplicit===true || previous?.cutoff>latest) ? previous.cutoff : latest;
         const savedEnd=previous?.endDate || ProgressCore.monthEnd(snapshot.month);
-        progressState={snapshot,basis,planned:options.preserveForecast?(previous?.planned||[]):[],mode:progressState.mode,cutoff,endDate:savedEnd<cutoff?cutoff:savedEnd,excluded:options.preserveForecast?(previous?.excluded || []):[],manual:options.preserveForecast?(previous?.manual || []):[],temporary:options.preserveForecast?(previous?.temporary || []):[],edits:options.preserveForecast?(previous?.edits || []):[],removedActual:options.preserveForecast?(previous?.removedActual || []):[]};
+        progressState={snapshot,basis,rangeExplicit:options.preserveForecast&&previous?.rangeExplicit===true,planned:options.preserveForecast?(previous?.planned||[]):[],mode:progressState.mode,cutoff,endDate:savedEnd<cutoff?cutoff:savedEnd,excluded:options.preserveForecast?(previous?.excluded || []):[],manual:options.preserveForecast?(previous?.manual || []):[],temporary:options.preserveForecast?(previous?.temporary || []):[],edits:options.preserveForecast?(previous?.edits || []):[],removedActual:options.preserveForecast?(previous?.removedActual || []):[]};
         progressVerified=true;
+        document.dispatchEvent(new CustomEvent('feecalc-progress-loaded',{detail:{studentId:student.id,month}}));
         progressStatus=snapshot.lessons.length ? `최신 수업 ${snapshot.lessons.length}건을 확인했습니다. 마지막 수업일 ${snapshot.lessons.map(r=>r.date).sort().at(-1)}.` : progressState.planned?.length?'선택한 월에 입력 수업이 없습니다. 이어받은 예정 수업은 달력에서 이동·수정할 수 있습니다.':'선택한 월에 입력 수업이 없습니다. 이번 달·지난달 기준 수업을 불러오거나 임시 수업을 추가하세요.';
     } catch(error) {
         if (request===progressRequest && epoch===staffAuthEpoch) progressStatus=`${error.message} 다시 불러오기로 재시도하세요.${progressBound()?' 기존에 불러온 데이터는 유지됩니다.':''}`;
@@ -91,11 +93,11 @@ async function loadProgressLessons(options={}) {
 function setProgressMode(mode) { progressState.mode=mode==='manual'?'manual':'auto'; renderProgress(); }
 function setProgressCutoff(value) {
     if (!ProgressCore.validDate(value) || value.slice(0,7)!==progressMonth()) { progressStatus='기준일은 선택한 월 안에서 지정해 주세요.'; renderProgress(); return; }
-    progressState.cutoff=value;if(progressState.endDate<value)progressState.endDate=value;renderProgress();
+    progressState.rangeExplicit=true;progressState.cutoff=value;if(progressState.endDate<value)progressState.endDate=value;renderProgress();
 }
 function setProgressEnd(value) {
     if(!ProgressCore.validDate(value) || value.slice(0,7)!==progressMonth() || value<progressState.cutoff){progressStatus='종료일은 같은 달의 기준일 이후로 선택해 주세요.';renderProgress();return;}
-    progressState.endDate=value;renderProgress();
+    progressState.rangeExplicit=true;progressState.endDate=value;renderProgress();
 }
 function toggleProgressDate(date) {
     const templateId=progressEl('progressTemplate').value;
@@ -289,7 +291,7 @@ applyCalculatorState=function(data,...args){
         if(!ProgressCore.validDate(data.progress.cutoff)||data.progress.cutoff.slice(0,7)!==snapshot.month)throw Error('진행형 기준일을 확인해 주세요.');
         const endDate=data.progress.endDate || ProgressCore.monthEnd(snapshot.month);
         if(!ProgressCore.validDate(endDate)||endDate.slice(0,7)!==snapshot.month||endDate<data.progress.cutoff)throw Error('진행형 예상 종료일을 확인해 주세요.');
-        restored={snapshot,planned:ProgressCore.validatePlanned(data.progress.planned,snapshot.month),basis:ProgressCore.validateBasis(data.progress.basis,snapshot),mode:data.progress.mode==='manual'?'manual':'auto',cutoff:data.progress.cutoff,endDate,excluded:Array.isArray(data.progress.excluded)?data.progress.excluded.filter(v=>typeof v==='string').slice(0,5000):[],manual:Array.isArray(data.progress.manual)?data.progress.manual.filter(v=>v&&typeof v.templateId==='string'&&ProgressCore.validDate(v.date)).slice(0,5000):[],temporary:ProgressCore.validateTemporary(data.progress.temporary,snapshot.month),edits:ProgressCore.validateEdits(data.progress.edits),removedActual:Array.isArray(data.progress.removedActual)?data.progress.removedActual.filter(id=>snapshot.lessons.some(r=>r.id===id)):[]};
+        restored={snapshot,rangeExplicit:data.progress.rangeExplicit===true,planned:ProgressCore.validatePlanned(data.progress.planned,snapshot.month),basis:ProgressCore.validateBasis(data.progress.basis,snapshot),mode:data.progress.mode==='manual'?'manual':'auto',cutoff:data.progress.cutoff,endDate,excluded:Array.isArray(data.progress.excluded)?data.progress.excluded.filter(v=>typeof v==='string').slice(0,5000):[],manual:Array.isArray(data.progress.manual)?data.progress.manual.filter(v=>v&&typeof v.templateId==='string'&&ProgressCore.validDate(v.date)).slice(0,5000):[],temporary:ProgressCore.validateTemporary(data.progress.temporary,snapshot.month),edits:ProgressCore.validateEdits(data.progress.edits),removedActual:Array.isArray(data.progress.removedActual)?data.progress.removedActual.filter(id=>snapshot.lessons.some(r=>r.id===id)):[]};
     }
     progressRequest++;progressLoading=false;progressState=restored;progressVerified=false;progressRefreshPending=!!restored.snapshot;progressStatus='저장본의 최신 인트라넷 수업을 확인합니다.';
     const result=progressOriginalApply(data,...args);renderProgress();return result;
@@ -301,7 +303,7 @@ syncStudentMatch=function(...args){const result=progressOriginalMatch(...args);r
 const progressOriginalAuth=handleStaffAuthState;
 handleStaffAuthState=async function(event){progressRequest++;progressLoading=false;if(!event.user || (previousStaffUid && event.user.uid!==previousStaffUid)){progressState={snapshot:null,mode:'auto',cutoff:'',endDate:'',excluded:[],manual:[],temporary:[],edits:[],removedActual:[]};progressVerified=false;progressRefreshPending=false;}return progressOriginalAuth(event);};
 const progressOriginalSaveUi=updateServerSaveModeUi;
-updateServerSaveModeUi=function(){progressOriginalSaveUi();if(currentTab==='progress'&&!progressReady())document.querySelectorAll('[onclick^="saveServerRecord("]').forEach(b=>{b.disabled=true;b.title='수업을 조회하고 미확인 금액·시간을 해결한 뒤 저장하세요.';});};
+updateServerSaveModeUi=function(){progressOriginalSaveUi();if(currentTab==='progress'&&!progressDraftReady())document.querySelectorAll('[onclick^="saveServerRecord("]').forEach(b=>{b.disabled=true;b.title='최신 수업을 조회한 뒤 초안을 저장하세요.';});};
 for(const name of ['saveServerRecord','downloadImage','copyGeneratedText']){
-    const original=window[name];window[name]=function(...args){if(currentTab==='progress'&&!progressReady()){progressStatus='수업을 조회하고 미확인 금액·시간을 해결한 뒤 저장하거나 복사해 주세요.';renderProgress();return;}return original(...args);};
+    const original=window[name];window[name]=function(...args){if(currentTab==='progress'&&!(name==='saveServerRecord'?progressDraftReady():progressReady())){progressStatus='수업을 조회하고 미확인 금액·시간을 해결한 뒤 저장하거나 복사해 주세요.';renderProgress();return;}return original(...args);};
 }

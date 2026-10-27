@@ -179,3 +179,12 @@ test('latest actual or absence replaces reviewed plan; another-time makeup does 
  assert.throws(()=>core.validatePlanned([row('planned:bad','2026-10-01')],'2026-09'));
  assert.throws(()=>core.validatePlanned([row('source','2026-09-01')],'2026-09'));
 });
+test('explicit range filters planned, moved and temporary rows without deleting drafts or actuals',()=>{
+ const s=state([row('actual','2026-09-02')]);s.mode='manual';s.rangeExplicit=true;s.cutoff='2026-09-05';s.endDate='2026-09-15';
+ s.planned=[row('planned:first','2026-09-08'),row('planned:last','2026-09-22')];
+ s.edits=[{id:'planned:first',movedDate:'2026-09-16',minutes:120,amount:60000,start:'16:00',end:'18:00'}];
+ s.temporary=[row('local:before','2026-09-05'),row('local:end','2026-09-15')];
+ const before=JSON.stringify(s),r=core.calculate(s);assert.equal(r.actual.length,1);assert.deepEqual(r.predicted.map(r=>r.id),['local:end']);assert.equal(r.predictedAmount,60000);assert.equal(JSON.stringify(s),before);
+ s.endDate='2026-09-30';assert.equal(core.calculate(s).predicted.length,3);
+ assert.deepEqual(core.calculate(JSON.parse(JSON.stringify(s))),core.calculate(s));
+});

@@ -6,7 +6,31 @@
  const buttons=document.createElement('div');buttons.className='financial-import-actions';
  const heading=el('adjustmentArea').firstElementChild,add=heading.querySelector('button');heading.classList.add('financial-area-heading');buttons.append(add);
  for(const [provider,label] of [['desk','데스크 수납 가져오기'],['intranet','인트라넷 잔액 가져오기']]){const b=document.createElement('button');b.type='button';b.className='ui-button';b.textContent=label;b.onclick=()=>open(provider,b);buttons.append(b);}heading.append(buttons);
- let active=null;
+ let active=null,autoGeneration=0;
+ const automatic=new Map(),summary=document.createElement('div');summary.id='financialAutoSummary';summary.setAttribute('role','status');el('adjustmentArea').append(summary);
+ const autoKey=()=>`${staffAuthEpoch}|${matchedStudent()?.id}|${month()}`;
+ function clearAutomatic(){autoGeneration++;automatic.clear();summary.replaceChildren();}
+ document.addEventListener('feecalc-auth-change',clearAutomatic);
+ document.addEventListener('feecalc-adjustments-reset',clearAutomatic);
+ for(const type of ['input','change'])document.addEventListener(type,e=>{if(['studentName','targetYear','targetMonth'].includes(e.target.id))clearAutomatic();});
+ document.addEventListener('feecalc-progress-loaded',async e=>{
+  const student=matchedStudent(),target=month(),key=autoKey();
+  if(!student||!isServerConfigured()||e.detail.studentId!==student.id||e.detail.month!==target)return;
+  const generation=++autoGeneration;automatic.clear();summary.replaceChildren();
+  await Promise.all(['desk','intranet'].map(async provider=>{
+   const line=document.createElement('div'),label=provider==='desk'?'데스크 수납':'인트라넷 잔액';line.textContent=`${label} 조회 중…`;summary.append(line);
+   try{
+    const {data,error}=await getSupabaseClient().rpc(provider==='desk'?'feecalc_desk_payments':'feecalc_intranet_opening',{p_student_id:student.id,p_month:target});
+    if(generation!==autoGeneration||key!==autoKey())return;
+    if(error)throw Error(error.message);
+    const rows=C.review(data,{provider,studentId:student.id,month:target,targetMonth:target},collectAdjustmentItems(true));
+    automatic.set(provider,{key,data});
+    line.textContent=`${label} ${rows.length}건 · 반영 가능 ${rows.filter(r=>!r.reason).length}건`;
+    if(data.unresolved||rows.some(r=>r.reason&&!r.reason.startsWith('이미 반영')))line.append(' · 확인 필요');
+    if(rows.length){const button=document.createElement('button');button.type='button';button.className='ui-button';button.textContent='내역 확인';button.onclick=()=>open(provider,button);line.append(button);}
+   }catch(error){if(generation===autoGeneration&&key===autoKey())line.textContent=`${label} 조회 실패 · 가져오기 버튼으로 다시 조회하세요.`;}
+  }));
+ });
  document.addEventListener('feecalc-auth-change',()=>active?.close());
  document.addEventListener('feecalc-adjustments-reset',()=>active?.close());
  for(const type of ['input','change'])document.addEventListener(type,e=>{if(['studentName','targetYear','targetMonth'].includes(e.target.id))active?.close();});
@@ -40,7 +64,7 @@
    if(!valid()){error('직원 로그인 후 등록 학생을 선택해 주세요.');return;}
    const m=el('financialSourceMonth').value;if(!/^20\d{2}-(0[1-9]|1[0-2])$/.test(m)){error('조회할 월을 선택해 주세요.');return;}
    const token=++generation;pending=true;rows=[];ids.clear();queryMonth='';error('');render();el('financialSourceStatus').textContent='원본 기록을 조회하고 있습니다.';
-   try{const {data,error:e}=await request(m);if(token!==generation||!valid())return;if(e)throw Error(e.message);rows=C.review(data,options(m),collectAdjustmentItems(true));queryMonth=m;el('financialSourceStatus').textContent=rows.length?`${rows.length}건 조회 · 가져올 항목을 선택하세요.${data.unresolved?provider==='desk'?' 학생 연결을 확인해야 하는 기록 '+data.unresolved+'건은 제외했습니다.':' 이전 달 수업 '+data.unresolved+'건의 청구 기준을 확인해야 합니다.':''}`:`${m}에 ${provider==='desk'?'조회 가능한 수납 기록':'가져올 전월 잔액'}이 없습니다.${data.unresolved?' 학생 연결 확인이 필요한 기록이 있습니다.':''}`;
+   try{const cached=automatic.get(provider);automatic.delete(provider);const {data,error:e}=cached?.key===autoKey()&&m===targetMonth?{data:cached.data}:await request(m);if(token!==generation||!valid())return;if(e)throw Error(e.message);rows=C.review(data,options(m),collectAdjustmentItems(true));queryMonth=m;el('financialSourceStatus').textContent=rows.length?`${rows.length}건 조회 · 가져올 항목을 선택하세요.${data.unresolved?provider==='desk'?' 학생 연결을 확인해야 하는 기록 '+data.unresolved+'건은 제외했습니다.':' 이전 달 수업 '+data.unresolved+'건의 청구 기준을 확인해야 합니다.':''}`:`${m}에 ${provider==='desk'?'조회 가능한 수납 기록':'가져올 전월 잔액'}이 없습니다.${data.unresolved?' 학생 연결 확인이 필요한 기록이 있습니다.':''}`;
    }catch(e){if(token===generation&&dialog.open){el('financialSourceStatus').textContent='조회하지 못했습니다. 현재 계산은 유지됩니다.';error(e.message);}}
    finally{if(token===generation&&dialog.open){pending=false;render();}}
   }

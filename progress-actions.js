@@ -59,8 +59,9 @@
   const all=rows(),list=all.filter(r=>r.amount===null||r.minutes===null);if(!list.length)return;
   const panel=document.createElement('section');panel.id='pendingLessons';const h=document.createElement('h3');h.textContent=`확인 필요 ${list.length}건`;panel.append(h);
   for(const r of list){const box=document.createElement('div');box.className='day-lesson';const title=document.createElement('strong');title.textContent=`${r.date.slice(5)} · ${r.className}`;box.append(title);
+   const reason=document.createElement('p');reason.textContent=[r.minutes===null?'회당 수업 시간 미확인':`회당 ${r.minutes/60}시간`,r.amount===null?'회당 수강료 미확인':`회당 ${money(r.amount)}`,r.start&&r.end?`시간대 ${r.start}–${r.end}`:'시작·종료 시간 미입력'].join(' · ');box.append(reason);
    const history=[...(progressState.basis||[]).flatMap(s=>s.lessons||[]),...(progressState.snapshot?.lessons||[])].filter(x=>x.id!==r.id&&x.date<r.date&&ProgressCore.courseKey(x)===ProgressCore.courseKey(r)&&x.minutes===r.minutes&&x.amount>0&&['regular','late'].includes(x.kind)).sort((a,b)=>b.date.localeCompare(a.date));
-   const hint=document.createElement('p');hint.textContent=history.length?`추천 ${money(history[0].amount)}/회 · ${history[0].date} 동일 수업·시수 기준 (확인 후 입력)`:'동일 수업·시수의 과거 금액이 없어 직접 확인이 필요합니다.';box.append(hint);
+   const hint=document.createElement('p');hint.textContent=history.length?`추천 ${money(history[0].amount)}/회 · ${history[0].date} 동일 수업·시수 기준 (확인 후 입력)`:'조회한 기록에 같은 수업·시수의 단가가 없습니다. 회당 시간과 수강료를 직접 확인해 주세요.';box.append(hint);
    const edit=document.createElement('button');edit.type='button';edit.textContent='금액·시간 확인';edit.onclick=()=>CalendarLessonEditor.open(r.id);box.append(edit);panel.append(box);
   }el('dayDetail').append(panel);
  }

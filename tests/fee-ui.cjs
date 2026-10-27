@@ -19,6 +19,7 @@ const root=path.resolve(__dirname,'..'),evidence=process.env.EVIDENCE_ROOT;
  if(rpc==='feecalc_student_memos')return{data:[{memo:'가상 안내 주의 메모 <script>안전한 텍스트</script>',createdAt:'2026-09-07',author:'검증 직원'}]};
  if(rpc==='feecalc_progress'&&window.testProgressSnapshot)return{data:params.p_month===window.testProgressSnapshot.month?window.testProgressSnapshot:{studentId:params.p_student_id,month:params.p_month,lessons:[]}};
  if(['feecalc_desk_payments','feecalc_intranet_opening'].includes(rpc)){window.testFinancialCalls=(window.testFinancialCalls||0)+1;if(window.testFinancialDelay)await new Promise(r=>window.testFinancialResolve=r);return{data:structuredClone(window.testFinancialData[rpc])};}
+ if(rpc==='feecalc_get_record'&&window.testSavedRecord)return{data:structuredClone(window.testSavedRecord)};
  if(rpc==='feecalc_get_app_settings')return{data:window.testSettings};
  if(rpc==='feecalc_save_app_settings'){window.testSettings=params.p_settings;return{data:{}};}
  if(rpc==='feecalc_save_record'||rpc==='feecalc_update_record'){window.testWrites.push(params);return{data:{record_id:'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',saved_at:new Date().toISOString()}};}
@@ -303,9 +304,45 @@ const root=path.resolve(__dirname,'..'),evidence=process.env.EVIDENCE_ROOT;
  await page.evaluate(async()=>{testFail=true;await loadProgressLessons({preserveForecast:true});testFail=false;});
  assert.equal(await page.evaluate(()=>progressReady()),false);assert.equal(await page.evaluate(()=>progressState.planned.length),9);
  await page.evaluate(()=>loadProgressLessons({preserveForecast:true}));assert.equal(await page.evaluate(()=>progressReady()),true);
+ // Editing the date period also constrains a moved next-month plan, then restores it.
+ await page.locator('#progressEnd').fill('2026-10-06');await page.locator('#progressEnd').dispatchEvent('change');
+ assert.equal(await page.locator('#workCalendar [data-day="7"] .calendar-event').count(),0);
+ await page.locator('#progressEnd').fill('2026-10-31');await page.locator('#progressEnd').dispatchEvent('change');
+ assert.equal(await page.locator('#workCalendar [data-day="7"] .calendar-event').count(),1);
+ // Save through the actual frontend RPC path, serialize, clear, and reopen.
+ await page.locator('#workCalendar [data-day="13"] .calendar-event').click();await page.locator('#lessonEditDelete').click();
+ const persisted=await page.evaluate(()=>({state:JSON.parse(JSON.stringify(collectCalculatorState())),total:document.getElementById('dispTotal').textContent}));
+ await page.evaluate(()=>saveServerRecord('insert'));
+ assert.equal(await page.evaluate(()=>testWrites.length),writes+1);
+ const payload=await page.evaluate(()=>testWrites.at(-1).p_payload);
+ assert.deepEqual(payload.progress,persisted.state.progress);
+ await page.evaluate(()=>{testSavedRecord=JSON.parse(JSON.stringify({record_id:'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',payload:testWrites.at(-1).p_payload,saved_at:'2026-09-29'}));clearMonthlyState();});
+ await page.evaluate(()=>loadServerRecord('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',{silent:true}));await page.waitForFunction(()=>progressVerified&&!progressLoading);
+ assert.equal(await page.evaluate(()=>currentTab),'progress');assert.equal(await page.locator('#dispTotal').innerText(),persisted.total);
+ assert.equal(await page.locator('#workCalendar [data-day="6"] .calendar-event').count(),0);
+ assert.equal(await page.locator('#workCalendar [data-day="7"] .calendar-event').count(),1);
+ assert.equal(await page.locator('#workCalendar [data-day="13"] .calendar-event').count(),0);
+ assert.deepEqual(await page.evaluate(()=>progressState.edits),persisted.state.progress.edits);
+ assert.deepEqual(await page.evaluate(()=>progressState.excluded),persisted.state.progress.excluded);
+ // New actuals at the moved date replace its forecast, while another-time makeup
+ // stays separately billable and does not suppress the regular plan.
+ await page.evaluate(()=>{
+ const moved=progressResult().predicted.find(r=>r.date==='2026-10-07');
+ const regular=progressResult().predicted.find(r=>r.date==='2026-10-20');
+ testProgressSnapshot={studentId:'one',month:'2026-10',lessons:[{...moved,id:'actual-moved',amount:45000,kind:'regular',predicted:false},{...regular,id:'actual-makeup',start:'18:00',end:'19:00',minutes:60,amount:20000,kind:'absenceMakeup',predicted:false}]};
+ });
+ await page.evaluate(()=>loadProgressLessons({preserveForecast:true}));
+ assert.equal(await page.evaluate(()=>progressResult().predicted.filter(r=>r.date==='2026-10-07').length),0);
+ assert.equal(await page.evaluate(()=>progressResult().actual.filter(r=>r.id==='actual-moved').length),1);
+ assert.equal(await page.locator('#dispTotal').innerText(),'540,000원');
+ await page.evaluate(()=>loadProgressLessons({preserveForecast:true}));assert.equal(await page.locator('#dispTotal').innerText(),'540,000원');
+ // Reopening the earlier saved draft must also reconcile with the new actuals.
+ await page.evaluate(()=>loadServerRecord('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',{silent:true}));await page.waitForFunction(()=>progressVerified&&!progressLoading);
+ assert.equal(await page.locator('#dispTotal').innerText(),'540,000원');assert.equal(await page.locator('#workCalendar [data-day="13"] .calendar-event').count(),0);
+ console.log('PASS next-month persisted move/edit/delete and repeated actual reconciliation');
  // An unverified or insufficient month must leave the current draft intact.
  await page.evaluate(()=>{switchTab('progress');progressVerified=false;window.nextInsufficient=collectCalculatorState();prepareNextMonthCalculation();});
- assert.equal(await page.locator('#targetMonth').inputValue(),'10');assert.equal(await page.evaluate(()=>currentTab),'progress');assert.equal(await page.evaluate(()=>testWrites.length),writes);
+ assert.equal(await page.locator('#targetMonth').inputValue(),'10');assert.equal(await page.evaluate(()=>currentTab),'progress');assert.equal(await page.evaluate(()=>testWrites.length),writes+1);
  await page.evaluate(()=>{switchTab('auto');openNextMonthWizard();});await page.keyboard.press('Escape');
  });
 
@@ -436,7 +473,7 @@ const root=path.resolve(__dirname,'..'),evidence=process.env.EVIDENCE_ROOT;
  assert.equal(await page.evaluate(()=>JSON.stringify(testProgressSnapshot)),await page.evaluate(()=>JSON.stringify(settlementSource)));assert.equal(await page.evaluate(()=>testWrites.length),await page.evaluate(()=>settlementWrites));
  });
  await check('past-month explicit manual dates and temporary drafts remain separately marked',async()=>{
- await page.evaluate(()=>{const saved=collectCalculatorState();saved.progress.mode='manual';saved.progress.cutoff='2026-09-29';saved.progress.manual=[{templateId:'settlement-math-23',date:'2026-09-30'}];saved.progress.temporary=[{id:'local:settlement',date:'2026-09-25',className:'영어-개별-임시강사',teacher:'임시강사',minutes:60,amount:0,start:'15:00',end:'16:00',kind:'regular'}];applyCalculatorState(saved);FeeCalendar.navigate('notice');});await page.waitForFunction(()=>progressVerified&&!progressLoading);
+ await page.evaluate(()=>{const saved=collectCalculatorState();saved.progress.mode='manual';saved.progress.rangeExplicit=false;saved.progress.cutoff='2026-09-29';saved.progress.manual=[{templateId:'settlement-math-23',date:'2026-09-30'}];saved.progress.temporary=[{id:'local:settlement',date:'2026-09-25',className:'영어-개별-임시강사',teacher:'임시강사',minutes:60,amount:0,start:'15:00',end:'16:00',kind:'regular'}];applyCalculatorState(saved);FeeCalendar.navigate('notice');});await page.waitForFunction(()=>progressVerified&&!progressLoading);
  assert.equal(await page.evaluate(()=>progressResult().predicted.length),2);assert.equal(await page.evaluate(()=>progressResult().predictedAmount),87500);assert.equal(await page.locator('#dispTotal').innerText(),'906,250원');assert.match(await page.locator('#receiptContext').innerText(),/직접 추가·임시/);assert.match(await page.locator('#generatedTextArea').inputValue(),/별도 예상분/);
  await page.evaluate(()=>{window.testNow='2026-09-29T03:00:00Z';});
  });
@@ -476,6 +513,28 @@ const root=path.resolve(__dirname,'..'),evidence=process.env.EVIDENCE_ROOT;
  if(evidence){fs.mkdirSync(evidence,{recursive:true});await page.screenshot({path:path.join(evidence,'forecast-next-desktop.png')});await page.setViewportSize({width:390,height:844});await page.screenshot({path:path.join(evidence,'forecast-next-mobile.png')});await page.setViewportSize({width:1440,height:1000});}
  await page.keyboard.press('Escape');assert.equal(await page.evaluate(()=>JSON.stringify(progressState.snapshot)),before);
  await page.locator('[onclick="openNextMonthWizard()"]').click();await page.locator('#nextMonthConfirm').click();assert.equal(await page.locator('#targetMonth').inputValue(),'11');assert.equal(await page.locator('#workCalendar .calendar-event').count(),4);assert.equal(await page.locator('#dispTotal').innerText(),'350,000원');assert.equal(await page.evaluate(()=>testWrites.length),writes);
+ });
+ await check('unresolved tuition saves a draft and auto financial review preserves fresh verification',async()=>{
+ await page.evaluate(()=>{
+ testNow='2026-10-11T03:00:00Z';
+ testProgressSnapshot={studentId:'one',month:'2026-10',lessons:[{id:'unknown',date:'2026-10-02',className:'수학-개별-검증강사-3h',teacher:'검증강사',minutes:180,amount:null,start:'16:00',end:'19:00',kind:'regular'}]};
+ testFinancialData={feecalc_desk_payments:{studentId:'one',month:'2026-10',rows:[{id:'auto-pay',label:'10월 수납',amount:-50000,kind:'other',fingerprint:'a'.repeat(64)}]},feecalc_intranet_opening:{studentId:'one',month:'2026-10',rows:[{id:'auto-opening',label:'9월 초과금',amount:10000,kind:'extra',fingerprint:'b'.repeat(64)}]}};
+ testFinancialCalls=0;
+ applyCalculatorState({currentTab:'progress',studentId:'one',studentName:'검증학생',targetYear:2026,targetMonth:10,progress:{snapshot:testProgressSnapshot,mode:'auto',cutoff:'2026-10-02',endDate:'2026-10-31'}});FeeCalendar.navigate('progress');
+ });
+ await page.waitForFunction(()=>progressVerified&&!progressLoading&&testFinancialCalls===2);
+ assert.match(await page.locator('#pendingLessons').innerText(),/회당 3시간.*회당 수강료 미확인/);
+ assert.match(await page.locator('#pendingLessons').innerText(),/조회한 기록/);
+ assert.equal(await page.locator('[onclick="saveServerRecord(\'insert\')"]').isEnabled(),true);
+ const before=await page.evaluate(()=>testWrites.length);await page.evaluate(()=>saveServerRecord('insert'));
+ assert.equal(await page.evaluate(()=>testWrites.length),before+1);assert.equal(await page.evaluate(()=>testWrites.at(-1).p_payload.progress.snapshot.lessons[0].amount),null);
+ assert.equal(await page.evaluate(()=>progressReady()),false);assert.equal(await page.evaluate(()=>getAdjustmentTotal()),0);
+ await page.locator('#financialAutoSummary button').first().click();await page.waitForFunction(()=>document.querySelectorAll('.financial-source-row').length===1);
+ assert.equal(await page.evaluate(()=>testFinancialCalls),2);
+ await page.locator('.financial-source-row input').check();await page.locator('#financialSourceApply').click();await page.waitForFunction(()=>!document.querySelector('#financialSourceDialog'));
+ assert.equal(await page.evaluate(()=>testFinancialCalls),3);assert.equal(await page.evaluate(()=>getAdjustmentTotal()),-50000);
+ await page.getByRole('button',{name:'데스크 수납 가져오기',exact:true}).click();await page.waitForFunction(()=>document.querySelectorAll('.financial-source-row').length===1);
+ assert.equal(await page.locator('.financial-source-row input').isDisabled(),true);await page.locator('#financialSourceCancel').click();
  });
  await check('signed-out account controls fit narrow and intermediate headers',async()=>{
  await page.evaluate(()=>testAuthState({state:'anonymous',gateway:testGateway}));

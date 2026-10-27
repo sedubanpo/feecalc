@@ -194,6 +194,9 @@
             if ([...actual,...predicted].some(existing=>overlaps(existing,row))) continue;
             predicted.push(applyStatus({...row,kind:row.kind||'regular',predicted:true,temporary:true}));
         }
+        // Explicit date controls constrain every draft occurrence after local moves.
+        // Keep the stored rows so widening the range restores them.
+        if(state.rangeExplicit===true)for(let i=predicted.length-1;i>=0;i--){if(predicted[i].date<=cutoff||predicted[i].date>endDate)predicted.splice(i,1);}
         predicted.sort((a,b)=>a.date.localeCompare(b.date)||a.start.localeCompare(b.start)||a.className.localeCompare(b.className));
         return {actual,predicted,templates:choices,automaticForecastEnded,excludedMakeupCount:basisSnapshot.lessons.filter(r=>r.date<=cutoff&&isMakeupLesson(r)).length,actualAmount:actual.reduce((s,r)=>s+(r.amount || 0),0),predictedAmount:predicted.reduce((s,r)=>s+(r.amount || 0),0),pending:[...actual,...predicted].filter(r=>r.amount===null || r.minutes===null).length};
     }
