@@ -89,6 +89,7 @@
         if(!state?.snapshot)return [];
         const snapshots=[...validateBasis(state.basis,state.snapshot),state.snapshot];
         const rows=snapshots.flatMap(s=>manualTemplates(s,s===state.snapshot?cutoff:monthEnd(s.month)).map(r=>({...r,id:s===state.snapshot?r.id:'basis:'+s.month+':'+r.id,sourceMonth:s.month})));
+        rows.push(...validatePlanned(state.planned,state.snapshot.month));
         const latest=new Map();
         for(const row of rows){const key=JSON.stringify([courseKey(row),row.minutes,row.amount,row.start,row.end]),old=latest.get(key);latest.set(key,{...row,aliases:old?[...(old.aliases||[]),old.id]:[]});}
         return [...latest.values()].sort((a,b)=>a.className.localeCompare(b.className,'ko')||b.date.localeCompare(a.date));
@@ -106,6 +107,12 @@
             if (!row.id.startsWith('local:') || !row.className.trim() || !row.teacher.trim() || row.minutes === null || row.minutes <= 0 || row.amount === null || start === null || end === null || end-start !== row.minutes) throw Error('임시 수업의 과목·강사·시간·금액을 확인해 주세요.');
         }
         return copy;
+    }
+    // Reviewed next-month occurrences are local plans, never source attendance.
+    function validatePlanned(rows,month) {
+        const lessons=validateSnapshot({studentId:'local',month,lessons:rows||[]}).lessons;
+        if(lessons.some(r=>!r.id.startsWith('planned:')||!r.className.trim()||!r.teacher.trim()||!r.minutes||r.amount===null||r.kind!=='regular'||!/^([01]\d|2[0-3]):[0-5]\d$/.test(r.start)||!/^([01]\d|2[0-3]):[0-5]\d$/.test(r.end)||r.end<=r.start))throw Error('다음 달 예정 수업을 확인해 주세요.');
+        return lessons;
     }
     function overlaps(a,b) {
         return a.date === b.date && courseKey(a) === courseKey(b) && (!a.start || !a.end || !b.start || !b.end || (a.start < b.end && b.start < a.end));
@@ -176,6 +183,12 @@
                 for (const row of choices) if (dayOfWeek(date) === dayOfWeek(row.date)) add(row,date);
             }
         }
+        for(const row of validatePlanned(state.planned,snapshot.month)) {
+            const edited=adjusted(row);
+            if(excluded.has(row.id)||(occupied.get(courseKey(row)+'|'+edited.date)||[]).some(r=>blocksForecast(r,edited,edited.date)))continue;
+            if(predicted.some(r=>overlaps(r,edited)))continue;
+            predicted.push({...row,predicted:true});
+        }
         for(let i=0;i<predicted.length;i++)predicted[i]=applyStatus(adjusted(predicted[i]));
         for (const row of validateTemporary(state.temporary,snapshot.month)) {
             if ([...actual,...predicted].some(existing=>overlaps(existing,row))) continue;
@@ -184,7 +197,7 @@
         predicted.sort((a,b)=>a.date.localeCompare(b.date)||a.start.localeCompare(b.start)||a.className.localeCompare(b.className));
         return {actual,predicted,templates:choices,automaticForecastEnded,excludedMakeupCount:basisSnapshot.lessons.filter(r=>r.date<=cutoff&&isMakeupLesson(r)).length,actualAmount:actual.reduce((s,r)=>s+(r.amount || 0),0),predictedAmount:predicted.reduce((s,r)=>s+(r.amount || 0),0),pending:[...actual,...predicted].filter(r=>r.amount===null || r.minutes===null).length};
     }
-    const api = {isMakeupLesson,blocksForecast,preserveSessionDraft,validMonth,validDate,daysInMonth,monthEnd,dayOfWeek,courseKey,validateSnapshot,validateTemporary,validateEdits,overlaps,templates,basisTemplates,validateBasis,previousMonth,defaultCutoff,calculate};
+    const api = {validatePlanned,isMakeupLesson,blocksForecast,preserveSessionDraft,validMonth,validDate,daysInMonth,monthEnd,dayOfWeek,courseKey,validateSnapshot,validateTemporary,validateEdits,overlaps,templates,basisTemplates,validateBasis,previousMonth,defaultCutoff,calculate};
     if (typeof module !== 'undefined' && module.exports) module.exports = api;
     else root.ProgressCore = api;
 })(typeof window === 'undefined' ? {} : window);

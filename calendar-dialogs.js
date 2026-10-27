@@ -46,7 +46,7 @@
     el('nextMonthModal').remove();
     const next=document.createElement('dialog');next.id='nextMonthModal';next.className='draft-dialog';next.setAttribute('aria-labelledby','nextMonthTitle');
     next.innerHTML=`<div class="temporary-heading"><div><h2 id="nextMonthTitle">다음 달 계산</h2><p id="nextMonthContext"></p></div><button type="button" class="temporary-close" aria-label="다음 달 계산 창 닫기">${closeIcon}</button></div>
-      <p class="temporary-intro" id="nextMonthIntro"></p><section id="nextMonthPatterns" hidden><div class="next-pattern-heading"><strong>이어받을 반복 수업</strong><span>요일고정으로 계산</span></div><div id="nextMonthRows"></div><div class="temporary-preview"><strong id="nextMonthTotal"></strong><p id="nextMonthSkipped"></p></div></section>
+      <p class="temporary-intro" id="nextMonthIntro"></p><section id="nextMonthPatterns" hidden><div class="next-pattern-heading"><strong>이어받을 반복 수업</strong><span>진행형으로 계산</span></div><div id="nextMonthRows"></div><div class="temporary-preview"><strong id="nextMonthTotal"></strong><p id="nextMonthSkipped"></p></div></section>
       <div class="next-month-options"><label id="nextSelectedOption"><input id="nextMonthClearSelectedDates" type="checkbox" checked><span><strong>선택형 날짜 비우기</strong><small>반명과 단가는 유지합니다.</small></span></label><label id="nextManualOption"><input id="nextMonthClearManualCounts" type="checkbox" checked><span><strong>변동형 횟수 비우기</strong><small>시간과 단가는 유지합니다.</small></span></label><label><input id="nextMonthClearAdjustments" type="checkbox" checked><span><strong>이월·초과금과 메모 비우기</strong><small>새 달의 조정 내역을 다시 입력합니다.</small></span></label><label><input id="nextMonthKeepSiblingRows" type="checkbox" checked><span><strong>형제/자매 안내 유지</strong><small>함께 안내할 학생과 금액을 유지합니다.</small></span></label></div>
       <p id="nextMonthError" class="draft-error" role="alert"></p><div class="temporary-footer"><button type="button" id="nextMonthCancel">취소</button><button type="button" id="nextMonthConfirm" class="primary">다음 달로 전환</button></div>`;
     document.body.append(next);
@@ -82,7 +82,9 @@
         const source=nextMonthSource(),available=FeeCalendarCore.nextMonthPlan(source,targetMonth).groups;
         const groups=options.progressGroups?available.filter(g=>options.progressGroups.includes(g.id)):available;
         if(!groups.length){setServerRecordStatus('이어받을 예상·반복 수업이 없어 현재 계산을 유지합니다.','warning');return;}
-        originalPrepare(options);FeeCalendar.seedNextMonth(groups,source);setServerRecordStatus(`${targetMonth} 요일고정 초안을 만들었습니다. ${groups.length}개 수업의 일정과 금액을 확인하세요.`,'success');
+        const clock=v=>/^([01]\d|2[0-3]):[0-5]\d$/.test(v||'');
+        if(groups.some(g=>g.dates.some(day=>{const t=g.schedule?.overrides?.[day];return !t||!clock(t.start)||!clock(t.end)||t.end<=t.start;}))){setServerRecordStatus('이어받을 수업의 시작·종료 시간을 먼저 확인하세요. 현재 계산을 유지합니다.','warning');return;}
+        originalPrepare(options);FeeCalendar.seedNextMonth(groups,source);setServerRecordStatus(`${targetMonth} 진행형 초안을 만들었습니다. ${groups.length}개 수업의 일정과 금액을 확인하세요.`,'success');
     };
     window.applyNextMonthWizard=function(){
         if(nextContext!==context()){el('nextMonthError').textContent='학생·월이 변경되었습니다. 창을 닫고 다시 시작하세요.';return;}

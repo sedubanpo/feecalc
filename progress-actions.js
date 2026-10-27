@@ -6,7 +6,7 @@
  function remove(state,r){
   if(r.temporary)state.temporary=(state.temporary||[]).filter(x=>x.id!==r.id);
   else if(!r.predicted)state.removedActual=[...new Set([...(state.removedActual||[]),r.id])];
-  else if(state.mode==='auto')state.excluded=[...new Set([...(state.excluded||[]),r.id])];
+  else if(state.mode==='auto'||state.planned?.some(x=>x.id===r.id))state.excluded=[...new Set([...(state.excluded||[]),r.id])];
   else state.manual=(state.manual||[]).filter(x=>x.templateId+'@'+x.date!==r.id);
   state.edits=(state.edits||[]).filter(x=>x.id!==r.id);
  }

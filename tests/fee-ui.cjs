@@ -17,7 +17,7 @@ const root=path.resolve(__dirname,'..'),evidence=process.env.EVIDENCE_ROOT;
  const gateway={rpc:async(rpc,params)=>{if(window.testFail)return{error:{message:'가상 네트워크 오류'}};
  if(rpc==='feecalc_students')return{data:[{id:'one',name:'검증학생',school:'검증중',grade:'2'},{id:'two',name:'동명학생',school:'가학교',grade:'1'},{id:'three',name:'동명학생',school:'나학교',grade:'2'}]};
  if(rpc==='feecalc_student_memos')return{data:[{memo:'가상 안내 주의 메모 <script>안전한 텍스트</script>',createdAt:'2026-09-07',author:'검증 직원'}]};
- if(rpc==='feecalc_progress'&&window.testProgressSnapshot)return{data:window.testProgressSnapshot};
+ if(rpc==='feecalc_progress'&&window.testProgressSnapshot)return{data:params.p_month===window.testProgressSnapshot.month?window.testProgressSnapshot:{studentId:params.p_student_id,month:params.p_month,lessons:[]}};
  if(['feecalc_desk_payments','feecalc_intranet_opening'].includes(rpc)){window.testFinancialCalls=(window.testFinancialCalls||0)+1;if(window.testFinancialDelay)await new Promise(r=>window.testFinancialResolve=r);return{data:structuredClone(window.testFinancialData[rpc])};}
  if(rpc==='feecalc_get_app_settings')return{data:window.testSettings};
  if(rpc==='feecalc_save_app_settings'){window.testSettings=params.p_settings;return{data:{}};}
@@ -281,20 +281,30 @@ const root=path.resolve(__dirname,'..'),evidence=process.env.EVIDENCE_ROOT;
  if(evidence&&process.env.NEXT_VISUAL){await page.screenshot({path:path.join(evidence,'next-month-desktop.png')});await page.setViewportSize({width:390,height:844});await page.waitForTimeout(250);await page.locator('#nextMonthConfirm').scrollIntoViewIfNeeded();await page.screenshot({path:path.join(evidence,'next-month-mobile.png')});assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));await page.setViewportSize({width:1440,height:1000});}
  await page.keyboard.press('Escape');assert.equal(await page.evaluate(()=>currentTab),'progress');assert.equal(await page.evaluate(()=>progressMonth()),'2026-09');
  await page.locator('[onclick="openNextMonthWizard()"]').click();await page.locator('#nextMonthConfirm').click();
- assert.equal(await page.evaluate(()=>currentTab),'auto');assert.equal(await page.locator('#targetMonth').inputValue(),'10');
- assert.equal(await page.locator('#autoList .auto-row').count(),2);assert.equal(await page.locator('#workCalendar .calendar-event').count(),9);
- assert.equal(await page.locator('#dispTotal').innerText(),'687,500원');assert.equal(await page.evaluate(()=>collectCalculatorState().progress),null);
+ await page.waitForFunction(()=>progressVerified&&!progressLoading);assert.equal(await page.evaluate(()=>currentTab),'progress');assert.equal(await page.locator('#targetMonth').inputValue(),'10');
+ assert.equal(await page.evaluate(()=>progressState.planned.length),9);assert.equal(await page.locator('#workCalendar .calendar-event').count(),9);
+ assert.equal(await page.locator('#dispTotal').innerText(),'687,500원');assert.equal(await page.evaluate(()=>collectCalculatorState().progress.snapshot.lessons.length),0);
  assert.equal(await page.evaluate(()=>collectAdjustmentItems().length),0);assert.equal(await page.evaluate(()=>testWrites.length),writes);
  assert.match(await page.locator('#workCalendar [data-day="6"] .calendar-event').innerText(),/16:00–18:00/);
  await page.locator('#workCalendar [data-day="6"] .calendar-event').click();await page.locator('#lessonEditRate').fill('40000');await page.locator('#lessonEditHours').fill('1');await page.locator('#lessonEditEnd').fill('17:00');await page.locator('#lessonEditSave').click();
  assert.equal(await page.locator('#dispTotal').innerText(),'665,000원');
- await page.locator('#loadSource').click();assert.equal(await page.locator('#autoList .auto-row').count(),2);
- const autoSaved=await page.evaluate(()=>collectCalculatorState());await page.evaluate(s=>applyCalculatorState(s),autoSaved);assert.equal(await page.locator('#dispTotal').innerText(),'665,000원');
+ await page.evaluate(()=>loadProgressLessons({preserveForecast:true}));assert.equal(await page.evaluate(()=>progressState.planned.length),9);
+ const autoSaved=await page.evaluate(()=>collectCalculatorState());await page.evaluate(s=>applyCalculatorState(s),autoSaved);await page.waitForFunction(()=>progressVerified&&!progressLoading);assert.equal(await page.locator('#dispTotal').innerText(),'665,000원');
  await page.locator('#workCalendar [data-day="6"] .calendar-event').click();await page.locator('#lessonEditDelete').click();
  assert.equal(await page.locator('#workCalendar .calendar-event').count(),8);assert.equal(await page.locator('#dispTotal').innerText(),'625,000원');
- await page.locator('#undoCalendar').click();assert.equal(await page.locator('#dispTotal').innerText(),'665,000원');
+ await page.locator('#undoCalendar').click();await page.waitForFunction(()=>progressVerified&&!progressLoading);assert.equal(await page.locator('#dispTotal').innerText(),'665,000원');
+ // The next-month progress draft retains drag movement and date-level deletion.
+ await page.locator('#workCalendar [data-day="6"] .calendar-event').dragTo(page.locator('#workCalendar [data-day="7"]'));
+ assert.equal(await page.locator('#workCalendar [data-day="6"] .calendar-event').count(),0);
+ assert.equal(await page.locator('#workCalendar [data-day="7"] .calendar-event').count(),1);
+ await page.evaluate(()=>ProgressActions.deleteDay(7));assert.equal(await page.locator('#workCalendar .calendar-event').count(),8);
+ await page.locator('#undoCalendar').click();await page.waitForFunction(()=>progressVerified&&!progressLoading);
+ assert.equal(await page.locator('#workCalendar [data-day="7"] .calendar-event').count(),1);
+ await page.evaluate(async()=>{testFail=true;await loadProgressLessons({preserveForecast:true});testFail=false;});
+ assert.equal(await page.evaluate(()=>progressReady()),false);assert.equal(await page.evaluate(()=>progressState.planned.length),9);
+ await page.evaluate(()=>loadProgressLessons({preserveForecast:true}));assert.equal(await page.evaluate(()=>progressReady()),true);
  // An unverified or insufficient month must leave the current draft intact.
- await page.evaluate(()=>{switchTab('progress');window.nextInsufficient=collectCalculatorState();prepareNextMonthCalculation();});
+ await page.evaluate(()=>{switchTab('progress');progressVerified=false;window.nextInsufficient=collectCalculatorState();prepareNextMonthCalculation();});
  assert.equal(await page.locator('#targetMonth').inputValue(),'10');assert.equal(await page.evaluate(()=>currentTab),'progress');assert.equal(await page.evaluate(()=>testWrites.length),writes);
  await page.evaluate(()=>{switchTab('auto');openNextMonthWizard();});await page.keyboard.press('Escape');
  });

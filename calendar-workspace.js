@@ -221,19 +221,17 @@
     function seedNextMonth(groups,snapshot){
         applying=true;
         try{
-            el('autoList').replaceChildren();Object.keys(autoRowExcludedDates).forEach(key=>delete autoRowExcludedDates[key]);
-            sourceSnapshot=snapshot;sourceContext=matchedStudent()?.id+'|'+month();sourceAttempt=sourceContext;sourcePending='';fetchToken++;clearTimeout(sourceTimer);
-            candidateResult=C.candidates(snapshot);candidateGroups=C.groupCandidates(candidateResult.rows);draftMonth=month();
-            for(const group of groups){
-                const name=`${group.subject}-${group.type}(${group.teacher})-${group.hours}h`;
-                addAutoRow(name);const row=[...el('autoList').querySelectorAll('.auto-row')].at(-1);
-                row.querySelector('.sub-rate').value=group.amount;row.querySelector('.sub-hours').value=group.hours;row.querySelector('.rate-mode').value='perClass';
-                for(const input of row.querySelectorAll('.day-chk'))input.checked=group.days.includes(Number(input.value));
-                row.dataset.schedule=JSON.stringify(group.schedule);row.dataset.sourceIds=JSON.stringify(group.sourceIds);row.dataset.candidateKeys=JSON.stringify([...new Set([group.id,...candidateGroups.filter(g=>g.sourceIds.some(id=>group.sourceIds.includes(id))).map(g=>g.id)])]);row.dataset.legacyAggregate='false';
+            const target=month(),planned=[];
+            for(const group of groups)for(const day of group.dates){
+                const clock=group.schedule.overrides[day];
+                planned.push({id:`planned:${group.id}:${day}`,date:`${target}-${String(day).padStart(2,'0')}`,className:`${group.subject}-${group.type}(${group.teacher})-${group.hours}h`,teacher:group.teacher,minutes:Math.round(group.hours*60),amount:Math.round(group.amount),start:clock?.start||'',end:clock?.end||'',kind:'regular'});
             }
-            options.source={studentId:snapshot.studentId,month:snapshot.month,targetMonth:month(),fetchedAt:snapshot.fetchedAt,confirmedAt:new Date().toISOString(),origin:'progress-next-month',sourceIds:groups.flatMap(g=>g.sourceIds)};
+            ProgressCore.validatePlanned(planned,target);
+            progressState={snapshot:{studentId:snapshot.studentId,month:target,lessons:[]},planned,mode:'manual',cutoff:target+'-01',endDate:ProgressCore.monthEnd(target),excluded:[],manual:[],temporary:[],edits:[],removedActual:[]};
+            progressVerified=false;progressRefreshPending=true;
+            options.source={studentId:snapshot.studentId,month:snapshot.month,targetMonth:target,fetchedAt:snapshot.fetchedAt,confirmedAt:new Date().toISOString(),origin:'progress-next-month',sourceIds:groups.flatMap(g=>g.sourceIds)};
             options.previous={studentId:snapshot.studentId,month:snapshot.month,hours:C.hoursBySubject(C.normalizeSnapshot(snapshot).filter(r=>r.kind!=='absence'))};
-            view='work';switchTab('auto');
+            view='work';switchTab('progress');
         }finally{applying=false;}
         renderCandidates();el('sourceStatus').textContent='진행형의 예상·반복 수업을 이어받았습니다. 이번 달 변경 일정은 달력에서 수정하세요.';updateBatch();commitCalendar();
     }

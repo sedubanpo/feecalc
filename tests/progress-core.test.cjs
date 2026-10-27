@@ -162,3 +162,20 @@ test('merged sessions forecast as one lesson while legacy segment edits remain r
  const edited=C.calculate({...state,edits:[{id:'session:ab',minutes:120,amount:50000,start:'16:00',end:'18:00'}]},'2026-10-11');assert.equal(edited.actualAmount,50000);assert.equal(snapshot.lessons[0].amount,60000);
  assert.equal(C.calculate({...state,removedActual:['session:ab']},'2026-10-11').actual.length,0);
 });
+test('reviewed next-month plans include day one, remain drafts and support moves and exclusions',()=>{
+ const s=state([]);s.mode='manual';s.cutoff='2026-09-01';s.planned=[row('planned:first','2026-09-01'),row('planned:second','2026-09-08')];
+ assert.equal(core.calculate(s,'2026-08-27').predictedAmount,120000);
+ assert.equal(core.calculate(s,'2026-08-27').actual.length,0);
+ assert.ok(core.calculate(s,'2026-08-27').templates.length);
+ s.edits=[{id:'planned:first',movedDate:'2026-09-02',minutes:120,amount:50000,start:'16:00',end:'18:00'}];
+ s.excluded=['planned:second'];
+ const r=core.calculate(s,'2026-08-27');assert.equal(r.predicted.length,1);assert.equal(r.predicted[0].date,'2026-09-02');assert.equal(r.predictedAmount,50000);
+ const restored=JSON.parse(JSON.stringify(s));assert.deepEqual(core.calculate(restored,'2026-08-27'),r);
+});
+test('latest actual or absence replaces reviewed plan; another-time makeup does not',()=>{
+ const s=state([]);s.mode='manual';s.planned=[row('planned:first','2026-09-08')];
+ for(const kind of ['regular','absence']){s.snapshot.lessons=[row('actual','2026-09-08',2,{kind})];assert.equal(core.calculate(s,'2026-09-09').predicted.length,0);}
+ s.snapshot.lessons=[row('makeup','2026-09-08',2,{kind:'makeup',start:'18:00',end:'20:00'})];assert.equal(core.calculate(s,'2026-09-09').predicted.length,1);
+ assert.throws(()=>core.validatePlanned([row('planned:bad','2026-10-01')],'2026-09'));
+ assert.throws(()=>core.validatePlanned([row('source','2026-09-01')],'2026-09'));
+});
