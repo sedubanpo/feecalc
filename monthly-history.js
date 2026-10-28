@@ -70,7 +70,13 @@
   const guard=()=>{if(token!==epoch||!active||key!==context()||selected!==selectedMonth||details!==$('mhIncludeDetails').checked||!isServerConfigured())throw Error('학생·월 또는 로그인 상태가 바뀌었습니다. 다시 출력해 주세요.');};
   try{
    const response=await getSupabaseClient().rpc('feecalc_monthly_history',{p_student_id:data.studentId,p_month:data.month});guard();if(response.error)throw Error(response.error.message);C.validate(response.data,data.studentId,data.month);
-   if(response.data.fingerprint!==fingerprint){cache.delete(key);await load(true);throw Error('원본 내역이 변경되어 다시 불러왔습니다. 금액을 확인한 뒤 출력해 주세요.');}
+   if(response.data.fingerprint!==fingerprint){
+    // The validated verification response already contains the full latest history.
+    // Keep the selected month, but discard previews built from the old source.
+    data=response.data;cache.set(key,{at:Date.now(),data});selectedGroup='';selectedDay='';
+    $('mhPreview').hidden=true;$('mhPages').replaceChildren();render();
+    throw Error('원본 내역이 변경되어 다시 불러왔습니다. 금액을 확인한 뒤 출력해 주세요.');
+   }
    data=response.data;
    exportHost=document.createElement('div');exportHost.className='mh-export';exportHost.innerHTML=pages();document.body.append(exportHost);await document.fonts.ready;
    const images=await Promise.all([...exportHost.querySelectorAll('img')].map(async img=>{await img.decode();const blob=await(await fetch(img.src)).blob();return await new Promise(resolve=>{const r=new FileReader();r.onload=()=>resolve(r.result);r.readAsDataURL(blob);});}));
