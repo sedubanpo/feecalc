@@ -334,11 +334,13 @@ const root=path.resolve(__dirname,'..'),evidence=process.env.EVIDENCE_ROOT;
  await page.evaluate(()=>loadProgressLessons({preserveForecast:true}));
  assert.equal(await page.evaluate(()=>progressResult().predicted.filter(r=>r.date==='2026-10-07').length),0);
  assert.equal(await page.evaluate(()=>progressResult().actual.filter(r=>r.id==='actual-moved').length),1);
- assert.equal(await page.locator('#dispTotal').innerText(),'540,000원');
- await page.evaluate(()=>loadProgressLessons({preserveForecast:true}));assert.equal(await page.locator('#dispTotal').innerText(),'540,000원');
+ assert.equal(await page.locator('#dispTotal').innerText(),'627,500원');
+ await page.evaluate(()=>loadProgressLessons({preserveForecast:true}));assert.equal(await page.locator('#dispTotal').innerText(),'627,500원');
+ // Explicit range retains the October 1 lesson (87,500) during reconciliation.
+ assert.equal(await page.locator('#workCalendar [data-day="1"] .calendar-event').count(),1);
  // Reopening the earlier saved draft must also reconcile with the new actuals.
  await page.evaluate(()=>loadServerRecord('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',{silent:true}));await page.waitForFunction(()=>progressVerified&&!progressLoading);
- assert.equal(await page.locator('#dispTotal').innerText(),'540,000원');assert.equal(await page.locator('#workCalendar [data-day="13"] .calendar-event').count(),0);
+ assert.equal(await page.locator('#dispTotal').innerText(),'627,500원');assert.equal(await page.locator('#workCalendar [data-day="13"] .calendar-event').count(),0);
  console.log('PASS next-month persisted move/edit/delete and repeated actual reconciliation');
  // An unverified or insufficient month must leave the current draft intact.
  await page.evaluate(()=>{switchTab('progress');progressVerified=false;window.nextInsufficient=collectCalculatorState();prepareNextMonthCalculation();});
@@ -535,6 +537,26 @@ const root=path.resolve(__dirname,'..'),evidence=process.env.EVIDENCE_ROOT;
  assert.equal(await page.evaluate(()=>testFinancialCalls),3);assert.equal(await page.evaluate(()=>getAdjustmentTotal()),-50000);
  await page.getByRole('button',{name:'데스크 수납 가져오기',exact:true}).click();await page.waitForFunction(()=>document.querySelectorAll('.financial-source-row').length===1);
  assert.equal(await page.locator('.financial-source-row input').isDisabled(),true);await page.locator('#financialSourceCancel').click();
+ });
+ await check('explicit November range includes day one on screen and after draft restore',async()=>{
+ await page.evaluate(()=>{
+ testNow='2026-10-31T03:00:00Z';testFinancialData=null;
+ testProgressSnapshot={studentId:'one',month:'2026-11',lessons:[]};
+ const planned=[1,8,15,22,29].map(d=>({id:'planned:'+d,date:'2026-11-'+String(d).padStart(2,'0'),className:'국어-개별-검증강사-2h',teacher:'검증강사',minutes:120,amount:62500,start:'15:00',end:'17:00',kind:'regular'}));
+ applyCalculatorState({currentTab:'progress',studentId:'one',studentName:'검증학생',targetYear:2026,targetMonth:11,progress:{snapshot:testProgressSnapshot,mode:'manual',cutoff:'2026-11-01',endDate:'2026-11-30',planned}});FeeCalendar.navigate('progress');
+ });
+ await page.waitForFunction(()=>progressVerified&&!progressLoading);
+ await page.locator('#progressEnd').fill('2026-11-18');await page.locator('#progressEnd').dispatchEvent('change');
+ assert.deepEqual(await page.evaluate(()=>progressResult().predicted.map(r=>r.date)),['2026-11-01','2026-11-08','2026-11-15']);
+ assert.equal(await page.locator('#workCalendar .calendar-event').count(),3);
+ assert.equal(await page.getByRole('button',{name:'2026-11-01 예상 수업',exact:true}).isEnabled(),true);
+ const saved=await page.evaluate(()=>JSON.parse(JSON.stringify(collectCalculatorState())));
+ await page.evaluate(s=>applyCalculatorState(s),saved);await page.waitForFunction(()=>progressVerified&&!progressLoading);
+ assert.equal(await page.evaluate(()=>progressResult().predictedAmount),187500);
+ await page.evaluate(()=>{testProgressSnapshot.lessons=[{...progressState.planned[0],id:'actual-first'}];applyCalculatorState(collectCalculatorState());});
+ await page.waitForFunction(()=>progressVerified&&!progressLoading);
+ assert.equal(await page.evaluate(()=>progressResult().predictedAmount+progressResult().actualAmount),187500);
+ assert.equal(await page.evaluate(()=>progressResult().actual.length),1);
  });
  await check('signed-out account controls fit narrow and intermediate headers',async()=>{
  await page.evaluate(()=>testAuthState({state:'anonymous',gateway:testGateway}));

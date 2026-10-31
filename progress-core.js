@@ -165,7 +165,7 @@
         }
         const predicted = [], seen = new Set(), slots = new Set();
         function add(template,date) {
-            if (!template || !validDate(date) || date.slice(0,7) !== snapshot.month || date <= cutoff || date > endDate || (occupied.get(courseKey(template)+'|'+date)||[]).some(r=>blocksForecast(r,template,date))) return;
+            if (!template || !validDate(date) || date.slice(0,7) !== snapshot.month || (date < cutoff || (date === cutoff && state.rangeExplicit !== true)) || date > endDate || (occupied.get(courseKey(template)+'|'+date)||[]).some(r=>blocksForecast(r,template,date))) return;
             const id = template.id + '@' + date;
             const slot = courseKey(template)+'|'+date+'|'+template.start+'|'+template.end;
             if (state.mode === 'manual' && (slots.has(slot) || predicted.some(r=>courseKey(r)===courseKey(template) && r.date===date && r.start<template.end && template.start<r.end))) return;
@@ -196,7 +196,7 @@
         }
         // Explicit date controls constrain every draft occurrence after local moves.
         // Keep the stored rows so widening the range restores them.
-        if(state.rangeExplicit===true)for(let i=predicted.length-1;i>=0;i--){if(predicted[i].date<=cutoff||predicted[i].date>endDate)predicted.splice(i,1);}
+        if(state.rangeExplicit===true)for(let i=predicted.length-1;i>=0;i--){if(predicted[i].date<cutoff||predicted[i].date>endDate)predicted.splice(i,1);}
         predicted.sort((a,b)=>a.date.localeCompare(b.date)||a.start.localeCompare(b.start)||a.className.localeCompare(b.className));
         return {actual,predicted,templates:choices,automaticForecastEnded,excludedMakeupCount:basisSnapshot.lessons.filter(r=>r.date<=cutoff&&isMakeupLesson(r)).length,actualAmount:actual.reduce((s,r)=>s+(r.amount || 0),0),predictedAmount:predicted.reduce((s,r)=>s+(r.amount || 0),0),pending:[...actual,...predicted].filter(r=>r.amount===null || r.minutes===null).length};
     }

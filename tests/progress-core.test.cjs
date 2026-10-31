@@ -183,8 +183,24 @@ test('explicit range filters planned, moved and temporary rows without deleting 
  const s=state([row('actual','2026-09-02')]);s.mode='manual';s.rangeExplicit=true;s.cutoff='2026-09-05';s.endDate='2026-09-15';
  s.planned=[row('planned:first','2026-09-08'),row('planned:last','2026-09-22')];
  s.edits=[{id:'planned:first',movedDate:'2026-09-16',minutes:120,amount:60000,start:'16:00',end:'18:00'}];
- s.temporary=[row('local:before','2026-09-05'),row('local:end','2026-09-15')];
- const before=JSON.stringify(s),r=core.calculate(s);assert.equal(r.actual.length,1);assert.deepEqual(r.predicted.map(r=>r.id),['local:end']);assert.equal(r.predictedAmount,60000);assert.equal(JSON.stringify(s),before);
- s.endDate='2026-09-30';assert.equal(core.calculate(s).predicted.length,3);
+ s.temporary=[row('local:before','2026-09-04'),row('local:start','2026-09-05'),row('local:end','2026-09-15')];
+ const before=JSON.stringify(s),r=core.calculate(s);assert.equal(r.actual.length,1);assert.deepEqual(r.predicted.map(r=>r.id),['local:start','local:end']);assert.equal(r.predictedAmount,120000);assert.equal(JSON.stringify(s),before);
+ s.endDate='2026-09-30';assert.equal(core.calculate(s).predicted.length,4);
  assert.deepEqual(core.calculate(JSON.parse(JSON.stringify(s))),core.calculate(s));
+});
+
+test('November explicit range includes first day after saved draft restore and deduplicates actuals',()=>{
+ const s={snapshot:{studentId:'qa',month:'2026-11',lessons:[]},mode:'manual',rangeExplicit:true,cutoff:'2026-11-01',endDate:'2026-11-18',planned:[1,8,15,22,29].map(d=>row('planned:'+d,'2026-11-'+String(d).padStart(2,'0')))};
+ const restored=JSON.parse(JSON.stringify(s));
+ assert.deepEqual(core.calculate(restored).predicted.map(r=>r.date),['2026-11-01','2026-11-08','2026-11-15']);
+ restored.endDate='2026-11-01';assert.equal(core.calculate(restored).predictedAmount,60000);
+ restored.snapshot.lessons=[row('actual','2026-11-01')];
+ assert.equal(core.calculate(restored).predictedAmount,0);assert.equal(core.calculate(restored).actualAmount,60000);
+});
+test('explicit start includes automatic and manual forecasts while implicit cutoff stays exclusive',()=>{
+ const s=state([row('basis','2026-09-09')]);s.endDate=s.cutoff;
+ assert.equal(core.calculate(s).predicted.length,0);
+ s.rangeExplicit=true;assert.deepEqual(core.calculate(s).predicted.map(r=>r.date),['2026-09-16']);
+ s.mode='manual';s.manual=[{templateId:'basis',date:s.cutoff}];assert.equal(core.calculate(s).predicted.length,1);
+ s.snapshot.lessons.push(row('actual',s.cutoff));assert.equal(core.calculate(s).predicted.length,0);
 });

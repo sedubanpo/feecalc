@@ -41,7 +41,7 @@ progressPanel.innerHTML = `
    <label class="progress-field">예상 종료일<input id="progressEnd" type="date" onchange="setProgressEnd(this.value)"></label>
   </div>
   <p id="progressCoverage" class="ui-help"></p>
-  <p class="ui-help">기준일 다음 날부터 종료일까지 정규 요일을 예상합니다. 보강·보충은 실제 수업료에만 포함하고 자동 반복하지 않습니다. 실제 수업과 중복되는 예상 수업은 제외합니다. 기간을 직접 변경하면 임시·이어받은 수업에도 적용됩니다. 실제 입력 수업은 모두 유지됩니다.</p>
+  <p class="ui-help">기간을 직접 지정하면 시작일과 종료일을 모두 포함합니다. 자동 기준일은 마지막 입력 수업일 다음 날부터 예상합니다. 보강·보충은 실제 수업료에만 포함하고 자동 반복하지 않습니다. 실제 수업과 중복되는 예상 수업은 제외합니다. 기간을 직접 변경하면 임시·이어받은 수업에도 적용됩니다. 실제 입력 수업은 모두 유지됩니다.</p>
   <p id="progressMakeupNotice" class="ui-help" hidden></p>
   <div id="progressManual" hidden>
    <label class="progress-field">추가할 기준 수업<select id="progressTemplate"></select></label>
@@ -132,7 +132,7 @@ function renderProgressDates() {
         const selected=!!template && progressState.manual.some(r=>r.date===date&&(r.templateId===template.id||template.aliases?.includes(r.templateId)));
         button.type='button';button.className='ui-button';button.textContent=String(day);button.dataset.weekday=ProgressCore.dayOfWeek(date);
         button.setAttribute('aria-label',`${date} 예상 수업${occupied?' · 입력 수업 있음':''}`);button.setAttribute('aria-pressed',String(selected));
-        button.disabled=!template || date<=progressState.cutoff || date>progressState.endDate || !!occupied;
+        button.disabled=!template || (date<progressState.cutoff || (date===progressState.cutoff && progressState.rangeExplicit!==true)) || date>progressState.endDate || !!occupied;
         button.onclick=()=>toggleProgressDate(date);host.append(button);
     }
     for(let i=0;i<(7-(ProgressCore.dayOfWeek(progressMonth()+'-01')+ProgressCore.daysInMonth(progressMonth()))%7)%7;i++)blank();
