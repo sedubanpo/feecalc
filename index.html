@@ -4184,7 +4184,7 @@
         async function initializeServerRecordFlow() {
             renderServerRecordList();
             try {
-                const { initializeAuth } = await import('./auth-client.mjs?v=20261021-request-sharing');
+                const { initializeAuth } = await import('./auth-client.mjs?v=20261031-hub-startup');
                 staffAuth = await initializeAuth(handleStaffAuthState);
                 supabaseClient = staffAuth.gateway;
                 document.getElementById('staffLoginButton').disabled = false;

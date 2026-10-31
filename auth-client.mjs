@@ -108,16 +108,29 @@ export async function initializeAuth(onState) {
     const auth = sdk.getAuth(initializeApp({apiKey: 'AIzaSyCFM21ZxgwIYwmjRPaAOp5bL9Kprqiyppg', authDomain: 'fir-lms-prod.firebaseapp.com', projectId: 'fir-lms-prod'}, 'feecalc'));
     return createStaffAuth(auth, sdk, onState);
 }
-export async function createStaffAuth(auth, sdk, onState, fetcher = fetch) {
-    const gateway = createGateway({fetcher, getUser: () => auth.currentUser, onDenied: message => onState({state: 'denied', message, user: auth.currentUser})});
-    await sdk.setPersistence(auth, sdk.browserSessionPersistence);
-    async function check(user) {
+export function createSessionVerifier(gateway, onState) {
+    let pending = null;
+    async function verify(user) {
         gateway.reset();
         onState({state: user ? 'pending' : 'signedOut', user, gateway});
         if (!user) return;
         try { const actor = await gateway.authorize(); onState({state: 'ready', actor, user, gateway}); }
         catch (error) { if (error.code !== 'AUTH_CHANGED') onState({state: 'error', user, message: error instanceof TypeError || error.name === 'TimeoutError' ? '직원 권한을 확인하지 못했습니다. 네트워크를 확인하고 다시 시도해 주세요.' : error.message || '권한 확인에 실패했습니다. 다시 시도해 주세요.'}); }
     }
+    return user => {
+        // Firebase's observer and the SSO completion callback report the same sign-in.
+        // Share the in-flight authorization only; later checks still revalidate grants.
+        if (user && pending?.uid === user.uid) return pending.task;
+        const item = {uid: user?.uid, task: null};
+        pending = item;
+        item.task = verify(user).finally(() => { if (pending === item) pending = null; });
+        return item.task;
+    };
+}
+export async function createStaffAuth(auth, sdk, onState, fetcher = fetch) {
+    const gateway = createGateway({fetcher, getUser: () => auth.currentUser, onDenied: message => onState({state: 'denied', message, user: auth.currentUser})});
+    await sdk.setPersistence(auth, sdk.browserSessionPersistence);
+    const check = createSessionVerifier(gateway, onState);
     sdk.onAuthStateChanged(auth, check);
     const {installSso} = await import('./hub-client.mjs');
     await installSso({appId:'fees',brokerUrl:'https://asia-northeast3-fir-lms-prod.cloudfunctions.net/hubSsoApi',hubOrigins:['https://sedubanpo.github.io'],
