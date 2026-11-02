@@ -7,7 +7,7 @@ test('occurrence status persists and zero-priced states cannot retain charges',(
  const edits=P.validateEdits(JSON.parse(JSON.stringify([edit])));
  assert.equal(edits[0].kind,kind);
  const result=P.calculate({snapshot:{studentId:'qa',month:'2026-10',lessons:[lesson]},edits,mode:'manual'},'2026-10-16');
- assert.equal(result.actualAmount,kind==='cancelMakeup'?50000:0);
+ assert.equal(result.actualAmount,0);
  }
  assert.throws(()=>P.validateEdits([{...lesson,kind:'unknown'}]));
 });

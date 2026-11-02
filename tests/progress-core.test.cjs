@@ -204,3 +204,16 @@ test('explicit start includes automatic and manual forecasts while implicit cuto
  s.mode='manual';s.manual=[{templateId:'basis',date:s.cutoff}];assert.equal(core.calculate(s).predicted.length,1);
  s.snapshot.lessons.push(row('actual',s.cutoff));assert.equal(core.calculate(s).predicted.length,0);
 });
+
+test('cancel makeup derives clock duration, waives fee and never becomes recurring tuition',()=>{
+ const s=state([row('makeup','2026-09-15',0,{kind:'cancelMakeup',amount:null,start:'17:00',end:'19:00'})]);
+ const before=JSON.stringify(s),r=core.calculate(s);
+ assert.equal(r.actual[0].minutes,120);assert.equal(r.actualAmount,0);assert.equal(r.pending,0);assert.equal(r.predicted.length,0);assert.equal(JSON.stringify(s),before);
+ assert.deepEqual(core.calculate(JSON.parse(before)),r);
+ s.edits=[{id:'makeup',minutes:60,amount:62500,start:'17:00',end:'18:30'}];assert.equal(core.calculate(s).actual[0].minutes,90);assert.equal(core.calculate(s).actualAmount,0);
+ s.edits=[];s.snapshot.lessons[0].end='';assert.equal(core.calculate(s).pending,1);assert.equal(core.calculate(s).actualAmount,0);
+});
+test('cancel makeup sums split intervals without gaps or double counting',()=>{
+ const s=state([row('merged','2026-09-15',0,{kind:'cancelMakeup',amount:null,segments:[{start:'17:00',end:'18:00'},{start:'17:30',end:'18:00'},{start:'19:00',end:'20:00'}]})]);
+ assert.equal(core.calculate(s).actual[0].minutes,120);
+});

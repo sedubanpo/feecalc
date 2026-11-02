@@ -2,7 +2,16 @@
 (function(root) {
     const D=typeof module!=='undefined'&&module.exports?require('./discount-core.js'):root.FeeDiscount;
     const kinds=['regular','late','cancel','absence','absenceMakeup','cancelMakeup','lateMakeup','free'];
-    const applyStatus=r=>['absence','free'].includes(r.kind)?{...r,amount:0,discountParts:[]}:r;
+    function makeupMinutes(row) {
+        const clock=value=>{const m=/^(\d{1,2}):(\d{2})$/.exec(value);return m&&+m[1]<24&&+m[2]<60?+m[1]*60+ +m[2]:null;};
+        const intervals=(row.segments||[row]).map(r=>[clock(r.start),clock(r.end)]);
+        if(intervals.some(([start,end])=>start===null||end===null||end<=start))return null;
+        intervals.sort((a,b)=>a[0]-b[0]);
+        let total=0,last=-1;
+        for(const [start,end] of intervals){total+=Math.max(0,end-Math.max(start,last));last=Math.max(last,end);}
+        return total;
+    }
+    const applyStatus=r=>r.kind==='cancelMakeup'?{...r,minutes:makeupMinutes(r),amount:0,discountParts:[]}:['absence','free'].includes(r.kind)?{...r,amount:0,discountParts:[]}:r;
     const validMonth = value => /^20\d{2}-(0[1-9]|1[0-2])$/.test(value || '');
     const validDate = value => typeof value === 'string' && /^20\d{2}-\d{2}-\d{2}$/.test(value) && !isNaN(Date.parse(value)) && new Date(value).toISOString().slice(0,10) === value;
     const dayOfWeek = date => new Date(date + 'T00:00:00Z').getUTCDay();
@@ -156,7 +165,7 @@
         const choices = state.mode === 'manual' ? basisTemplates(state,cutoff) : templates(basisSnapshot,cutoff), excluded = new Set(state.excluded || []);
         for(const edit of edits.values())if(edit.movedDate&&edit.movedDate.slice(0,7)!==snapshot.month)throw Error('같은 달 안에서 이동하세요.');
         const adjusted=r=>edits.has(r.id)?{...r,...edits.get(r.id),date:edits.get(r.id).movedDate||r.date,discountParts:edits.get(r.id).amount===r.amount&&edits.get(r.id).minutes===r.minutes?r.discountParts:[],edited:true}:r;
-        const actual = snapshot.lessons.filter(r=>!removed.has(r.id)).map(r=>{const row=adjusted({...r,predicted:false});return row.kind==='absence'?{...row,minutes:0,amount:0,discountParts:[]}:row;});
+        const actual = snapshot.lessons.filter(r=>!removed.has(r.id)).map(r=>{const row=applyStatus(adjusted({...r,predicted:false}));return row.kind==='absence'?{...row,minutes:0,amount:0,discountParts:[]}:row;});
         const occupied = new Map();
         for(const row of [...snapshot.lessons,...actual]){
             const key=courseKey(row)+'|'+row.date;

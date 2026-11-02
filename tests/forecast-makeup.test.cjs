@@ -8,7 +8,7 @@ test('Mon/Wed/Fri regular lessons never pick up Tuesday makeups; actual charges 
   const lessons=[row('mon','2026-10-05'),row('wed','2026-10-07'),row('fri','2026-10-09'),row('makeup','2026-10-06',{kind,amount:kind==='free'?0:45000})];
   const s=state(lessons),before=JSON.stringify(s),result=run(s);
   assert.deepEqual(result.predicted.map(r=>r.date),['2026-10-12','2026-10-14','2026-10-16']);
-  assert.equal(result.actualAmount,180000+(kind==='free'?0:45000));assert.equal(result.actual.length,4);
+  assert.equal(result.actualAmount,180000+(['free','cancelMakeup'].includes(kind)?0:45000));assert.equal(result.actual.length,4);
   assert.equal(result.excludedMakeupCount,1);assert.equal(JSON.stringify(s),before);
  }
 });

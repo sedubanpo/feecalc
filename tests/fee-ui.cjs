@@ -558,6 +558,18 @@ const root=path.resolve(__dirname,'..'),evidence=process.env.EVIDENCE_ROOT;
  assert.equal(await page.evaluate(()=>progressResult().predictedAmount+progressResult().actualAmount),187500);
  assert.equal(await page.evaluate(()=>progressResult().actual.length),1);
  });
+ await check('cancel makeup uses clock hours with zero charge and survives restore',async()=>{
+ await page.evaluate(()=>{
+ testNow='2026-11-02T03:00:00Z';testProgressSnapshot={studentId:'one',month:'2026-10',lessons:[{id:'cancel-makeup',date:'2026-10-13',className:'영어-개별-검증강사',teacher:'검증강사',kind:'cancelMakeup',minutes:0,amount:null,start:'17:00',end:'19:00'}]};
+ applyCalculatorState({currentTab:'progress',studentId:'one',studentName:'검증학생',targetYear:2026,targetMonth:10,progress:{snapshot:testProgressSnapshot,mode:'auto',cutoff:'2026-10-13'}});FeeCalendar.navigate('progress');
+ });
+ await page.waitForFunction(()=>progressVerified&&!progressLoading);
+ assert.equal(await page.evaluate(()=>progressResult().pending),0);
+ assert.equal(await page.evaluate(()=>progressResult().actual[0].minutes),120);
+ assert.match(await page.locator('#workCalendar [data-day="13"] .calendar-event').innerText(),/당취보충.*0원/s);
+ const saved=await page.evaluate(()=>collectCalculatorState());await page.evaluate(s=>applyCalculatorState(s),saved);await page.waitForFunction(()=>progressVerified&&!progressLoading);
+ assert.equal(await page.evaluate(()=>progressResult().actualAmount),0);assert.equal(await page.evaluate(()=>progressResult().pending),0);
+ });
  await check('signed-out account controls fit narrow and intermediate headers',async()=>{
  await page.evaluate(()=>testAuthState({state:'anonymous',gateway:testGateway}));
  for(const width of [390,600,768,1050,1440]){await page.setViewportSize({width,height:1000});assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),String(width));assert.equal(await page.locator('#staffLoginForm').isVisible(),true);}
