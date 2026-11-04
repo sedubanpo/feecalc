@@ -209,7 +209,7 @@
         predicted.sort((a,b)=>a.date.localeCompare(b.date)||a.start.localeCompare(b.start)||a.className.localeCompare(b.className));
         return {actual,predicted,templates:choices,automaticForecastEnded,excludedMakeupCount:basisSnapshot.lessons.filter(r=>r.date<=cutoff&&isMakeupLesson(r)).length,actualAmount:actual.reduce((s,r)=>s+(r.amount || 0),0),predictedAmount:predicted.reduce((s,r)=>s+(r.amount || 0),0),pending:[...actual,...predicted].filter(r=>r.amount===null || r.minutes===null).length};
     }
-    const api = {validatePlanned,isMakeupLesson,blocksForecast,preserveSessionDraft,validMonth,validDate,daysInMonth,monthEnd,dayOfWeek,courseKey,validateSnapshot,validateTemporary,validateEdits,overlaps,templates,basisTemplates,validateBasis,previousMonth,defaultCutoff,calculate};
+    const api = {makeupMinutes,validatePlanned,isMakeupLesson,blocksForecast,preserveSessionDraft,validMonth,validDate,daysInMonth,monthEnd,dayOfWeek,courseKey,validateSnapshot,validateTemporary,validateEdits,overlaps,templates,basisTemplates,validateBasis,previousMonth,defaultCutoff,calculate};
     if (typeof module !== 'undefined' && module.exports) module.exports = api;
     else root.ProgressCore = api;
 })(typeof window === 'undefined' ? {} : window);

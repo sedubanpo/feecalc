@@ -628,7 +628,7 @@
         if(!Array.isArray(nextOptions.placements)||nextOptions.placements.some(r=>!r||!Number.isInteger(r.day)||r.day<1||r.day>31||!Number.isFinite(r.hours)||r.hours<0))throw Error('시간표 저장 형식을 확인해 주세요.');
         const oldOptions=options,oldLegacy=legacySnapshot;let restored=false;
         applying=true;legacySnapshot=null;options=JSON.parse(JSON.stringify(nextOptions));
-        try{const result=applyOriginal(data,...args);
+        try{C.upgradePriorMakeups(options.priorNotice);const result=applyOriginal(data,...args);
         
         if(data.currentTab==='history'&&data.historyData?.length&&!options.historySource)options.historySource={studentId:data.studentId||'',studentName:data.studentName||'',month:m,origin:'saved'};
         if(data.currentTab==='timetable'&&!data.calendarWorkspace)migrateTimetable();

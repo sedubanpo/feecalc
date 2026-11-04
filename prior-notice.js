@@ -38,7 +38,7 @@
     }
     if(provider==='intranet'&&!rows.length)adjustments.push({id:'intranet:missing',label:'시작 잔액 확인 필요',amount:null,provider,included:true});
    }
-   FeeCalendar.remember();ctx.options.priorNotice={studentId,targetMonth:ctx.month,month,fetchedAt:new Date().toISOString(),lessons:C.normalizeSnapshot(snapshot).map(r=>({...r,included:true})),adjustments,sourceIssue,modified:false};
+   FeeCalendar.remember();ctx.options.priorNotice={studentId,targetMonth:ctx.month,month,fetchedAt:new Date().toISOString(),lessons:C.normalizeSnapshot(snapshot).map(r=>({...r,included:true})),adjustments,sourceIssue,makeupRuleVersion:1,modified:false};
    ctx.markTouched();message=`${month} 실제 수업 ${snapshot.lessons.length}건 · 원본 조회 완료. 아래 합계와 포함 항목을 검토하세요.`;version='';render(ctx);
   }catch(error){if(token===generation){message='조회하지 못했습니다. '+error.message;}}
   finally{if(token===generation){pending=false;status();}}

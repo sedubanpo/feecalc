@@ -66,8 +66,25 @@
             return {subject,current:now,previous:known?Number(prior):null,percent:now!==null&&known&&Number(prior)>0?(now-Number(prior))/Number(prior)*100:null,label:now===null?'현재 시수 확인 필요':!known?'비교 자료 없음':Number(prior)===0?(now>0?'신규':'변동 없음'):null};
         });
     }
+    function makeupHours(row){
+        const minutes=P.makeupMinutes(row);
+        return minutes===null?null:minutes/60;
+    }
+    function upgradePriorMakeups(d){
+        if(!d||d.makeupRuleVersion===1)return;
+        for(const row of d.lessons){
+            if(row.kind!=='cancelMakeup')continue;
+            if(!d.modified||row.amount===null){row.amount=0;row.discountParts=[];}
+            if(!d.modified||row.hours===null||row.hours===0){
+                const source=row.source;
+                const sameTimes=source?.start===row.start&&source?.end===row.end;
+                row.hours=makeupHours(sameTimes&&Array.isArray(source.segments)&&source.segments.every(s=>s&&typeof s==='object')?source:row);
+            }
+        }
+        d.makeupRuleVersion=1;
+    }
     function normalizeSnapshot(snapshot){
-        return snapshot.lessons.map(r=>({...info(r.className,r.teacher),id:r.id,day:Number(r.date.slice(-2)),date:r.date,hours:r.kind==='absence'?0:r.minutes===null?null:(r.minutes||0)/60,amount:r.kind==='absence'?0:r.amount,discountParts:r.discountParts,rate:null,rawName:r.className,start:r.start,end:r.end,status:({regular:'출석',late:'지각',cancel:'당일취소',absence:'결석예고',absenceMakeup:'결석보강',cancelMakeup:'보충',lateMakeup:'보충',free:'프리'})[r.kind]||'확인 필요',kind:r.kind,note:r.note||r.memo||r.reference||'',source:r}));
+        return snapshot.lessons.map(r=>({...info(r.className,r.teacher),id:r.id,day:Number(r.date.slice(-2)),date:r.date,hours:r.kind==='cancelMakeup'?makeupHours(r):r.kind==='absence'?0:r.minutes===null?null:(r.minutes||0)/60,amount:['absence','cancelMakeup'].includes(r.kind)?0:r.amount,discountParts:r.kind==='cancelMakeup'?[]:r.discountParts,rate:null,rawName:r.className,start:r.start,end:r.end,status:({regular:'출석',late:'지각',cancel:'당일취소',absence:'결석예고',absenceMakeup:'결석보강',cancelMakeup:'보충',lateMakeup:'보충',free:'프리'})[r.kind]||'확인 필요',kind:r.kind,note:r.note||r.memo||r.reference||'',source:r}));
     }
     function validatePriorNotice(d){
         if(d===undefined||d===null)return;
@@ -165,6 +182,6 @@
         for(const v of [...Object.values(s.overrides||{}),...(s.additional||[])])if((v.start||v.end)&&(!clock(v.start)||!clock(v.end)||v.end<=v.start))throw Error('회차별 시작·종료 시각을 확인해 주세요.');
         return JSON.parse(JSON.stringify(s));
     }
-    const api={nextMonthPlan,info,expand,groups,hoursBySubject,compareHours,candidates,groupCandidates,normalizeSnapshot,validatePriorNotice,daysInMonth,weekday,validateSchedule};
+    const api={nextMonthPlan,info,expand,groups,hoursBySubject,compareHours,candidates,groupCandidates,normalizeSnapshot,upgradePriorMakeups,validatePriorNotice,daysInMonth,weekday,validateSchedule};
     if(typeof module!=='undefined')module.exports=api;else root.FeeCalendarCore=api;
 })(typeof window==='undefined'?{}:window);

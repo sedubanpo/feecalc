@@ -49,6 +49,28 @@ const root=path.resolve(__dirname,'..'),evidence=process.env.EVIDENCE_ROOT;
  assert.match(await page.locator('#generatedTextArea').inputValue(),/확인/);
  assert.equal(await page.locator('[onclick="copyGeneratedText()"]').isDisabled(),true);
  });
+ await check('prior notice counts cancellation makeup as three hours and zero won on fetch and restore',async()=>{
+ await page.evaluate(()=>{
+  const rows=[];
+  const add=(subject,day,minutes,amount,kind='regular')=>rows.push({id:'r'+rows.length,date:'2026-10-'+String(day).padStart(2,'0'),className:subject+'-개별',teacher:subject+'강사',start:'14:00',end:'17:00',minutes,amount,kind});
+  for(const d of [4,11,13,18,20,25,27])add('국어',d,180,87500,d===11?'cancel':'regular');add('국어',6,240,112500);
+  add('사탐',23,240,112500);add('사탐',30,240,112500);add('사회',24,120,62500);add('사회',31,180,87500);
+  for(const d of [4,11,18,25])add('영어',d,180,87500,d===11?'cancel':'regular');add('영어',16,0,null,'cancelMakeup');
+  window.testProgressSnapshot={studentId:'one',month:'2026-10',lessons:rows};
+  const data=(id,amount)=>({studentId:'one',month:'2026-10',rows:[{id,label:id,amount,kind:'other',fingerprint:'a'.repeat(64)}]});
+  window.testFinancialData={feecalc_desk_payments:data('receipt',-1150000),feecalc_intranet_opening:data('opening',0)};
+  applyCalculatorState({currentTab:'auto',studentId:'one',studentName:'검증학생',targetYear:2026,targetMonth:11});FeeCalendar.navigate('notice');
+ });
+ await page.locator('#loadPriorNotice').click();
+ for(const restore of [false,true]){
+  if(restore)await page.evaluate(()=>{const state=collectCalculatorState(),d=state.calendarWorkspace.priorNotice;delete d.makeupRuleVersion;Object.assign(d.lessons.find(r=>r.kind==='cancelMakeup'),{amount:null,hours:0});applyCalculatorState(state);FeeCalendar.navigate('notice');});
+  await page.waitForFunction(()=>document.querySelector('#priorNoticePaper .prior-total')?.textContent.includes('300,000'));
+  const paper=page.locator('#priorNoticePaper');
+  for(const label of ['350,000원','1,450,000원','0원/회'])assert.ok((await paper.innerText()).includes(label),label);
+  const row=await page.evaluate(()=>collectCalculatorState().calendarWorkspace.priorNotice.lessons.find(r=>r.kind==='cancelMakeup'));
+  assert.deepEqual([row.hours,row.amount],[3,0]);
+ }
+ });
  await page.evaluate(()=>{
  window.auditLessons=Array.from({length:81},(_,i)=>({id:'audit-'+i,date:'2026-09-'+String(1+Math.floor(i/3)).padStart(2,'0'),className:['사회','사탐','통합사회'][i%3]+'-1:1(긴이름검증강사)-2h',teacher:i%2?'다른강사':'긴이름검증강사',minutes:120,amount:37500,start:['10:00','13:00','16:00'][i%3],end:['12:00','15:00','18:00'][i%3],kind:'regular'}));
  window.testProgressSnapshot={studentId:'one',month:'2026-09',fetchedAt:'2026-10-03T00:00:00Z',lessons:auditLessons};
