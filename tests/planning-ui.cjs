@@ -55,7 +55,8 @@ const root=path.resolve(__dirname,'..'),evidence=process.env.EVIDENCE_ROOT;
 
  });
  await check('temporary entry includes prior courses and prefers the matching current draft',async()=>{
- await page.evaluate(()=>TemporaryLessons.open(9));assert.equal(await page.locator('#temporaryCourse option').count(),4);
+ await page.evaluate(()=>TemporaryLessons.open(9));assert.equal(await page.locator('#temporaryCourse option').count(),5);
+ assert.ok(await page.locator('#temporaryCourse optgroup[label="2026-09 지난달 수업"] option').count()>0);
  assert.match(await page.locator('#temporaryCourse option:checked').innerText(),/과학.*3시간.*16:00.*10-08 기준.*87,500원/);
  await page.locator('#temporaryLessonDialog [aria-label="임시 수업 창 닫기"]').click();
  });

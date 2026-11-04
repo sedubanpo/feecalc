@@ -1,12 +1,15 @@
-// Temporary lessons are local calculation drafts. This module has no service calls.
+// Historical lessons supply choices only. Additions belong to the current calculation.
 (() => {
     const el=id=>document.getElementById(id), esc=escapeHtml, weekdays=['일','월','화','수','목','금','토'];
     let courses=[],context='',focusReturn=null,focusDay=1;
+    const previousRequests=new WeakMap();
+    let opening=0;
     const dialog=document.createElement('dialog');dialog.id='temporaryLessonDialog';dialog.setAttribute('aria-labelledby','temporaryTitle');
     dialog.innerHTML=`<form id="temporaryLessonForm" novalidate>
       <div class="temporary-heading"><div><h2 id="temporaryTitle">임시 수업 추가</h2><p id="temporaryContext"></p></div><button type="button" class="temporary-close" aria-label="임시 수업 창 닫기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button></div>
       <p class="temporary-intro">현재 계산에만 반영됩니다. 인트라넷에 등록되지는 않습니다.</p>
       <label class="temporary-field">수업 선택<select id="temporaryCourse"></select></label>
+      <p id="temporaryHistoryStatus" class="ui-help" role="status"></p>
       <div class="temporary-custom"><label class="temporary-field">과목·수업 유형<input id="temporaryName" maxlength="120" placeholder="예: 수학-개별정규"></label><label class="temporary-field">강사<input id="temporaryTeacher" maxlength="60" placeholder="강사 이름"></label></div>
       <div class="temporary-terms"><label class="temporary-field">시작 시각<input id="temporaryStart" type="time" value="16:00"></label><label class="temporary-field">수업 시간<input id="temporaryHours" type="number" min="0.25" max="24" step="0.25" value="2"><span>시간</span></label><label class="temporary-field">회당 수강료<input id="temporaryAmount" type="number" min="0" max="10000000000" step="any" placeholder="금액 입력"><span>원</span></label></div>
       <fieldset class="temporary-scope"><legend>언제 진행하나요?</legend><div class="temporary-scope-options"><label><input type="radio" name="temporaryScope" value="date" checked> 이 날짜만</label><label><input type="radio" name="temporaryScope" value="repeat"> 요일 반복</label></div></fieldset>
@@ -79,18 +82,53 @@
             FeeCalendar.remember();progressState.temporary=next;progressStatus=`임시 수업 ${dates.length}회를 현재 계산에 추가했습니다.`;close();renderProgress();FeeCalendar.commit();queueMicrotask(()=>el('workCalendar').querySelector(`[data-day="${focusDay}"] .calendar-add-lesson`)?.focus());
         }catch(error){el('temporaryError').textContent=error.message;el('temporaryError').hidden=false;}
     };
+    function courseGroup(label,rows,offset){
+        if(!rows.length)return '';
+        return '<optgroup label="'+esc(label)+'">'+rows.map((r,i)=>`<option value="${offset+i}">${esc(FeeCalendarCore.info(r.className,r.teacher).subject)} · ${esc(r.teacher)} · ${r.minutes/60}시간 · ${esc(r.start)} · ${esc(r.date.slice(5))} 기준 · ${r.amount===null?'금액 확인 필요':r.amount.toLocaleString('ko-KR')+'원'}</option>`).join('')+'</optgroup>';
+    }
+    async function appendPreviousCourses(snapshot,sequence){
+        const status=el('temporaryHistoryStatus'), epoch=staffAuthEpoch;
+        const active=()=>sequence===opening && dialog.open && context===identity() && epoch===staffAuthEpoch && progressState.snapshot===snapshot;
+        try{
+            status.textContent='지난달 수업을 불러오는 중입니다.';
+            let previous=progressState.basis?.[0];
+            if(!previous){
+                let request=previousRequests.get(snapshot);
+                if(!request || request.epoch!==epoch){
+                    const promise=getSupabaseClient().rpc('feecalc_progress',{
+                        p_student_id:snapshot.studentId,p_month:ProgressCore.previousMonth(snapshot.month)
+                    }).then(({data,error})=>{
+                        if(error)throw Error();
+                        return ProgressCore.validateBasis([data],snapshot)[0];
+                    });
+                    request={epoch,promise};previousRequests.set(snapshot,request);
+                    promise.catch(()=>{if(previousRequests.get(snapshot)===request)previousRequests.delete(snapshot);});
+                }
+                previous=await request.promise;
+            }
+            if(!active())return;
+            const rows=ProgressCore.basisTemplates({snapshot:previous,cutoff:ProgressCore.monthEnd(previous.month)});
+            el('temporaryCourse').lastElementChild.insertAdjacentHTML('beforebegin',courseGroup(previous.month+' 지난달 수업',rows,courses.length));
+            courses.push(...rows);
+            status.textContent=rows.length?'':'지난달에 선택할 수 있는 수업이 없습니다.';
+        }catch{
+            if(active())status.textContent='지난달 수업을 불러오지 못했습니다. 창을 다시 열어 재시도하세요.';
+        }
+    }
     function open(day){
         if(dialog.open)return;
         context=identity();focusDay=day;FeeCalendar.focusDay(day);focusReturn=el('workCalendar').querySelector(`[data-day="${day}"] .calendar-add-lesson`)||document.activeElement;
         const date=progressMonth()+'-'+String(day).padStart(2,'0');
         const distinct=new Map();
         const existing=progressResult();
-        for(const row of progressBound()?[...ProgressCore.basisTemplates(progressState),...existing.actual,...existing.predicted]:[]){
+        for(const row of progressBound()?[...ProgressCore.basisTemplates({...progressState,basis:[]}),...existing.actual,...existing.predicted]:[]){
             if(!['regular','late','absenceMakeup'].includes(row.kind)||!row.minutes)continue;
             distinct.set(JSON.stringify([ProgressCore.courseKey(row),row.minutes,row.amount,row.start,row.end]),row);
         }
         courses=[...distinct.values()].sort((a,b)=>a.className.localeCompare(b.className,'ko'));
-        el('temporaryCourse').innerHTML=courses.map((r,i)=>`<option value="${i}">${esc(FeeCalendarCore.info(r.className,r.teacher).subject)} · ${esc(r.teacher)} · ${r.minutes/60}시간 · ${esc(r.start)} · ${esc(r.date.slice(5))} 기준 · ${r.amount===null?'금액 확인 필요':r.amount.toLocaleString('ko-KR')+'원'}</option>`).join('')+'<option value="custom">새 수업 직접 입력</option>';
+        const select=el('temporaryCourse');
+        select.innerHTML=courseGroup('이번 달 수업',courses,0)+'<option value="custom">새 수업 직접 입력</option>';
+        el('temporaryHistoryStatus').textContent='';
         el('temporaryContext').textContent=`${getCurrentStudentName()||'학생 선택'} · ${Number(date.slice(5,7))}월 ${day}일 (${weekdays[ProgressCore.dayOfWeek(date)]})`;
         dialog.querySelector('[name="temporaryScope"][value="date"]').checked=true;
         for(const id of ['temporaryFrom','temporaryUntil']){el(id).min=progressMonth()+'-01';el(id).max=ProgressCore.monthEnd(progressMonth());}
@@ -98,6 +136,8 @@
         el('temporaryWeekdays').querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(Number(b.dataset.weekday)===ProgressCore.dayOfWeek(date))));
         const selected=el('progressTemplate').value,index=courses.findIndex(r=>r.id===selected);if(index>=0)el('temporaryCourse').value=String(index);
         selectCourse();dialog.showModal();el('temporaryCourse').focus();
+        const sequence=++opening;
+        if(progressBound())appendPreviousCourses(progressState.snapshot,sequence);
     }
     window.TemporaryLessons={open};
 })();

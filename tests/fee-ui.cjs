@@ -17,6 +17,7 @@ const root=path.resolve(__dirname,'..'),evidence=process.env.EVIDENCE_ROOT;
  const gateway={rpc:async(rpc,params)=>{if(window.testFail)return{error:{message:'가상 네트워크 오류'}};
  if(rpc==='feecalc_students')return{data:[{id:'one',name:'검증학생',school:'검증중',grade:'2'},{id:'two',name:'동명학생',school:'가학교',grade:'1'},{id:'three',name:'동명학생',school:'나학교',grade:'2'}]};
  if(rpc==='feecalc_student_memos')return{data:[{memo:'가상 안내 주의 메모 <script>안전한 텍스트</script>',createdAt:'2026-09-07',author:'검증 직원'}]};
+ if(rpc==='feecalc_progress'&&params.p_month===window.testPriorSnapshot?.month){window.testPriorCalls++;return{data:window.testPriorSnapshot};}
  if(rpc==='feecalc_progress'&&window.testProgressSnapshot)return{data:params.p_month===window.testProgressSnapshot.month?window.testProgressSnapshot:{studentId:params.p_student_id,month:params.p_month,lessons:[]}};
  if(['feecalc_desk_payments','feecalc_intranet_opening'].includes(rpc)){window.testFinancialCalls=(window.testFinancialCalls||0)+1;if(window.testFinancialDelay)await new Promise(r=>window.testFinancialResolve=r);return{data:structuredClone(window.testFinancialData[rpc])};}
  if(rpc==='feecalc_get_record'&&window.testSavedRecord)return{data:structuredClone(window.testSavedRecord)};
@@ -569,6 +570,26 @@ const root=path.resolve(__dirname,'..'),evidence=process.env.EVIDENCE_ROOT;
  assert.match(await page.locator('#workCalendar [data-day="13"] .calendar-event').innerText(),/당취보충.*0원/s);
  const saved=await page.evaluate(()=>collectCalculatorState());await page.evaluate(s=>applyCalculatorState(s),saved);await page.waitForFunction(()=>progressVerified&&!progressLoading);
  assert.equal(await page.evaluate(()=>progressResult().actualAmount),0);assert.equal(await page.evaluate(()=>progressResult().pending),0);
+ });
+ await check('temporary lesson picker loads previous month once and bills only the chosen day',async()=>{
+ await page.evaluate(()=>{
+ testProgressSnapshot={studentId:'one',month:'2026-11',lessons:[]};
+ testPriorSnapshot={studentId:'one',month:'2026-10',lessons:[{id:'prior',date:'2026-10-15',className:'국어-개별-검증',teacher:'검증',kind:'regular',minutes:120,amount:62500,start:'17:00',end:'19:00'}]};testPriorCalls=0;
+ applyCalculatorState({currentTab:'progress',studentId:'one',studentName:'검증학생',targetYear:2026,targetMonth:11,progress:{snapshot:testProgressSnapshot,mode:'manual',cutoff:'2026-11-01'}});FeeCalendar.navigate('progress');
+ });
+ await page.waitForFunction(()=>progressVerified&&!progressLoading);
+ const open=()=>page.locator('#workCalendar [data-day="5"] .calendar-add-lesson').click();
+ await open();
+ const prior=page.locator('#temporaryCourse optgroup[label="2026-10 지난달 수업"] option');
+ assert.match(await prior.textContent(),/10-15 기준.*62,500원/);
+ assert.equal(await page.evaluate(()=>progressResult().predictedAmount),0);
+ await page.locator('#temporaryCancel').click();await open();
+ await page.locator('#temporaryCourse').selectOption(await prior.getAttribute('value'));
+ assert.equal(await page.locator('#temporaryStart').inputValue(),'17:00');
+ assert.equal(await page.locator('#temporaryHours').inputValue(),'2');
+ await page.locator('#temporaryConfirm').click();
+ assert.deepEqual(await page.evaluate(()=>progressResult().predicted.map(r=>[r.date,r.amount])),[['2026-11-05',62500]]);
+ assert.equal(await page.evaluate(()=>testPriorCalls),1);
  });
  await check('signed-out account controls fit narrow and intermediate headers',async()=>{
  await page.evaluate(()=>testAuthState({state:'anonymous',gateway:testGateway}));
