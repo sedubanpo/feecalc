@@ -1,0 +1,55 @@
+--- a/feeApplications.js
++++ b/feeApplications.js
+@@ -1,11 +1,37 @@
+ import {projectMonthlyLessons} from './feecalcBilling.generated.js';
+ import {hash} from './contracts.js';
+-import {scopeMatches,selectFeeScope} from './feeScope.js';
++import {mergeMatches} from './feeMerge.js';
++import {scopedAmount,scopeMatches,selectFeeScope} from './feeScope.js';
+ import {readCarriedFees} from './carriedFees.js';
+ import {savedBillingLessons} from './savedBillingLessons.js';
+ 
+ const snapshot=l=>Object.fromEntries(['date','start','end','className','teacher'].map(k=>[k,l[k]]));
+ const fail=message=>{throw Object.assign(Error(message),{status:409});};
++// Older bulk edits replaced the occurrence assignment but retained its ledger
++// entry. A later historical group correction can replace that exact occurrence.
++function replacementOccurrence(record, period) {
++ const {scope,lessonId}=record;
++ if(scope.scope!=='occurrence' || scope.lessonId!==lessonId || record.allocation || scope.allocation || scope.withdrawn)return null;
++ const candidates=(period.assignments||[]).filter(a=>a.kind==='lesson' && a.target===lessonId);
++ if(candidates.length!==1)return null;
++ const [a]=candidates, snapshot=a.lessonSnapshot;
++ if(a.feeScope || a.source!=='fee-bulk' || a.bulkMode!=='manual' || !snapshot ||
++    snapshot.kind!=='regular' || !(Date.parse(a.updatedAt)>Date.parse(record.recordedAt)) ||
++    !Number.isSafeInteger(snapshot.billMinutes) || snapshot.billMinutes<=0 ||
++    !Number.isSafeInteger(a.amount) || a.amount<=0 || !['perHour','perClass'].includes(a.rateUnit))return null;
++ const lesson={...snapshot,id:lessonId,studentId:period.studentId};
++ if(!scopeMatches(scope,lesson) || Object.entries(record.snapshot).some(([k,v])=>lesson[k]!==v))return null;
++ const amount=a.rateUnit==='perClass'?a.amount:Math.round(a.amount*snapshot.billMinutes/60);
++ const merges=(period.merges||[]).filter(m=>mergeMatches(m,lesson));
++ if(merges.some(m=>m.conflict || m.amount!==a.amount || m.rateUnit!==a.rateUnit))return null;
++ const explicitlyCorrected=a.confirmedGroupPrice===true && a.bulkMerge && merges.some(m=>
++   m.scope==='month' && m.updatedAt===a.updatedAt && m.lessonIds?.includes(lessonId));
++ if(!explicitlyCorrected && amount!==scopedAmount(scope,lesson))return null;
++ return {repairSnapshots:{...scope.repairSnapshots,[lessonId]:snapshot},reuseMatchingRate:false,
++   ...(explicitlyCorrected?{amount:a.amount,rateUnit:a.rateUnit,valueMode:'base'}:{})};
++
++}
++
+ // A server-owned ledger, separate from imported lessons and editable drafts.
+ // Never accept these records in a client lesson payload.
+ export async function attachFeeApplications(db,studentId,month,period,tx){
+@@ -17,7 +43,12 @@
+  const assignments=(period.assignments||[]).map(a=>a.feeScope?{...a,feeScope:{...a.feeScope,agreementId:a.rateId,applications:records.filter(r=>r.agreementId===a.rateId)}}:a);
+  // An application whose agreement has disappeared remains pending, not a
+  // newly unpriced lesson eligible for a different inferred tariff.
+- for(const r of records)if(!assignments.some(a=>a.rateId===r.agreementId))assignments.push({kind:'lesson',target:r.lessonId,rateId:r.agreementId,amount:r.scope.amount,rateUnit:r.scope.rateUnit,feeScope:{...r.scope,agreementId:r.agreementId,applications:records.filter(x=>x.agreementId===r.agreementId),withdrawn:true}});
++ for(const r of records){
++  if(assignments.some(a=>a.rateId===r.agreementId))continue;
++  const restored=replacementOccurrence(r,period)||{withdrawn:true};
++  const feeScope={...r.scope,agreementId:r.agreementId,applications:records.filter(x=>x.agreementId===r.agreementId),...restored};
++  assignments.push({kind:'lesson',target:r.lessonId,rateId:r.agreementId,amount:feeScope.amount,rateUnit:feeScope.rateUnit,feeScope});
++ }
+  return {...period,assignments};
+ }
+ 
