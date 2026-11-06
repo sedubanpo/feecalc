@@ -19,7 +19,7 @@ function makeData(id='one',month='2026-10'){
  await page.locator('[data-lesson="2026-10-7"]').click();assert.match(await page.locator('#mhLessonDetail').innerText(),/당일취소/);
  await page.screenshot({path:path.join(proof,'desktop.png'),fullPage:true});
  await page.locator('[data-month="2026-09"]').click();assert.match(await page.locator('.mh-story h2').innerText(),/50,000원/);assert.equal(await page.evaluate(()=>historyCalls),1);assert.match(await page.locator('.mh-selected-context').innerText(),/2026년 9월/);assert.match(await page.locator('[data-month="2026-09"]').innerText(),/선택/);
- await page.locator('#mhParent').click();assert.equal(await page.locator('.mh-paper').count(),1);await page.locator('#mhRange').selectOption('2026-09');
+ await page.locator('#mhParent').click();assert.equal(await page.locator('.mh-paper').count(),1);await page.locator('#mhRange').selectOption('2026-09_2026-10');
  assert.equal(await page.locator('.mh-comparison').count(),1);
  assert.match(await page.locator('.mh-comparison section').innerText(),/9월 말 초과금 50,000원이 10월 시작 잔액/);
  await context.grantPermissions(['clipboard-read','clipboard-write']);
@@ -29,9 +29,19 @@ function makeData(id='one',month='2026-10'){
   assert.match(copied,/2026-09 정산[\s\S]*월말 잔액 \+50,000원[\s\S]*2026-10 정산 \(잠정\)[\s\S]*시작 잔액 \+50,000원/);
   assert.ok(copied.includes(await page.locator('.mh-comparison section p').innerText()));
  }
+ await page.locator('#mhRange').selectOption('2026-08_2026-10');
+ assert.equal(await page.locator('.mh-comparison thead th').count(),4);
+ await page.locator('#mhRangeCopy').click();
+ const threeMonths=await page.evaluate(()=>navigator.clipboard.readText());
+ const links=await page.locator('.mh-comparison section p').allInnerTexts();
+ assert.equal(links.length,2);
+ assert.match(links[0],/8월 말 이월금 50,000원이 9월/);
+ assert.match(links[1],/9월 말 초과금 50,000원이 10월/);
+ assert.ok(links.every(text=>threeMonths.includes(text)));
+ assert.match(threeMonths,/11월 수강료에 100,000원 추가 예상/);
  for(const kind of ['Pdf','Image']){
   const download=page.waitForEvent('download');await page.locator('#mhRange'+kind).click();
-  const file=await download;assert.match(file.suggestedFilename(),/2026-09_2026-10/);
+  const file=await download;assert.match(file.suggestedFilename(),/2026-08_2026-10/);
   if(kind==='Pdf')assert.match(fs.readFileSync(await file.path()).toString('latin1'),/\/Count 1\b/);
  }
  await page.locator('#mhRange').selectOption('');await page.locator('#mhIncludeDetails').check();assert.ok(await page.locator('.mh-paper').count()>=3);assert.doesNotMatch(await page.locator('#mhPages').innerText(),/업무 메모|receipt1/);await page.screenshot({path:path.join(proof,'parent-preview.png'),fullPage:true});await page.locator('#mhClosePreview').click();

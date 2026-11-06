@@ -40,7 +40,7 @@
  const color=s=>/수학/.test(s)?'math':/국어/.test(s)?'korean':/영어/.test(s)?'english':/과학|물리|화학|생명/.test(s)?'science':'other';
  function render(){
   const r=row(),n=C.narrative(r),groups=C.groups(r);$('mhStatus').textContent=`${data.studentName} · ${r.month} · 조회 기준 ${new Date(data.asOf).toLocaleString('ko-KR',{timeZone:'Asia/Seoul'})}`;
-  $('mhIncludeDetails').disabled=!!selectedPair();
+  $('mhIncludeDetails').disabled=!!selectedRange();
   const empty=n.tone==='empty';buttons().forEach(b=>b.disabled=!!r.blockers.length||r.closing===null||empty||outputBusy);
   $('mhBody').innerHTML=`<nav class="mh-flow" aria-label="월별 정산 흐름">${data.months.map(m=>`<button type="button" data-month="${m.month}" aria-pressed="${m.month===r.month}"><span>${Number(m.month.slice(5))}월${m.month===r.month?' · 선택':''}${m.provisional?' · 잠정':''}</span><strong>${m.closing===null?'확인 필요':C.signed(m.closing)}</strong><small>${m.closing===null?'근거 확인':m.nextOpeningSource==='saved'&&m.openingAdjustment!==0?'다음 달 별도 조정':m.closing>0?`초과금 · ${C.monthName(C.shift(m.month,1))}에 추가`:m.closing<0?`이월금 · ${C.monthName(C.shift(m.month,1))}에서 차감`:'정산 차액 없음'}</small></button>`).join('')}</nav><p class="mh-selected-context"><strong>지금 보는 내역 · ${r.month.slice(0,4)}년 ${Number(r.month.slice(5))}월</strong><span>월을 선택하면 그달의 수업료와 다음 달로 넘어가는 금액을 볼 수 있어요.</span></p><div class="mh-layout"><section class="mh-calendar-section"><div class="mh-calendar-title"><h2>${Number(r.month.slice(5))}월 수업 달력</h2><span>${r.lessons.length}건 · 예정 포함</span></div>${empty?'<p class="mh-empty">등록된 수업·납부 내역이 없습니다. 조회 월과 원본 기록을 확인해 주세요.</p>':''}${calendar(r)}<div id="mhLessonDetail" class="mh-lesson-detail" aria-live="polite">수업을 누르면 시간과 금액을 볼 수 있어요.</div></section><aside class="mh-story" aria-label="정산 이유"><div class="mh-story-title">${icon}<h2>${esc(n.title)}</h2></div><p>${esc(n.text)}</p>${equation(r)}<h3>수업료는 이렇게 구성돼요</h3><p class="mh-hint">과목을 누르면 해당 수업이 달력에 표시돼요.</p><div class="mh-subjects">${groups.map(g=>`<button type="button" data-subject="${esc(g.name)}" aria-pressed="${selectedGroup===g.name}"><span><strong>${esc(g.name)}</strong><small>${g.count}건 · ${g.minutes}분</small></span><b>${g.pending?'확인 필요':C.money(g.amount)}</b></button>`).join('')||'<p>등록된 수업이 없습니다.</p>'}</div><div class="mh-notes">${notes(r)}</div></aside></div><details class="mh-ledger"><summary>납부·환불과 정산 근거 보기</summary><h3>납부·환불 내역</h3>${receiptsTable(r)}<p>수업료에 이미 반영된 할인은 다시 차감하지 않습니다. 이전 안내본과 연결되지 않은 차액의 발생 이유는 추측하지 않습니다.</p></details>`;
   host.querySelectorAll('[data-month]').forEach(b=>b.onclick=()=>{selectedMonth=b.dataset.month;selectedGroup='';selectedDay='';$('mhPreview').hidden=true;render();});
@@ -49,36 +49,39 @@
  }
  function receiptsTable(r){return `<table class="mh-table"><thead><tr><th>납부일</th><th>내용</th><th>정산 반영</th></tr></thead><tbody>${r.receipts.map(p=>`<tr><td>${esc(p.date||'날짜 확인')}</td><td>${esc(p.label)}${p.blocked?' · 확인 필요':''}</td><td>${amount(p.amount)}</td></tr>`).join('')||'<tr><td colspan="3">연결된 납부·환불 내역이 없습니다.</td></tr>'}</tbody></table><p class="mh-hint">납부는 잔액에서 차감(−), 환불은 더하기(+)로 표시합니다.</p>`;}
  function printHeader(r,subtitle){return `<header class="mh-paper-header"><img src="assets/brand/sedu-warm.svg" alt="에스에듀"><div><span>에스에듀 반포관</span><h2>${esc(data.studentName)} · ${r.month}</h2><p>${subtitle}${r.provisional?' · 잠정 안내':''}</p></div></header>`;}
- function selectedPair(){
+ function selectedRange(){
   if($('mhPreview').hidden||!$('mhRange').value)return null;
-  const i=data.months.findIndex(r=>r.month===$('mhRange').value);
-  return i>=0&&i+1<data.months.length?data.months.slice(i,i+2):null;
+  const [start,end]=$('mhRange').value.split('_');
+  return data.months.filter(r=>r.month>=start&&r.month<=end);
  }
  function rangeOptions(){
   const select=$('mhRange');
   select.replaceChildren(new Option(row().month+' 한 달',''));
-  data.months.slice(0,-1).forEach((first,i)=>{
-   const second=data.months[i+1];
-   const option=new Option(first.month+' ~ '+second.month+' 두 달 비교 · 한 장',first.month);
-   option.disabled=[first,second].some(r=>r.closing===null||r.blockers.length);
+  const add=months=>{
+   const start=months[0].month,end=months.at(-1).month;
+   const label=months.length===3?'세 달':'두 달';
+   const option=new Option(`${start} ~ ${end} ${label} 비교 · 한 장`,start+'_'+end);
+   option.disabled=months.some(r=>r.closing===null||r.blockers.length);
    if(option.disabled)option.text+=' · 확인 필요';
    select.add(option);
-  });
+  };
+  data.months.slice(0,-1).forEach((_,i)=>add(data.months.slice(i,i+2)));
+  add(data.months);
  }
- function comparison([first,second],footer){
-  const from=C.monthName(first.month),to=C.monthName(second.month);
-  const pair=[first,second];
-  const line=(label,format)=>`<tr><th scope="row">${label}</th>${pair.map(r=>`<td>${format(r)}</td>`).join('')}</tr>`;
-  return `<article class="mh-paper mh-comparison">${printHeader({month:first.month+' ~ '+second.month,provisional:pair.some(r=>r.provisional)},'두 달 수강료 정산 안내')}
-   <table><thead><tr><th scope="col">정산 내역</th>${pair.map(r=>`<th scope="col">${C.monthName(r.month)}${r.provisional?' · 잠정':''}</th>`).join('')}</tr></thead><tbody>
+ function comparison(months,footer){
+  const start=months[0],last=months.at(-1);
+  const links=months.slice(1).map((r,i)=>`<section><h3>${C.monthName(months[i].month)} 말 → ${C.monthName(r.month)} 시작</h3><p>${C.carryExplanation(months[i],r)}</p></section>`).join('');
+  const line=(label,format)=>`<tr><th scope="row">${label}</th>${months.map(r=>`<td>${format(r)}</td>`).join('')}</tr>`;
+  return `<article class="mh-paper mh-comparison">${printHeader({month:start.month+' ~ '+last.month,provisional:months.some(r=>r.provisional)},months.length===3?'세 달 수강료 정산 안내':'두 달 수강료 정산 안내')}
+   <table><thead><tr><th scope="col">정산 내역</th>${months.map(r=>`<th scope="col">${C.monthName(r.month)}${r.provisional?' · 잠정':''}</th>`).join('')}</tr></thead><tbody>
    ${line('시작 잔액',r=>amount(r.opening))}${line('수업료',r=>amount(r.charges))}
    ${line('납부·환불 반영',r=>amount(-r.paid))}${line('월말 잔액',r=>amount(r.closing))}
-   </tbody></table><section><h3>${from} 말 → ${to} 시작</h3><p>${C.carryExplanation(first,second)}</p></section>
+   </tbody></table>${links}<p><strong>${C.onwardExplanation(last)}</strong></p>
    <p class="mh-formula">납부액은 빼고 환불액은 더해 계산해요.<br>${C.terms.credit}<br>${C.terms.due}</p>${footer}</article>`;
  }
  function pages(){const r=row(),n=C.narrative(r),footer=`<footer>현재 저장된 기록 기준 · ${esc(new Date(data.asOf).toLocaleString('ko-KR',{timeZone:'Asia/Seoul'}))}</footer>`;
-  const pair=selectedPair();
-  if(pair)return comparison(pair,footer);
+  const months=selectedRange();
+  if(months)return comparison(months,footer);
   // Dense calendars are split at week boundaries, never shrink the text to fit.
   const cal=document.createElement('div');cal.innerHTML=calendar(r,true);const cells=[...cal.querySelector('.mh-calendar').children],weeks=[];for(let i=0;i<cells.length;i+=7)weeks.push(cells.slice(i,i+7));
   const chunks=[];let chunk=[],weight=0;for(const week of weeks){const total=Math.max(1,...week.map(c=>c.querySelectorAll('.mh-event').length));
@@ -94,10 +97,10 @@
  }
  function preview(){if(!row()||buttons()[0].disabled)return;$('mhRangeCopyStatus').textContent='';if($('mhPreview').hidden)rangeOptions();$('mhPreview').hidden=false;$('mhPages').innerHTML=pages();$('mhPreview').scrollIntoView({behavior:'instant',block:'start'});}
  async function exportPages(kind){
-  if(outputBusy||!row()||buttons()[0].disabled)return;const token=epoch,key=renderKey,fingerprint=data.fingerprint,selected=selectedMonth,range=selectedPair()?.[0].month,details=$('mhIncludeDetails').checked;
+  if(outputBusy||!row()||buttons()[0].disabled)return;const token=epoch,key=renderKey,fingerprint=data.fingerprint,selected=selectedMonth,range=$('mhPreview').hidden?'':$('mhRange').value,details=$('mhIncludeDetails').checked;
   outputBusy=true;buttons().forEach(b=>b.disabled=true);$('mhStatus').textContent='최신 자료를 확인하고 안내 문서를 만들고 있어요…';
   let exportHost;
-  const guard=()=>{if(token!==epoch||!active||key!==context()||selected!==selectedMonth||range!==selectedPair()?.[0].month||details!==$('mhIncludeDetails').checked||!isServerConfigured())throw Error('학생·월 또는 로그인 상태가 바뀌었습니다. 다시 출력해 주세요.');};
+  const guard=()=>{if(token!==epoch||!active||key!==context()||selected!==selectedMonth||range!==($('mhPreview').hidden?'':$('mhRange').value)||details!==$('mhIncludeDetails').checked||!isServerConfigured())throw Error('학생·월 또는 로그인 상태가 바뀌었습니다. 다시 출력해 주세요.');};
   try{
    const response=await getSupabaseClient().rpc('feecalc_monthly_history',{p_student_id:data.studentId,p_month:data.month});guard();if(response.error)throw Error(response.error.message);C.validate(response.data,data.studentId,data.month);
    if(response.data.fingerprint!==fingerprint){
@@ -112,7 +115,7 @@
    const images=await Promise.all([...exportHost.querySelectorAll('img')].map(async img=>{await img.decode();const blob=await(await fetch(img.src)).blob();return await new Promise(resolve=>{const r=new FileReader();r.onload=()=>resolve(r.result);r.readAsDataURL(blob);});}));
    [...exportHost.querySelectorAll('img')].forEach((img,i)=>img.src=images[i]);
    const canvases=[];for(const paper of exportHost.children){guard();if(paper.scrollHeight/paper.offsetWidth>802/555)throw Error('한 페이지에 담기 어려운 긴 내역이 있습니다. 상세 근거 포함을 해제해 다시 저장하거나, 화면에서 월별 내역을 확인해 주세요.');canvases.push(await html2canvas(paper,{scale:1.5,useCORS:true,backgroundColor:'#fffefa',windowWidth:1200,scrollX:0,scrollY:0}));}guard();
-   const name=`${data.studentName.replace(/[^\w가-힣-]/g,'_')}_${range?range+'_'+C.shift(range,1):selected}_수강료히스토리`;
+   const name=`${data.studentName.replace(/[^\w가-힣-]/g,'_')}_${range||selected}_수강료히스토리`;
    if(kind==='pdf'){const pdf=await FeeHistoryPdf.create(canvases);guard();download(pdf,name+'.pdf');}else{
     // One image file prevents multi-download blocking; page gaps preserve the document order.
     const canvas=document.createElement('canvas');canvas.width=Math.max(...canvases.map(c=>c.width));canvas.height=canvases.reduce((n,c)=>n+c.height+24,0);if(canvas.height>30000)throw Error('이미지가 너무 깁니다. PDF 저장을 이용해 주세요.');const ctx=canvas.getContext('2d');ctx.fillStyle='#f2f3f1';ctx.fillRect(0,0,canvas.width,canvas.height);let y=0;for(const c of canvases){ctx.drawImage(c,0,y);y+=c.height+24;}const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/png'));guard();if(!blob)throw Error('이미지 생성에 실패했습니다.');download(blob,name+'.png');
@@ -125,7 +128,7 @@
  $('mhSearch').oninput=options;$('mhStudent').onchange=()=>load();$('mhMonth').onchange=()=>load();$('mhReload').onclick=()=>load(true);
  for(const [id,d] of [['mhPrev',-1],['mhNext',1]])$(id).onclick=()=>{if(!$('mhMonth').value)return;$('mhMonth').value=C.shift($('mhMonth').value,d);load();};
  $('mhRange').onchange=()=>{
-  const compare=!!selectedPair();
+  const compare=!!selectedRange();
   if(compare)$('mhIncludeDetails').checked=false;
   $('mhIncludeDetails').disabled=compare;
   preview();
@@ -135,11 +138,11 @@
  $('mhIncludeDetails').onchange=()=>{if(!$('mhPreview').hidden){preview();}};$('mhParent').onclick=preview;$('mhClosePreview').onclick=()=>{$('mhIncludeDetails').disabled=false;$('mhPreview').hidden=true;$('mhParent').focus();};$('mhImage').onclick=()=>exportPages('image');$('mhPdf').onclick=()=>exportPages('pdf');
  async function copyExplanation(){
   if(!data||!row()||$('mhCopy').disabled)return;
-  const pair=selectedPair();
+  const months=selectedRange();
   const status=$('mhPreview').hidden?$('mhStatus'):$('mhRangeCopyStatus');
   try{
-   await navigator.clipboard.writeText(pair?C.comparisonMessage(data,pair):C.message(data,row()));
-   status.textContent=pair?'두 달의 정산 설명을 복사했습니다.':'설명 문구를 복사했습니다.';
+   await navigator.clipboard.writeText(months?C.comparisonMessage(data,months):C.message(data,row()));
+   status.textContent=months?months.length+'개월 정산 설명을 복사했습니다.':'설명 문구를 복사했습니다.';
   }catch{status.textContent='클립보드 접근이 제한됐습니다. 학부모용 보기에서 내용을 확인해 주세요.';}
  }
  $('mhCopy').onclick=copyExplanation;
