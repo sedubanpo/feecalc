@@ -1,0 +1,33 @@
+--- a/feecalcBalancePolicy.js
++++ b/feecalcBalancePolicy.js
+@@ -1,7 +1,8 @@
+ // Calculator import policy: absence notices have no charge. All other unknowns stay blocked.
+ import {projectBalanceMonth} from './feecalcBilling.generated.js';
+-export function projectCalculatorBalanceMonth(student,month,rows,...args){
+- return projectBalanceMonth(student,month,rows.filter(row=>row.kind!=='absence'),...args);
++export function projectCalculatorBalanceMonth(student,month,rows,period,decisions,desk){
++ // Keep absence segments in the session when determining its full-duration rate.
++ return projectBalanceMonth(student,month,rows,period,decisions,desk,{excludeAbsenceCharges:true});
+ }
+ // Same display subtotal as balanceOpeningEstimate.ts; it is never an import amount.
+ export function openingDisplayEstimate(month,periods,summaries,start='2026-09'){
+--- a/feecalcBilling.generated.js
++++ b/feecalcBilling.generated.js
+@@ -921,8 +921,9 @@
+ }
+ 
+ // src/projectBalanceMonth.ts
+-function projectBalanceMonth(student, month, rows, period, decisions, desk) {
+-  const lessons = projectMonthlyLessons(rows.map((l) => ({ ...l, studentId: student.id })), student.id, month, period, decisions, true);
++function projectBalanceMonth(student, month, rows, period, decisions, desk, options = {}) {
++  const projected = projectMonthlyLessons(rows.map((l) => ({ ...l, studentId: student.id })), student.id, month, period, decisions, true);
++  const lessons = options.excludeAbsenceCharges ? projected.filter((lesson) => lesson.kind !== "absence") : projected;
+   const merged = mergeDeskPayments({ ...emptyStore(), students: [student], lessons }, student.id, student.id, month, desk);
+   if (merged.state !== "loaded") throw Error(`${month} \uC218\uB0A9 \uC5F0\uACB0\uC744 \uD655\uC778\uD558\uC138\uC694.`);
+   const ledger = monthLedger(merged.store, { ...student, originMonth: month, opening: 0 }, month);
+@@ -1179,4 +1180,4 @@
+   studentDeskExceptions
+ };
+ 
+-export const billingModelVersion = "3f320b76238d7d8203ab5e62b60868a5352586118cba1058e24f485f5e16ca18";
++export const billingModelVersion = "3d57ad3a2f4a08f2df02a55afe2edfdb615596cd4d13772ca86771fd87f6c2fb";
