@@ -564,7 +564,8 @@
         if(!sourceTarget&&currentTab==='progress'&&!progressReady()){setServerRecordStatus('최신 수업과 미확인 금액을 확인한 뒤 출력하세요.','warning');return;}
         if(!sourceTarget&&['auto','select','history'].includes(currentTab)&&activeLessons().some(r=>r.amount===null)){el('imageOutputStatus').textContent='단가 미확인 수업을 먼저 확인하세요. 0원은 직접 입력할 수 있습니다.';return;}
         outputPending=true;el('imageOutputStatus').textContent='이미지를 만들고 있습니다.';
-        const target=sourceTarget||el('captureArea'),oldWidth=target.style.width,oldMax=target.style.maxWidth;
+        const target=sourceTarget||el('captureArea');
+        const frame=document.createElement('iframe');
         const context=JSON.stringify(collectCalculatorState()),outputEpoch=staffAuthEpoch;
         const outputButtons=[...document.querySelectorAll('.output-actions button,[data-prior-export]')].map(button=>({button,disabled:button.disabled}));
         outputButtons.forEach(({button})=>button.disabled=true);
@@ -579,24 +580,46 @@
                 const bitmap=document.createElement('canvas');bitmap.width=img.naturalWidth;bitmap.height=img.naturalHeight;
                 bitmap.getContext('2d').drawImage(img,0,0);return bitmap.toDataURL('image/png');
             });
-            target.style.width='1120px';target.style.maxWidth='1120px';await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
-            const canvas=await html2canvas(target,{scale:2,x:0,y:0,scrollX:0,scrollY:0,foreignObjectRendering:true,useCORS:true,backgroundColor:'#fff',windowWidth:1440,onclone:async doc=>{
-                doc.body.classList.add('capture-mode');
-                const area=doc.getElementById(target.id);if(sourceTarget){doc.getElementById('captureArea')?.remove();area.id='captureArea';}doc.body.append(area);area.style.width='1120px';area.style.position='absolute';area.style.left='0';area.style.top='0';
-                // html2canvas measures text baselines using an image; Tailwind's block
-                // image reset shifts that measurement. Restore inline images in the clone.
-                const fix=doc.createElement('style');fix.textContent='img{display:inline-block;vertical-align:baseline}';doc.head.append(fix);
-                await Promise.all([...area.querySelectorAll('img')].map(async(img,i)=>{if(!embeddedImages[i]){img.remove();return;}img.removeAttribute('crossorigin');img.src=embeddedImages[i];await img.decode();}));
-                await doc.fonts.ready;
-                // Resolve the watermark after export layout, without transform or negative stacking.
-                const watermark=area.querySelector('.watermark-img');
-                if(watermark){
-                    const bounds=area.getBoundingClientRect(),calendarBounds=(area.querySelector('[data-receipt-part=receiptMiniCalGrid]')||doc.getElementById('receiptMiniCalGrid')).getBoundingClientRect();
-                    const grid=calendarBounds.width&&calendarBounds.height?calendarBounds:bounds;
-                    const width=Math.min(grid.width*.95,grid.height*.85),height=width*(watermark.naturalHeight/watermark.naturalWidth||1);
-                    for(const [key,value] of Object.entries({left:(grid.left-bounds.left+(grid.width-width)/2)+'px',top:(grid.top-bounds.top+(grid.height-height)/2)+'px',width:width+'px',height:height+'px',transform:'none','max-height':'none','z-index':'0'}))watermark.style.setProperty(key,value,'important');
-                }
-            }});
+            // Lay out the paper before html2canvas snapshots computed styles.
+            // Its foreign-object renderer preserves the source viewport's grid tracks.
+            frame.setAttribute('aria-hidden','true');
+            frame.tabIndex=-1;
+            frame.style.cssText='position:fixed;left:-10000px;top:0;width:1440px;height:1000px;border:0;pointer-events:none';
+            document.body.append(frame);
+            const doc=frame.contentDocument;
+            doc.documentElement.lang=document.documentElement.lang;
+            doc.body.className=document.body.className;
+            doc.body.classList.add('capture-mode');
+            doc.body.dataset.mode=document.body.dataset.mode;
+            const styles=[...document.querySelectorAll('style,link[rel=stylesheet]')];
+            await Promise.all(styles.map(node=>{
+                const copy=node.cloneNode(true);
+                const loaded=copy.tagName==='LINK'?new Promise((resolve,reject)=>{
+                    copy.onload=resolve;
+                    copy.onerror=()=>reject(Error('안내서 스타일을 불러오지 못했습니다.'));
+                }):Promise.resolve();
+                doc.head.append(copy);
+                return loaded;
+            }));
+            const area=doc.importNode(target,true);
+            area.id='captureArea';
+            area.style.cssText+=';width:1120px;min-width:1120px;max-width:1120px;position:absolute;left:0;top:0;margin:0;';
+            doc.body.append(area);
+            await Promise.all([...area.querySelectorAll('img')].map(async(img,i)=>{
+                if(!embeddedImages[i]){img.remove();return;}
+                img.removeAttribute('crossorigin');img.src=embeddedImages[i];await img.decode();
+            }));
+            area.getBoundingClientRect();
+            await doc.fonts.ready;
+            // Resolve the watermark after export layout, without transform or negative stacking.
+            const watermark=area.querySelector('.watermark-img');
+            if(watermark){
+                const bounds=area.getBoundingClientRect(),calendarBounds=(area.querySelector('[data-receipt-part=receiptMiniCalGrid]')||doc.getElementById('receiptMiniCalGrid')).getBoundingClientRect();
+                const grid=calendarBounds.width&&calendarBounds.height?calendarBounds:bounds;
+                const width=Math.min(grid.width*.95,grid.height*.85),height=width*(watermark.naturalHeight/watermark.naturalWidth||1);
+                for(const [key,value] of Object.entries({left:(grid.left-bounds.left+(grid.width-width)/2)+'px',top:(grid.top-bounds.top+(grid.height-height)/2)+'px',width:width+'px',height:height+'px',transform:'none','max-height':'none','z-index':'0'}))watermark.style.setProperty(key,value,'important');
+            }
+            const canvas=await html2canvas(area,{scale:2,scrollX:0,scrollY:0,foreignObjectRendering:true,useCORS:true,backgroundColor:'#fff',windowWidth:1440});
             const checkContext=()=>{if(outputEpoch!==staffAuthEpoch||context!==JSON.stringify(collectCalculatorState()))throw Error('이미지 생성 중 계산 내용 또는 로그인 상태가 바뀌었습니다. 다시 출력하세요.');};
             checkContext();
             const blob=await new Promise((resolve,reject)=>canvas.toBlob(v=>v?resolve(v):reject(Error('이미지 생성에 실패했습니다.')),'image/png'));
@@ -607,7 +630,7 @@
             if(!copied){const a=document.createElement('a');a.href=url;a.download=`${getCurrentStudentName().replace(/[^\w가-힣-]/g,'_')||'학생'}_${sourceTarget?.dataset.month||month()}_${currentTab==='timetable'?'시간표':'수강료안내서'}.png`;a.click();}
             el('imageOutputStatus').textContent=copied?'이미지를 복사했습니다.':'파일 저장을 요청했습니다. 다운로드가 막히면 생성 이미지 열기를 사용하세요.';
         }catch(error){el('imageOutputStatus').textContent=error.message||'출력 실패 · 입력을 유지했습니다. 다시 시도하세요.';}
-        finally{target.style.width=oldWidth;target.style.maxWidth=oldMax;outputPending=false;outputButtons.forEach(({button,disabled})=>button.disabled=disabled);refresh();}
+        finally{frame.remove();outputPending=false;outputButtons.forEach(({button,disabled})=>button.disabled=disabled);refresh();}
     }
     // Persist only draft extensions. School assets and student registry stay out of localStorage.
     const collectOriginal=collectCalculatorState;

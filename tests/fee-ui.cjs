@@ -413,6 +413,12 @@ const root=path.resolve(__dirname,'..'),evidence=process.env.EVIDENCE_ROOT;
  const png=await page.evaluate(async()=>Array.from(new Uint8Array(await copiedNotice.arrayBuffer())));assert.ok(png.length>10000);
  if(evidence){fs.writeFileSync(path.join(evidence,'clipboard-export.png'),Buffer.from(png));await page.locator('#captureArea').screenshot({path:path.join(evidence,'export-preview.png')});}
  assert.match(await page.locator('#imageOutputStatus').innerText(),/복사했습니다/);
+ await page.setViewportSize({width:390,height:844});
+ const download=page.waitForEvent('download');
+ await page.locator('#saveNoticeImage').click();
+ const file=await (await download).path();
+ assert.deepEqual(fs.readFileSync(file),Buffer.from(png),'mobile save and desktop copy render the same paper');
+ await page.setViewportSize({width:1440,height:1000});
  assert.equal(await page.evaluate(()=>document.documentElement.classList.contains('workspace-loading')),false);
  });
  await check('previous notice reconciles actual tuition, opening and receipts independently with editable persistent draft',async()=>{

@@ -30,12 +30,12 @@ const root=path.resolve(__dirname,'..');
  await page.waitForFunction(()=>registryState==='ready');
 
 
- for(const mode of ['auto','progress','payment','guide'])await check('new calculation clears '+mode,async()=>{
+ for(const mode of ['auto','select','manual','first','progress','payment','guide','history','timetable'])await check('new calculation clears '+mode,async()=>{
  await page.evaluate(mode=>{switchTab(mode);setAdjustmentItems([{label:'9월 이월금',amount:-50000,kind:'carry'},{label:'초과금',amount:10000,kind:'extra'}]);handleAdjustmentInput();},mode);
  await page.getByRole('button',{name:'새 계산',exact:true}).click();
  await page.waitForTimeout(100);
- const state=await page.evaluate(()=>({items:collectAdjustmentItems(true),total:document.getElementById('adjustment').value,summary:document.getElementById('dispAdjRow').innerText,saved:collectCalculatorState()}));
- assert.deepEqual(state.items,[]);assert.equal(state.total,'0');assert.doesNotMatch(state.summary,/50,000|10,000/);assert.deepEqual(state.saved.adjustmentItems,[]);
+ const state=await page.evaluate(()=>({items:collectAdjustmentItems(true),total:document.getElementById('adjustment').value,summary:document.getElementById('priceSummaryArea').innerText,saved:collectCalculatorState()}));
+ assert.equal(state.saved.currentTab,mode);assert.deepEqual(state.items,[]);assert.equal(state.total,'0');assert.doesNotMatch(state.summary,/50,000|10,000/);assert.deepEqual(state.saved.adjustmentItems,[]);
  });
  await check('reset cancels in-flight carry import even when same student is selected again',async()=>{
  await page.evaluate(()=>{applyCalculatorState({studentId:'one',studentName:'검증학생',targetYear:2026,targetMonth:9,currentTab:'auto'});window.testFinancialData={feecalc_intranet_opening:{studentId:'one',month:'2026-09',rows:[{id:'opening',label:'8월 이월금',amount:-50000,kind:'carry',fingerprint:'a'.repeat(64)}]}};});
