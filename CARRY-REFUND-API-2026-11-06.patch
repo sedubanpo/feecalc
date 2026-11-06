@@ -1,0 +1,13 @@
+--- a/functions/contracts.js
++++ b/functions/contracts.js
+@@ -79,7 +79,9 @@
+   const amount = Number(row.amount);
+   const validDate = validIsoDate(paid);
+   const adjustment = isDeskSettlementAdjustment(row);
+-  const acceptedItem = row.itemName === "납부금액" || isTrustedDeskPaymentLink(row, amount) || adjustment;
++  const manualRefund = row.source === "desk_portal" && row.entryKind === "payment" &&
++    row.countsAsPayment === true && row.itemName === "환불금액" && amount > 0;
++  const acceptedItem = manualRefund || row.itemName === "납부금액" || isTrustedDeskPaymentLink(row, amount) || adjustment;
+   const linkLifecycleCandidate = row?.source === "desk_portal_payment_link";
+   const blocked = !validDate
+     ? "실제 납부일 확인 필요"
