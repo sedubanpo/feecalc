@@ -33,6 +33,32 @@
   const paid=row.paid<0?`납부보다 환불이 ${money(row.paid)} 많았어요.`:`환불을 뺀 납부액은 ${money(row.paid)}이에요.`;
   return {title,text:`${opening} ${current} 수업료는 ${money(row.charges)}이고, ${paid}`,tone:n>0?'positive':n<0?'negative':'balanced'};
  }
+ function carryExplanation(first,second){
+  const from=monthName(first.month),to=monthName(second.month);
+  const saved=second.openingSource==='saved';
+  const difference=second.opening-first.closing;
+  return saved?
+   `${to}에는 별도로 입력한 시작 잔액 ${signed(second.opening)}을 적용했어요. ${from} 말 잔액과의 차이는 ${signed(difference)}이에요.`:
+   difference!==0?`${from} 말 잔액과 ${to} 시작 잔액이 ${money(difference)} 달라요. 정산 기록을 확인해 주세요.`:
+   first.closing===0?`${from} 말 잔액이 0원이어서 ${to}은 0원으로 시작했어요.`:
+   `${from} 말 ${first.closing<0?'이월금':'초과금'} ${money(first.closing)}이 ${to} 시작 잔액으로 넘어와 ${to} 수강료${first.closing<0?'에서 차감':'에 추가'}됐어요.`;
+ }
+ function comparisonMessage(data,pair){
+  const [first,second]=pair;
+  const summaries=pair.map(r=>[
+   r.month+' 정산'+(r.provisional?' (잠정)':''),
+   '시작 잔액 '+signed(r.opening),'수업료 '+signed(r.charges),
+   '납부·환불 반영 '+signed(-r.paid),'월말 잔액 '+signed(r.closing)
+  ].join('\n'));
+  const next=monthName(shift(second.month,1));
+  const onward=second.nextOpeningSource==='saved'
+   ? `${next}에는 별도로 입력한 시작 잔액 ${signed(second.nextOpening)}이 적용돼요.`
+   : narrative(second).title;
+  return [data.studentName+' 학생 · '+first.month+' ~ '+second.month+' 수강료 정산 안내',
+   ...summaries,carryExplanation(first,second)+'\n'+onward,terms.credit+'\n'+terms.due,
+   '조회 기준 '+new Date(data.asOf).toLocaleString('ko-KR',{timeZone:'Asia/Seoul'})
+  ].join('\n\n');
+ }
  function message(data,row){const n=narrative(row);return `${data.studentName} 학생 · ${row.month} 수업·정산 안내\n${n.title}\n${n.text}\n\n${terms.credit}\n${terms.due}\n\n${groups(row).map(g=>`${g.name} ${g.count}건: ${g.pending?'확인 필요':money(g.amount)}`).join('\n')}\n\n전월 잔액 ${signed(row.opening)} + 수업료 ${money(row.charges)} − 순수납액 ${row.paid<0?'−':''}${money(row.paid)} = 잔액 ${signed(row.closing)}${row.openingSource==='saved'?'\n전월 잔액은 저장된 시작 잔액을 사용했습니다.':''}${row.paidSource==='saved'?'\n순수납액은 인트라넷에서 저장한 조정 금액을 사용했습니다.':''}${row.nextOpeningSource==='saved'?`\n다음 달에는 별도로 저장된 시작 잔액 ${signed(row.nextOpening)}이 적용됩니다. 위 정산 잔액과의 차이 ${signed(row.openingAdjustment)}는 별도 확인 대상입니다.`:''}\n${row.provisional?'진행 중인 달의 잠정 안내입니다. 이후 수업·수납에 따라 달라질 수 있습니다.':'현재 저장된 기록 기준이며 과거 안내서와 다를 수 있습니다.'}\n조회 기준: ${new Date(data.asOf).toLocaleString('ko-KR',{timeZone:'Asia/Seoul'})}`;}
- return {monthName,terms,known,money,signed,shift,subject,status,validate,groups,narrative,message};
+ return {carryExplanation,comparisonMessage,monthName,terms,known,money,signed,shift,subject,status,validate,groups,narrative,message};
 });

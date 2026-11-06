@@ -3,7 +3,7 @@
  const C=FeeMonthlyHistoryCore,$=id=>document.getElementById(id),esc=escapeHtml;
  const icon='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M5 3v4m14-4v4M3 10h18M5 5h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2m2 10 3 3 6-6"/></svg>';
  const host=document.createElement('section');host.id='monthlyHistory';host.hidden=true;host.setAttribute('aria-label','월별 수강료 히스토리');$('productHeader').after(host);
- host.innerHTML=`<div class="mh-toolbar"><div><h1>월별 수강료 히스토리</h1><p>수업 달력을 보며, 다음 달로 이어지는 금액을 함께 확인해요.</p></div><div class="mh-actions"><button type="button" id="mhParent">학부모용 보기</button><button type="button" id="mhImage">이미지 저장</button><button type="button" id="mhPdf">PDF 저장</button><button type="button" id="mhCopy">설명 복사</button><label class="mh-detail-toggle"><input type="checkbox" id="mhIncludeDetails"> 상세 근거 포함</label></div></div><div class="mh-query"><label>학생 찾기<input id="mhSearch" type="search" placeholder="학생 이름 검색" autocomplete="off"></label><label>학생 선택<select id="mhStudent"><option value="">학교·학년을 확인해 선택하세요</option></select></label><div class="mh-month-nav"><button type="button" id="mhPrev" aria-label="이전 달">이전</button><label>최근 3개월 · 마지막 달<input type="month" id="mhMonth" min="2000-03" max="2099-12"></label><button type="button" id="mhNext" aria-label="다음 달">다음</button></div><button type="button" id="mhReload">새로고침</button></div><p id="mhStatus" role="status" aria-live="polite"></p><div id="mhBody"></div><section id="mhPreview" hidden aria-label="학부모 안내 미리보기"><div class="mh-preview-heading"><h2>학부모용 안내 미리보기</h2><button type="button" id="mhClosePreview">닫기</button></div><div class="mh-range-tools"><label>안내 기간 <select id="mhRange"></select></label><button type="button" id="mhRangeImage">이미지 저장</button><button type="button" id="mhRangePdf">PDF 저장</button></div><p>아래 문서만 출력됩니다. 실제 학생·월과 금액을 확인해 주세요.</p><div id="mhPages"></div></section>`;
+ host.innerHTML=`<div class="mh-toolbar"><div><h1>월별 수강료 히스토리</h1><p>수업 달력을 보며, 다음 달로 이어지는 금액을 함께 확인해요.</p></div><div class="mh-actions"><button type="button" id="mhParent">학부모용 보기</button><button type="button" id="mhImage">이미지 저장</button><button type="button" id="mhPdf">PDF 저장</button><button type="button" id="mhCopy">설명 복사</button><label class="mh-detail-toggle"><input type="checkbox" id="mhIncludeDetails"> 상세 근거 포함</label></div></div><div class="mh-query"><label>학생 찾기<input id="mhSearch" type="search" placeholder="학생 이름 검색" autocomplete="off"></label><label>학생 선택<select id="mhStudent"><option value="">학교·학년을 확인해 선택하세요</option></select></label><div class="mh-month-nav"><button type="button" id="mhPrev" aria-label="이전 달">이전</button><label>최근 3개월 · 마지막 달<input type="month" id="mhMonth" min="2000-03" max="2099-12"></label><button type="button" id="mhNext" aria-label="다음 달">다음</button></div><button type="button" id="mhReload">새로고침</button></div><p id="mhStatus" role="status" aria-live="polite"></p><div id="mhBody"></div><section id="mhPreview" hidden aria-label="학부모 안내 미리보기"><div class="mh-preview-heading"><h2>학부모용 안내 미리보기</h2><button type="button" id="mhClosePreview">닫기</button></div><div class="mh-range-tools"><label>안내 기간 <select id="mhRange"></select></label><button type="button" id="mhRangeImage">이미지 저장</button><button type="button" id="mhRangePdf">PDF 저장</button><button type="button" id="mhRangeCopy">설명 복사</button><span id="mhRangeCopyStatus" role="status"></span></div><p>아래 문서만 출력됩니다. 실제 학생·월과 금액을 확인해 주세요.</p><div id="mhPages"></div></section>`;
  let active=false,data=null,selectedMonth='',selectedGroup='',selectedDay='',epoch=0,busy=false,outputBusy=false,identity='',registrySignature='',renderKey='';
  const cache=new Map(),pending=new Map();
  const context=()=>`${staffAuthEpoch}|${$('mhStudent').value}|${$('mhMonth').value}`;
@@ -67,20 +67,13 @@
  }
  function comparison([first,second],footer){
   const from=C.monthName(first.month),to=C.monthName(second.month);
-  const saved=second.openingSource==='saved';
-  const difference=second.opening-first.closing;
-  const bridge=saved?
-   `${to}에는 별도로 입력한 시작 잔액 ${C.signed(second.opening)}을 적용했어요. ${from} 말 잔액과의 차이는 ${C.signed(difference)}이에요.`:
-   difference!==0?`${from} 말 잔액과 ${to} 시작 잔액이 ${C.money(difference)} 달라요. 정산 기록을 확인해 주세요.`:
-   first.closing===0?`${from} 말 잔액이 0원이어서 ${to}는 0원으로 시작했어요.`:
-   `${from} 말 ${first.closing<0?'이월금':'초과금'} ${C.money(first.closing)}이 ${to} 시작 잔액으로 넘어와 ${to} 수강료${first.closing<0?'에서 차감':'에 추가'}됐어요.`;
   const pair=[first,second];
   const line=(label,format)=>`<tr><th scope="row">${label}</th>${pair.map(r=>`<td>${format(r)}</td>`).join('')}</tr>`;
   return `<article class="mh-paper mh-comparison">${printHeader({month:first.month+' ~ '+second.month,provisional:pair.some(r=>r.provisional)},'두 달 수강료 정산 안내')}
    <table><thead><tr><th scope="col">정산 내역</th>${pair.map(r=>`<th scope="col">${C.monthName(r.month)}${r.provisional?' · 잠정':''}</th>`).join('')}</tr></thead><tbody>
    ${line('시작 잔액',r=>amount(r.opening))}${line('수업료',r=>amount(r.charges))}
    ${line('납부·환불 반영',r=>amount(-r.paid))}${line('월말 잔액',r=>amount(r.closing))}
-   </tbody></table><section><h3>${from} 말 → ${to} 시작</h3><p>${bridge}</p></section>
+   </tbody></table><section><h3>${from} 말 → ${to} 시작</h3><p>${C.carryExplanation(first,second)}</p></section>
    <p class="mh-formula">납부액은 빼고 환불액은 더해 계산해요.<br>${C.terms.credit}<br>${C.terms.due}</p>${footer}</article>`;
  }
  function pages(){const r=row(),n=C.narrative(r),footer=`<footer>현재 저장된 기록 기준 · ${esc(new Date(data.asOf).toLocaleString('ko-KR',{timeZone:'Asia/Seoul'}))}</footer>`;
@@ -99,7 +92,7 @@
   for(let i=0;i<r.receipts.length;i+=16)result.push(`<article class="mh-paper">${printHeader(r,'납부·환불 상세 근거')}${receiptsTable({...r,receipts:r.receipts.slice(i,i+16)})}${footer}</article>`);
   return result.map((html,i)=>html.replace('</footer>',` · ${i+1}/${result.length}</footer>`)).join('');
  }
- function preview(){if(!row()||buttons()[0].disabled)return;if($('mhPreview').hidden)rangeOptions();$('mhPreview').hidden=false;$('mhPages').innerHTML=pages();$('mhPreview').scrollIntoView({behavior:'instant',block:'start'});}
+ function preview(){if(!row()||buttons()[0].disabled)return;$('mhRangeCopyStatus').textContent='';if($('mhPreview').hidden)rangeOptions();$('mhPreview').hidden=false;$('mhPages').innerHTML=pages();$('mhPreview').scrollIntoView({behavior:'instant',block:'start'});}
  async function exportPages(kind){
   if(outputBusy||!row()||buttons()[0].disabled)return;const token=epoch,key=renderKey,fingerprint=data.fingerprint,selected=selectedMonth,range=selectedPair()?.[0].month,details=$('mhIncludeDetails').checked;
   outputBusy=true;buttons().forEach(b=>b.disabled=true);$('mhStatus').textContent='최신 자료를 확인하고 안내 문서를 만들고 있어요…';
@@ -140,7 +133,17 @@
  $('mhRangeImage').onclick=()=>exportPages('image');
  $('mhRangePdf').onclick=()=>exportPages('pdf');
  $('mhIncludeDetails').onchange=()=>{if(!$('mhPreview').hidden){preview();}};$('mhParent').onclick=preview;$('mhClosePreview').onclick=()=>{$('mhIncludeDetails').disabled=false;$('mhPreview').hidden=true;$('mhParent').focus();};$('mhImage').onclick=()=>exportPages('image');$('mhPdf').onclick=()=>exportPages('pdf');
- $('mhCopy').onclick=async()=>{if(!data||!row()||$('mhCopy').disabled)return;try{await navigator.clipboard.writeText(C.message(data,row()));$('mhStatus').textContent='설명 문구를 복사했습니다.';}catch{$('mhStatus').textContent='클립보드 접근이 제한됐습니다. 학부모용 보기에서 내용을 확인해 주세요.';}};
+ async function copyExplanation(){
+  if(!data||!row()||$('mhCopy').disabled)return;
+  const pair=selectedPair();
+  const status=$('mhPreview').hidden?$('mhStatus'):$('mhRangeCopyStatus');
+  try{
+   await navigator.clipboard.writeText(pair?C.comparisonMessage(data,pair):C.message(data,row()));
+   status.textContent=pair?'두 달의 정산 설명을 복사했습니다.':'설명 문구를 복사했습니다.';
+  }catch{status.textContent='클립보드 접근이 제한됐습니다. 학부모용 보기에서 내용을 확인해 주세요.';}
+ }
+ $('mhCopy').onclick=copyExplanation;
+ $('mhRangeCopy').onclick=copyExplanation;
  document.addEventListener('feecalc-auth-change',()=>{invalidate();cache.clear();pending.clear();identity='';registrySignature='';$('mhSearch').value='';$('mhStudent').replaceChildren(new Option('학생 선택',''));$('mhStatus').textContent='로그인 상태가 바뀌었습니다. 학생을 다시 선택해 주세요.';});
  const nav=document.createElement('button');nav.type='button';nav.dataset.purpose='monthly-history';nav.innerHTML=icon+'월별 수강료 히스토리';nav.onclick=()=>FeeCalendar.navigate('monthly-history');$('productHeader').querySelector('[data-purpose="history"]').after(nav);
  window.FeeMonthlyHistory={open,close,sync,get active(){return active;}};buttons().forEach(b=>b.disabled=true);

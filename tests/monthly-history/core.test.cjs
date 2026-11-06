@@ -8,3 +8,10 @@ test('context, totals, impossible dates, duplicate IDs and nonnumeric values fai
 test('groups include all independent lessons and decimal amounts without rounding unit rates',()=>{const r=row({lessons:[{id:'a',className:'수학-개별',amount:31250.5,minutes:60},{id:'b',className:'수학-개별',amount:31250.25,minutes:60}]});assert.equal(C.groups(r)[0].amount,62500.75);assert.equal(C.groups(r)[0].count,2);assert.equal(C.money(62500.75),'62,500.75원');assert.equal(C.shift('2026-01',-1),'2025-12');});
 
 test('future labels retain attendance and lesson kind',()=>{assert.equal(C.status({kind:'absence',scheduled:true}),'결석예고 · 0원 · 예정');assert.equal(C.status({kind:'makeup',scheduled:true}),'보강 · 예정');});
+
+test('comparison explains credits, zero balances and a separately saved opening',()=>{
+ const first=row({closing:-3125}),second=row({month:'2026-10',opening:-3125});
+ assert.match(C.comparisonMessage(data(),[first,second]),/9월 말 이월금 3,125원이 10월 시작 잔액으로 넘어와 10월 수강료에서 차감/);
+ assert.match(C.carryExplanation(first,{...second,openingSource:'saved',opening:0}),/별도로 입력한 시작 잔액 0원.*차이는 \+3,125원/);
+ assert.match(C.carryExplanation({...first,closing:0},{...second,opening:0}),/10월은 0원으로 시작/);
+});

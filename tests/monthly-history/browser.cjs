@@ -22,6 +22,13 @@ function makeData(id='one',month='2026-10'){
  await page.locator('#mhParent').click();assert.equal(await page.locator('.mh-paper').count(),1);await page.locator('#mhRange').selectOption('2026-09');
  assert.equal(await page.locator('.mh-comparison').count(),1);
  assert.match(await page.locator('.mh-comparison section').innerText(),/9월 말 초과금 50,000원이 10월 시작 잔액/);
+ await context.grantPermissions(['clipboard-read','clipboard-write']);
+ for(const id of ['mhCopy','mhRangeCopy']){
+  await page.locator('#'+id).click();
+  const copied=await page.evaluate(()=>navigator.clipboard.readText());
+  assert.match(copied,/2026-09 정산[\s\S]*월말 잔액 \+50,000원[\s\S]*2026-10 정산 \(잠정\)[\s\S]*시작 잔액 \+50,000원/);
+  assert.ok(copied.includes(await page.locator('.mh-comparison section p').innerText()));
+ }
  for(const kind of ['Pdf','Image']){
   const download=page.waitForEvent('download');await page.locator('#mhRange'+kind).click();
   const file=await download;assert.match(file.suggestedFilename(),/2026-09_2026-10/);
