@@ -1,0 +1,44 @@
+--- a/feecalcBilling.generated.js
++++ b/feecalcBilling.generated.js
+@@ -137,6 +137,7 @@
+   return l.source === "access-history" && l.access?.billingAuthoritative === true && typeof l.access.amount === "number" && Number.isFinite(l.access.amount) && l.access.amount >= 0 ? Math.round(l.access.amount * 100) / 100 : null;
+ }
+ function charge(l) {
++  if (l.kind === "free" && l.billMinutes === 0) return 0;
+   if (l.kind === "cancelMakeup" && l.billMinutes === 0 && accessCharge(l) === null && l.scopedFee?.scope.scope !== "occurrence") return 0;
+   if (l.kind === "absence" && l.billMinutes === 0 && l.payMinutes === 0) return 0;
+   if (l.scopedFee?.review) return null;
+@@ -159,6 +160,7 @@
+ }
+ function estimatedCharge(l) {
+   if (l.deletedAt) return 0;
++  if (l.kind === "free" && l.billMinutes === 0) return 0;
+   if (l.kind === "cancelMakeup" && l.billMinutes === 0 && accessCharge(l) === null && l.scopedFee?.scope.scope !== "occurrence") return 0;
+   if (l.kind === "absence" && l.billMinutes === 0 && l.payMinutes === 0) return 0;
+   if (l.scopedFee?.review) return null;
+@@ -437,6 +439,7 @@
+     lessons: automaticCourseFees(store.lessons.map((l) => {
+       const { feeGroupId: _feeGroupId, automaticFeeApplied: _automatic, automaticFeeConflict: _conflict, ...base } = l;
+       if (base.studentId !== studentId || !base.date.startsWith(month)) return l;
++      if (base.kind === "free" && base.billMinutes === 0) return base;
+       const occurrenceRates = base.kind === "absenceMakeup" ? scopedAssignments.filter((a2) => a2.kind === "lesson" && a2.target === base.id && (!a2.feeScope || a2.feeScope.scope === "occurrence")) : scopedAssignments;
+       const scoped = selectFeeScope(occurrenceRates, base);
+       if (scoped && (scoped.review || scoped.scope.scope === "occurrence" || base.rate === null && base.rateOverride === void 0 && !(base.source === "access-history" && base.access?.billingAuthoritative))) {
+@@ -820,10 +823,9 @@
+     let scopedSource;
+     let values = evidence.get(automaticCourseKey(virtual));
+     const period = periodFor?.(virtual);
+-    if (period?.assignments.some((a) => a.feeScope?.protectedLessonIds?.some((id) => s.rows.some((l) => l.id === id)))) continue;
+     if (!values && period && s.rows.length > 1) {
+       const whole = { ...virtual, id: "session:" + s.key, kind: "regular", status: "\uCD9C\uC11D", sourceMinutes: minutes, billMinutes: minutes, payMinutes: minutes, rate: null, rateUnit: "perHour", feeProjection: void 0, access: void 0, rateOverride: void 0 };
+-      const priced = applyFees({ ...emptyStore(), lessons: [whole] }, whole.studentId, whole.date.slice(0, 7), period.assignments, period.merges || []).lessons[0];
++      const priced = applyFees({ ...emptyStore(), lessons: [whole] }, whole.studentId, whole.date.slice(0, 7), period.assignments.filter((a) => !a.feeScope?.protectedLessonIds?.some((id) => s.rows.some((l) => l.id === id))), period.merges || []).lessons[0];
+       const total2 = estimatedCharge(priced);
+       if (total2 !== null && total2 > 0 && Number.isSafeInteger(total2) && !priced.automaticFeeConflict) {
+         values = /* @__PURE__ */ new Set([total2]);
+@@ -1180,4 +1182,4 @@
+   studentDeskExceptions
+ };
+ 
+-export const billingModelVersion = "3d57ad3a2f4a08f2df02a55afe2edfdb615596cd4d13772ca86771fd87f6c2fb";
++export const billingModelVersion = "fb867d324791f5b18ee07723ca64d0b463bbe667cf19f4a6d734953475a44c29";
