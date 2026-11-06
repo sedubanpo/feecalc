@@ -19,7 +19,15 @@ function makeData(id='one',month='2026-10'){
  await page.locator('[data-lesson="2026-10-7"]').click();assert.match(await page.locator('#mhLessonDetail').innerText(),/당일취소/);
  await page.screenshot({path:path.join(proof,'desktop.png'),fullPage:true});
  await page.locator('[data-month="2026-09"]').click();assert.match(await page.locator('.mh-story h2').innerText(),/50,000원/);assert.equal(await page.evaluate(()=>historyCalls),1);assert.match(await page.locator('.mh-selected-context').innerText(),/2026년 9월/);assert.match(await page.locator('[data-month="2026-09"]').innerText(),/선택/);
- await page.locator('#mhParent').click();assert.equal(await page.locator('.mh-paper').count(),1);await page.locator('#mhIncludeDetails').check();assert.ok(await page.locator('.mh-paper').count()>=3);assert.doesNotMatch(await page.locator('#mhPages').innerText(),/업무 메모|receipt1/);await page.screenshot({path:path.join(proof,'parent-preview.png'),fullPage:true});await page.locator('#mhClosePreview').click();
+ await page.locator('#mhParent').click();assert.equal(await page.locator('.mh-paper').count(),1);await page.locator('#mhRange').selectOption('2026-09');
+ assert.equal(await page.locator('.mh-comparison').count(),1);
+ assert.match(await page.locator('.mh-comparison section').innerText(),/9월 말 초과금 50,000원이 10월 시작 잔액/);
+ for(const kind of ['Pdf','Image']){
+  const download=page.waitForEvent('download');await page.locator('#mhRange'+kind).click();
+  const file=await download;assert.match(file.suggestedFilename(),/2026-09_2026-10/);
+  if(kind==='Pdf')assert.match(fs.readFileSync(await file.path()).toString('latin1'),/\/Count 1\b/);
+ }
+ await page.locator('#mhRange').selectOption('');await page.locator('#mhIncludeDetails').check();assert.ok(await page.locator('.mh-paper').count()>=3);assert.doesNotMatch(await page.locator('#mhPages').innerText(),/업무 메모|receipt1/);await page.screenshot({path:path.join(proof,'parent-preview.png'),fullPage:true});await page.locator('#mhClosePreview').click();
  await page.setViewportSize({width:390,height:844});await page.evaluate(()=>scrollTo(0,0));assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);await page.screenshot({path:path.join(proof,'mobile.png'),fullPage:true});
  await page.setViewportSize({width:1440,height:1000});
  const dl=page.waitForEvent('download');await page.locator('#mhPdf').click();const pdf=await dl;await pdf.saveAs(path.join(proof,'parent.pdf'));assert.ok(fs.statSync(path.join(proof,'parent.pdf')).size>10000);assert.match(await page.locator('#mhStatus').innerText(),/저장했습니다/);
