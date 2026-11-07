@@ -21,7 +21,24 @@ function makeData(id='one',month='2026-10'){
  await page.locator('[data-month="2026-09"]').click();assert.match(await page.locator('.mh-story h2').innerText(),/50,000원/);assert.equal(await page.evaluate(()=>historyCalls),1);assert.match(await page.locator('.mh-selected-context').innerText(),/2026년 9월/);assert.match(await page.locator('[data-month="2026-09"]').innerText(),/선택/);
  await page.locator('#mhParent').click();assert.equal(await page.locator('.mh-paper').count(),1);await page.locator('#mhRange').selectOption('2026-09_2026-10');
  assert.equal(await page.locator('.mh-comparison').count(),1);
- assert.match(await page.locator('.mh-comparison section').innerText(),/9월 말 초과금 50,000원이 10월 시작 잔액/);
+ assert.match(await page.locator('.mh-comparison section:has(.mh-transfer)').innerText(),/9월 말 초과금 50,000원이 10월 시작 잔액/);
+ async function checkCalendars(monthNumbers){
+  const calendars=page.locator('#mhPages .mh-parent-calendar');
+  assert.equal(await page.locator('#mhPages article').count(),1);
+  assert.deepEqual(await calendars.locator('h3').allTextContents(),monthNumbers.map(m=>`2026년 ${m}월 수업 달력`));
+  for(const [index,month] of monthNumbers.entries()){
+   const days=calendars.nth(index).locator('.mh-date');
+   assert.equal(await days.last().innerText(),String(new Date(2026,month,0).getDate()));
+   assert.equal(await calendars.nth(index).locator('.mh-event').count(),10);
+  }
+  const download=page.waitForEvent('download');
+  await page.locator('#mhRangeImage').click();
+  const file=await download;
+  await file.saveAs(path.join(proof,'comparison-'+monthNumbers.length+'.png'));
+  const png=fs.readFileSync(await file.path());
+  assert.ok(png.readUInt32BE(20)>png.readUInt32BE(16));
+ }
+ await checkCalendars([9,10]);
  await context.grantPermissions(['clipboard-read','clipboard-write']);
  for(const id of ['mhCopy','mhRangeCopy']){
   await page.locator('#'+id).click();
@@ -30,6 +47,7 @@ function makeData(id='one',month='2026-10'){
   assert.ok(copied.includes(await page.locator('.mh-comparison section p').innerText()));
  }
  await page.locator('#mhRange').selectOption('2026-08_2026-10');
+ await checkCalendars([8,9,10]);
  assert.equal(await page.locator('.mh-comparison thead th').count(),4);
  await page.locator('#mhRangeCopy').click();
  const threeMonths=await page.evaluate(()=>navigator.clipboard.readText());
@@ -39,11 +57,11 @@ function makeData(id='one',month='2026-10'){
  assert.match(links[1],/9월 말 초과금 50,000원이 10월/);
  assert.ok(links.every(text=>threeMonths.includes(text)));
  assert.match(threeMonths,/11월 수강료에 100,000원 추가 예상/);
- for(const kind of ['Pdf','Image']){
-  const download=page.waitForEvent('download');await page.locator('#mhRange'+kind).click();
-  const file=await download;assert.match(file.suggestedFilename(),/2026-08_2026-10/);
-  if(kind==='Pdf')assert.match(fs.readFileSync(await file.path()).toString('latin1'),/\/Count 1\b/);
- }
+ const comparisonDownload=page.waitForEvent('download');
+ await page.locator('#mhRangePdf').click();
+ const comparisonPdf=await comparisonDownload;
+ assert.match(comparisonPdf.suggestedFilename(),/2026-08_2026-10/);
+ assert.match(fs.readFileSync(await comparisonPdf.path()).toString('latin1'),/\/Count 1\b/);
  await page.locator('#mhRange').selectOption('');await page.locator('#mhIncludeDetails').check();assert.equal(await page.locator('.mh-paper').count(),1);assert.ok(await page.locator('#mhPages .mh-table').count()>=2);assert.doesNotMatch(await page.locator('#mhPages').innerText(),/업무 메모|receipt1/);await page.screenshot({path:path.join(proof,'parent-preview.png'),fullPage:true});await page.locator('#mhClosePreview').click();
  await page.setViewportSize({width:390,height:844});await page.evaluate(()=>scrollTo(0,0));assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);await page.screenshot({path:path.join(proof,'mobile.png'),fullPage:true});
  await page.setViewportSize({width:1440,height:1000});

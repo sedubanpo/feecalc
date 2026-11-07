@@ -88,30 +88,34 @@
    <span class="mh-transfer-arrow" aria-hidden="true">→</span>
    <div><small>${next} 시작 · ${source==='saved'?'별도 입력':closing!==opening?'잔액 확인':label}</small><b>${amount(opening)}</b></div></div>`;
  }
- function comparison(months,footer){
+ function monthCalendar(r){
+  const year=r.month.slice(0,4);
+  return `<section class="mh-parent-calendar"><h3>${year}년 ${C.monthName(r.month)} 수업 달력</h3>${calendar(r,true,true)}</section>`;
+ }
+ function comparison(months,footer,includeCalendars){
   const start=months[0],last=months.at(-1);
   const links=months.slice(1).map((r,i)=>`<section>${carryDiagram(months[i].month,months[i].closing,r.opening,r.openingSource,months[i].provisional)}<p>${C.carryExplanation(months[i],r)}</p></section>`).join('');
   const line=(label,format)=>`<tr><th scope="row">${label}</th>${months.map(r=>`<td>${format(r)}</td>`).join('')}</tr>`;
-  return `<article class="mh-paper mh-comparison">${printHeader({month:start.month+' ~ '+last.month,provisional:months.some(r=>r.provisional)},months.length===3?'세 달 수강료 정산 안내':'두 달 수강료 정산 안내')}
+  return `<article class="mh-paper mh-comparison${includeCalendars?' mh-scroll-paper':''}">${printHeader({month:start.month+' ~ '+last.month,provisional:months.some(r=>r.provisional)},months.length===3?'세 달 수강료 정산 안내':'두 달 수강료 정산 안내')}
    <table><thead><tr><th scope="col">정산 내역</th>${months.map(r=>`<th scope="col">${C.monthName(r.month)}${r.provisional?' · 잠정':''}</th>`).join('')}</tr></thead><tbody>
    ${line('시작 잔액',r=>amount(r.opening))}${line('수업료',r=>amount(r.charges))}
    ${line('납부·환불 반영',r=>amount(-r.paid))}${line('월말 잔액',r=>amount(r.closing))}
    </tbody></table>${links}<p><strong>${C.onwardExplanation(last)}</strong></p>
-   <p class="mh-formula">납부액은 빼고 환불액은 더해 계산해요.<br>${C.terms.credit}<br>${C.terms.due}</p>${footer}</article>`;
+   <p class="mh-formula">납부액은 빼고 환불액은 더해 계산해요.<br>${C.terms.credit}<br>${C.terms.due}</p>${includeCalendars?months.map(monthCalendar).join(''):''}${footer}</article>`;
  }
  function lessonRows(r){
   return r.lessons.map(l=>`<tr><td>${esc(l.date.slice(5))}</td><td>${esc(C.subject(l))} · ${esc(l.teacher)}<small>${esc(l.start||'')}${l.end?'–'+esc(l.end):''} · ${esc(C.status(l))}</small></td><td>${C.money(l.amount)}${l.discountParts?.length?'<small>할인 반영</small>':''}</td></tr>`);
  }
  function pages(paginate=false){const r=row(),n=C.narrative(r),footer=`<footer>현재 저장된 기록 기준 · ${esc(new Date(data.asOf).toLocaleString('ko-KR',{timeZone:'Asia/Seoul'}))}</footer>`;
   const months=selectedRange();
-  if(months)return comparison(months,footer);
+  if(months)return comparison(months,footer,!paginate);
   const previous=data.months.find(m=>m.month===C.shift(r.month,-1));
   const incoming=previous?carryDiagram(previous.month,previous.closing,r.opening,r.openingSource,previous.provisional):'';
   const outgoing=carryDiagram(r.month,r.closing,r.nextOpening,r.nextOpeningSource,r.provisional);
   const summary=`<div class="mh-paper-summary"><h3>${esc(n.title)}</h3>${incoming}<p>${esc(n.text)}</p>${equation(r)}${outgoing}<p class="mh-paper-groups">${C.groups(r).map(g=>esc(g.name)+' '+g.count+'건 · '+C.money(g.amount)).join(' / ')}</p></div>`;
   if(!paginate){
    const details=$('mhIncludeDetails').checked?`<h3>수업료 상세 근거</h3><table class="mh-table"><thead><tr><th>날짜</th><th>수업</th><th>적용 수업료</th></tr></thead><tbody>${lessonRows(r).join('')}</tbody></table><h3>납부·환불 상세 근거</h3>${receiptsTable(r)}`:'';
-   return `<article class="mh-paper mh-scroll-paper">${printHeader(r,'수업·정산 안내')}${summary}<h3>${C.monthName(r.month)} 수업 달력</h3>${calendar(r,true,true)}${details}<div class="mh-notes">${notes(r)}</div>${footer}</article>`;
+   return `<article class="mh-paper mh-scroll-paper">${printHeader(r,'수업·정산 안내')}${summary}${monthCalendar(r)}${details}<div class="mh-notes">${notes(r)}</div>${footer}</article>`;
   }
   // Dense calendars are split at week boundaries, never shrink the text to fit.
   const cal=document.createElement('div');cal.innerHTML=calendar(r,true);const cells=[...cal.querySelector('.mh-calendar').children],weeks=[];for(let i=0;i<cells.length;i+=7)weeks.push(cells.slice(i,i+7));
