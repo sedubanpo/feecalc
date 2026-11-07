@@ -4,7 +4,7 @@
  const signed=v=>known(v)?(v>0?'+':v<0?'−':'')+money(v):'확인 필요';
  const shift=(m,n)=>{const d=new Date(m+'-01T00:00:00Z');d.setUTCMonth(d.getUTCMonth()+n);return d.toISOString().slice(0,7);};
  const subject=l=>String(l.className||'수업').split(/[-·(]/)[0].trim()||'수업';
- const statuses={regular:'정규',absence:'결석예고 · 0원',cancel:'당일취소',makeup:'보강',supplement:'보충',study:'학습',late:'지각'};
+ const statuses={regular:'정규',absence:'결석예고 · 0원',cancel:'당일취소',absenceMakeup:'결석보강',cancelMakeup:'당취보충',lateMakeup:'지각보충',free:'무료보충',makeup:'보강',supplement:'보충',study:'학습',late:'지각'};
  const status=l=>(statuses[l.kind]||l.kind||'수업')+(l.scheduled?' · 예정':'');
  function validate(data,id,month){
   if(data?.version!==1||data.studentId!==id||data.month!==month||!Array.isArray(data.months)||data.months.length!==3||!data.fingerprint||!data.asOf)throw Error('조회한 학생·월을 확인하지 못했습니다. 다시 조회해 주세요.');
